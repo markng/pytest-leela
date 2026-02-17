@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytest-leela"
+version = "0.1.0"
+description = "Type-aware mutation testing for Python — fast, opinionated, pytest-native"
+requires-python = ">=3.12"
+dependencies = [
+    "pytest>=7.0",
+    "pytest-describe>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "factory-boy",
+    "faker",
+]
+
+[project.entry-points.pytest11]
+leela = "pytest_leela.plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytest_leela"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+python_files = ["test_*.py", "describe_*.py"]
+
+[tool.mypy]
+strict = true

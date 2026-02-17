@@ -1,0 +1,166 @@
+"""Execute tests against a single mutant in-process."""
+
+from __future__ import annotations
+
+import contextlib
+import io
+import os
+import sys
+import time
+from typing import Any
+
+import pytest
+
+from pytest_leela.import_hook import (
+    clear_target_modules,
+    install_hook,
+    remove_hook,
+)
+from pytest_leela.models import Mutant, MutantResult
+
+# Prefixes for modules that should never be evicted between mutation runs.
+_KEEP_PREFIXES = (
+    "pytest_leela.",
+    "_pytest",
+    "pytest",
+    "pluggy",
+    "py.",
+    "_py",
+)
+
+
+def _clear_user_modules() -> None:
+    """Remove project-local modules (tests + targets) from sys.modules.
+
+    Keeps stdlib, site-packages, and pytest-leela internals intact.
+    This forces pytest to reimport test files on every mutation run so
+    they pick up the current mutant's code via the import hook.
+    """
+    cwd = os.getcwd() + os.sep
+    to_remove = [
+        name for name, mod in sys.modules.items()
+        if mod is not None
+        and getattr(mod, "__file__", None) is not None
+        and mod.__file__.startswith(cwd)
+        and not name.startswith(_KEEP_PREFIXES)
+    ]
+    for name in to_remove:
+        sys.modules.pop(name, None)
+
+
+class _ResultCollector:
+    """Minimal pytest plugin to collect test results."""
+
+    def __init__(self) -> None:
+        self.passed: list[str] = []
+        self.failed: list[str] = []
+        self.errors: list[str] = []
+        self.total = 0
+
+    def pytest_runtest_logreport(self, report: Any) -> None:
+        if report.when == "call":
+            self.total += 1
+            if report.passed:
+                self.passed.append(report.nodeid)
+            elif report.failed:
+                self.failed.append(report.nodeid)
+        elif report.when in ("setup", "teardown") and report.failed:
+            self.errors.append(report.nodeid)
+
+
+def run_tests_for_mutant(
+    mutant: Mutant,
+    target_sources: dict[str, str],
+    module_to_file: dict[str, str],
+    test_ids: list[str] | None = None,
+    test_dir: str | None = None,
+) -> MutantResult:
+    """Run tests against a single mutant, return the result."""
+    start = time.monotonic()
+
+    module_names = list(target_sources.keys())
+
+    # Install mutating import hook
+    finder = install_hook(target_sources, mutant, module_to_file)
+
+    # Clear target modules by name (they may lack __file__ when loaded
+    # through the mutating import hook) and test modules by file path
+    # (they cache direct references to target functions via
+    # ``from target.X import func``).
+    clear_target_modules(module_names)
+    _clear_user_modules()
+
+    # Snapshot sys.meta_path and sys.modules keys so the inner
+    # pytest.main() cannot corrupt the outer process state (e.g. by
+    # accumulating stale assertion rewriters or evicting stdlib modules).
+    saved_meta_path = sys.meta_path.copy()
+    saved_module_keys = set(sys.modules.keys())
+
+    try:
+        collector = _ResultCollector()
+
+        # Build pytest args — disable leela plugin to prevent recursion
+        args: list[str] = [
+            "--tb=no", "-q", "--no-header", "-x",
+            "--override-ini=addopts=",
+            "-p", "no:leela",
+            "-p", "no:leela-benchmark",
+            "--capture=sys",
+        ]
+
+        if test_ids:
+            args.extend(test_ids)
+        elif test_dir:
+            args.append(test_dir)
+
+        # Run pytest in-process (suppress noisy output)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                pytest.main(args, plugins=[collector])
+        except Exception:
+            # A mutation that crashes the test runner counts as killed
+            elapsed = time.monotonic() - start
+            return MutantResult(
+                mutant=mutant,
+                killed=True,
+                tests_run=collector.total,
+                killing_test="<crashed>",
+                time_seconds=elapsed,
+            )
+
+        killed = len(collector.failed) > 0 or len(collector.errors) > 0
+        killing_test = None
+        if collector.failed:
+            killing_test = collector.failed[0]
+        elif collector.errors:
+            killing_test = collector.errors[0]
+
+        elapsed = time.monotonic() - start
+
+        return MutantResult(
+            mutant=mutant,
+            killed=killed,
+            tests_run=collector.total,
+            killing_test=killing_test,
+            time_seconds=elapsed,
+        )
+    finally:
+        # Cleanup: remove hook and clear cached modules
+        remove_hook(finder)
+        clear_target_modules(module_names)
+        _clear_user_modules()
+
+        # Restore sys.meta_path to prevent assertion rewriter accumulation
+        sys.meta_path[:] = saved_meta_path
+
+        # Re-add any stdlib/site-packages modules that were evicted
+        for key in saved_module_keys:
+            if key not in sys.modules:
+                # Module was evicted during inner run — can't restore the
+                # object (it may be stale), but avoid KeyError by leaving
+                # it out.  The important thing is we don't ADD junk.
+                pass
+        # Remove modules added by the inner run that weren't there before
+        for key in list(sys.modules.keys()):
+            if key not in saved_module_keys:
+                sys.modules.pop(key, None)
