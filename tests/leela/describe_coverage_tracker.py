@@ -1,9 +1,11 @@
 """Tests for pytest_leela.coverage_tracker and CoverageMap."""
 
+import os
 import sys
+import tempfile
 import threading
 
-from pytest_leela.coverage_tracker import _LineTracer
+from pytest_leela.coverage_tracker import _LineTracer, collect_coverage
 from pytest_leela.models import CoverageMap
 
 
@@ -74,6 +76,41 @@ def describe_LineTracer_trace():
         result = tracer._trace(None, "call", None)
         assert result is None
 
+    def it_does_not_collect_data_when_inactive():
+        """An inactive tracer must not trace into any scope (line 39 guard).
+
+        If _trace returned a non-None value when inactive, Python's trace
+        mechanism would trace into function scopes and _trace_lines would
+        record line hits for target files. This verifies no data leaks.
+        """
+        import os
+        import tempfile
+
+        source = "def func():\n    x = 1\n    return x\n"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write(source)
+            f.flush()
+            tmp = f.name
+
+        try:
+            code = compile(source, tmp, "exec")
+            ns = {}
+            exec(code, ns)
+
+            tracer = _LineTracer(target_files={tmp})
+            # Do NOT call start() — _active stays False
+            sys.settrace(tracer._trace)
+            threading.settrace(tracer._trace)
+            try:
+                ns["func"]()
+            finally:
+                sys.settrace(None)
+                threading.settrace(None)
+
+            assert len(tracer.lines_hit) == 0
+        finally:
+            os.unlink(tmp)
+
     def it_returns_none_for_non_call_events():
         """_trace returns None for events that aren't 'call'."""
         tracer = _LineTracer(target_files={"/some/file.py"})
@@ -82,6 +119,28 @@ def describe_LineTracer_trace():
         assert result is None
         result = tracer._trace(None, "return", None)
         assert result is None
+
+    def it_does_not_trace_non_call_events_behaviorally():
+        """Non-call events must return None so Python doesn't sub-trace (line 45).
+
+        Even for an active tracer, events like 'line' and 'return' at the top
+        level must return None — returning a trace function would cause Python
+        to invoke it as a local tracer for subsequent events in that scope.
+        """
+        tracer = _LineTracer(target_files={"/target/file.py"})
+        tracer._active = True
+
+        class FakeCode:
+            co_filename = "/target/file.py"
+
+        class FakeFrame:
+            f_code = FakeCode()
+            f_lineno = 5
+
+        # For non-"call" events, _trace must return None (not _trace_lines)
+        for event in ("line", "return", "exception"):
+            result = tracer._trace(FakeFrame(), event, None)
+            assert result is None, f"_trace returned {result!r} for event {event!r}"
 
     def it_returns_trace_lines_for_target_file_call():
         """_trace returns _trace_lines when the call is from a target file."""
@@ -113,6 +172,55 @@ def describe_LineTracer_trace():
 
         result = tracer._trace(FakeFrame(), "call", None)
         assert result is None
+
+    def it_excludes_non_target_files_from_tracing():
+        """Non-target file calls must return None so they aren't sub-traced (line 44).
+
+        If _trace returned a trace function for non-target files, Python would
+        install it as the local tracer. Even though _trace_lines also guards on
+        target_files, returning non-None is semantically wrong and wastes CPU.
+        Verify with a real settrace to confirm no sub-tracing occurs.
+        """
+        import os
+        import tempfile
+
+        target_source = "def target_func():\n    return 42\n"
+        other_source = "def other_func():\n    a = 1\n    b = 2\n    return a + b\n"
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as tf:
+            tf.write(target_source)
+            tf.flush()
+            target_path = tf.name
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as of:
+            of.write(other_source)
+            of.flush()
+            other_path = of.name
+
+        try:
+            # Compile both — only target_path is in target_files
+            target_code = compile(target_source, target_path, "exec")
+            other_code = compile(other_source, other_path, "exec")
+            target_ns = {}
+            other_ns = {}
+            exec(target_code, target_ns)
+            exec(other_code, other_ns)
+
+            tracer = _LineTracer(target_files={target_path})
+            tracer.start()
+            try:
+                # Call both functions — only target should be traced
+                other_ns["other_func"]()
+                target_ns["target_func"]()
+            finally:
+                result = tracer.stop()
+
+            # Only target_path lines should appear
+            hit_files = {f for f, _ in result}
+            assert other_path not in hit_files
+        finally:
+            os.unlink(target_path)
+            os.unlink(other_path)
 
 
 def describe_LineTracer_trace_lines():
@@ -196,3 +304,35 @@ def describe_CoverageMap():
         cov.add("foo.py", 10, "test_b")
         assert cov.tests_for("foo.py", 5) == {"test_a"}
         assert cov.tests_for("foo.py", 10) == {"test_b"}
+
+
+def describe_collect_coverage():
+    def it_returns_a_coverage_map():
+        """collect_coverage returns a CoverageMap, not None.
+
+        Kills: line 95 return expr → return None.
+        """
+        # Create a minimal target file and test file in a temp dir
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = os.path.join(tmpdir, "src")
+            test_dir = os.path.join(tmpdir, "tests")
+            os.makedirs(target_dir)
+            os.makedirs(test_dir)
+
+            target_file = os.path.join(target_dir, "target.py")
+            with open(target_file, "w") as f:
+                f.write("def add(a, b):\n    return a + b\n")
+
+            test_file = os.path.join(test_dir, "test_target.py")
+            with open(test_file, "w") as f:
+                f.write(
+                    "import sys\n"
+                    f"sys.path.insert(0, {target_dir!r})\n"
+                    "from target import add\n"
+                    "def test_add():\n"
+                    "    assert add(1, 2) == 3\n"
+                )
+
+            result = collect_coverage([target_file], test_dir)
+            assert isinstance(result, CoverageMap)
+            assert result is not None

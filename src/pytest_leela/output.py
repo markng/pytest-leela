@@ -37,6 +37,11 @@ def _op_display(original: str, replacement: str) -> str:
     return f"{orig_sym} \u2192 {repl_sym}"
 
 
+def _pct(killed: int, total: int) -> float:
+    """Calculate kill percentage, defaulting to 100% when no mutants exist."""
+    return killed / total * 100 if total > 0 else 100.0
+
+
 def format_terminal_report(result: RunResult) -> str:
     """Format a terminal-friendly mutation testing report."""
     lines: list[str] = []
@@ -67,7 +72,7 @@ def format_terminal_report(result: RunResult) -> str:
 
         killed = sum(1 for r in file_res if r.killed)
         total = len(file_res)
-        pct = killed / total * 100 if total > 0 else 100.0
+        pct = _pct(killed, total)
 
         lines.append(f"  {basename:<30s} {killed}/{total} killed ({pct:.1f}%)")
 

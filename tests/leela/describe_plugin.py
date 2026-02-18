@@ -189,3 +189,77 @@ def describe_LeelaPlugin():
         with patch("pytest_leela.plugin._find_default_targets", return_value=[]):
             # Should not crash — just returns when no target files
             plugin.pytest_sessionfinish(session, exitstatus=0)
+
+    def it_runs_engine_when_target_files_found():
+        """When target_files is non-empty, engine must run (line 95 guard).
+
+        The `not target_files` → `target_files` mutation would cause early
+        return when files ARE found, skipping the engine entirely.
+        """
+        from pytest_leela.plugin import LeelaPlugin
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": "/fake/target.py",
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+
+        mock_engine = MagicMock()
+        mock_result = MagicMock()
+        mock_engine.return_value.run.return_value = mock_result
+
+        with (
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/target.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine),
+            patch("pytest_leela.plugin.format_terminal_report", return_value="report"),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Engine.run MUST have been called — the `not target_files` guard
+        # should NOT have triggered early return
+        mock_engine.return_value.run.assert_called_once()
+
+    def it_constructs_test_dir_with_path_join():
+        """test_dir uses Path / operator (line 98): rootpath / 'tests'.
+
+        The `/` → `*` and `/` → `//` mutations would crash or produce
+        wrong paths. Verify the constructed test_dir is correct.
+        """
+        from pytest_leela.plugin import LeelaPlugin
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": "/fake/mod.py",
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/myproject")
+
+        mock_engine_cls = MagicMock()
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = MagicMock()
+
+        with (
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Verify engine.run was called with the correct test_dir
+        call_args = mock_engine.run.call_args
+        test_dir = call_args.kwargs.get("test_dir") or call_args[0][1]
+        assert test_dir == str(Path("/tmp/myproject") / "tests")
+        assert test_dir == "/tmp/myproject/tests"

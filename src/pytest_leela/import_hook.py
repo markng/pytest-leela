@@ -119,6 +119,9 @@ class MutantApplier(ast.NodeTransformer):
         elif replacement == "empty_str":
             node.value = ast.Constant(value="")
             self.applied = True
+        elif replacement == "expr" and node.value is not None and isinstance(node.value, ast.Constant) and node.value.value is None:
+            node.value = ast.Constant(value=True)
+            self.applied = True
 
         return node
 

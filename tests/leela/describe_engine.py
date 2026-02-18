@@ -1,10 +1,14 @@
 """Tests for pytest_leela.engine."""
 
+import os
 import sys
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from pytest_leela.engine import Engine, _module_name_from_path
 from pytest_leela.models import RunResult
+from pytest_leela.resources import ResourceLimits
 
 
 def describe_engine():
@@ -122,3 +126,129 @@ def describe_Engine_run():
         result = engine.run([str(target)], str(test_dir))
         # total_mutants should be at least mutants_tested + mutants_pruned
         assert result.total_mutants == result.mutants_tested + result.mutants_pruned
+
+    def it_adds_pruned_count_to_total_mutants(tmp_path, monkeypatch):
+        """total_mutants = len(all_mutants) + total_pruned (not minus).
+
+        Kills line 108: + → -
+        """
+        target = tmp_path / "t_pruned.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "t_pruned_tests"
+        test_dir.mkdir()
+        (test_dir / "test_pruned.py").write_text(
+            "from t_pruned import add\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        # Mock count_pruned to return a non-zero value so + vs - matters
+        with patch("pytest_leela.engine.count_pruned", return_value=5):
+            engine = Engine(use_types=False, use_coverage=False)
+            result = engine.run([str(target)], str(test_dir))
+
+        assert result.mutants_pruned == 5
+        assert result.total_mutants == result.mutants_tested + 5
+
+    def it_tests_only_mutants_on_diff_changed_lines(tmp_path, monkeypatch):
+        """diff_base filters mutants to only changed lines.
+
+        Kills line 116: and → or, in → not in
+        Kills line 117: in → not in
+        """
+        target = tmp_path / "t_diff.py"
+        target.write_text(
+            "def add(a, b):\n"
+            "    return a + b\n"
+            "\n"
+            "def sub(a, b):\n"
+            "    return a - b\n"
+        )
+        abs_target = os.path.abspath(str(target))
+        test_dir = tmp_path / "t_diff_tests"
+        test_dir.mkdir()
+        (test_dir / "test_diff.py").write_text(
+            "from t_diff import add, sub\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n\n"
+            "def test_sub():\n"
+            "    assert sub(3, 1) == 2\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        engine = Engine(use_types=False, use_coverage=False)
+
+        # Baseline: all mutants tested (no diff filter)
+        result_all = engine.run([str(target)], str(test_dir))
+        all_lines = {r.mutant.point.lineno for r in result_all.results}
+        assert len(all_lines) > 1, "need mutants on multiple lines"
+
+        # With diff_base: only line 2 changed
+        with patch("pytest_leela.engine.changed_lines") as mock_cl:
+            mock_cl.return_value = {abs_target: {2}}
+            result_diff = engine.run(
+                [str(target)], str(test_dir), diff_base="main"
+            )
+
+        # Fewer mutants tested (only line 2), and all on line 2
+        assert 0 < result_diff.mutants_tested < result_all.mutants_tested
+        tested_lines = {r.mutant.point.lineno for r in result_diff.results}
+        assert tested_lines == {2}
+
+    def it_stops_testing_when_memory_limit_exceeded(tmp_path, monkeypatch):
+        """Engine breaks when is_memory_ok returns False.
+
+        Kills line 129: not x → x
+        """
+        target = tmp_path / "t_mem.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "t_mem_tests"
+        test_dir.mkdir()
+        (test_dir / "test_mem.py").write_text(
+            "from t_mem import add\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        limits = ResourceLimits(max_memory_percent=90)
+
+        # is_memory_ok returns False → engine should break immediately
+        with patch("pytest_leela.engine.is_memory_ok", return_value=False), \
+             patch("pytest_leela.engine.apply_limits"):
+            engine = Engine(use_types=False, use_coverage=False)
+            result = engine.run([str(target)], str(test_dir), limits=limits)
+
+        assert result.total_mutants > 0
+        assert result.mutants_tested == 0
+
+    def it_computes_wall_time_as_monotonic_difference(tmp_path, monkeypatch):
+        """wall_time = end - start, not end + start or end * start.
+
+        Kills line 151: - → + and - → *
+        """
+        target = tmp_path / "t_time.py"
+        # Assignment only — no mutation points, so no mutant runs
+        target.write_text("x = 1\n")
+        test_dir = tmp_path / "t_time_tests"
+        test_dir.mkdir()
+        (test_dir / "test_time.py").write_text(
+            "def test_pass():\n"
+            "    pass\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        mock_time = MagicMock()
+        mock_time.monotonic.side_effect = [1000.0, 1000.5]
+
+        with patch("pytest_leela.engine.time", mock_time):
+            engine = Engine(use_types=False, use_coverage=False)
+            result = engine.run([str(target)], str(test_dir))
+
+        # 1000.5 - 1000.0 = 0.5 (not 2000.5 from + or 1000500.0 from *)
+        assert result.wall_time_seconds == pytest.approx(0.5)

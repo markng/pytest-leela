@@ -141,6 +141,43 @@ def describe_changed_files():
         assert isinstance(result, list)
         assert result == []
 
+    def it_returns_actual_files_on_success():
+        """changed_files must return the file list, not None (line 38 guard).
+
+        Mocking subprocess.run to return valid git output with an existing
+        .py file ensures we exercise the `return files` path at line 38.
+        """
+        import tempfile
+        from unittest.mock import MagicMock, patch
+        from pytest_leela.git_diff import changed_files
+
+        # Create a real temp .py file so os.path.exists passes
+        with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as f:
+            tmp_path = f.name
+
+        try:
+            # The filename must be relative — changed_files calls os.path.abspath
+            rel_name = os.path.basename(tmp_path)
+
+            mock_result = MagicMock()
+            mock_result.stdout = rel_name + "\n"
+
+            with patch("pytest_leela.git_diff.subprocess.run", return_value=mock_result):
+                # Need to be in the same dir as the temp file for abspath to match
+                old_cwd = os.getcwd()
+                os.chdir(os.path.dirname(tmp_path))
+                try:
+                    result = changed_files("main")
+                finally:
+                    os.chdir(old_cwd)
+
+            assert result is not None
+            assert isinstance(result, list)
+            assert len(result) == 1
+            assert result[0] == os.path.abspath(tmp_path)
+        finally:
+            os.unlink(tmp_path)
+
 
 def describe_changed_lines():
     def it_returns_dict_type():
@@ -152,3 +189,35 @@ def describe_changed_lines():
             result = changed_lines("main")
         assert isinstance(result, dict)
         assert result == {}
+
+    def it_returns_parsed_hunks_on_success():
+        """changed_lines must return parsed data, not None (line 61 guard).
+
+        Mocking subprocess.run to return valid unified diff output exercises
+        the `return _parse_diff_hunks(result.stdout)` path at line 61.
+        """
+        from unittest.mock import MagicMock, patch
+        from pytest_leela.git_diff import changed_lines
+
+        diff_output = (
+            "diff --git a/foo.py b/foo.py\n"
+            "--- a/foo.py\n"
+            "+++ b/foo.py\n"
+            "@@ -10,0 +10,2 @@\n"
+            "+new_line_1\n"
+            "+new_line_2\n"
+        )
+        mock_result = MagicMock()
+        mock_result.stdout = diff_output
+
+        with patch("pytest_leela.git_diff.subprocess.run", return_value=mock_result):
+            result = changed_lines("main")
+
+        assert result is not None
+        assert isinstance(result, dict)
+        assert len(result) > 0
+        # Verify actual parsed data is present
+        abs_foo = os.path.abspath("foo.py")
+        assert abs_foo in result
+        assert 10 in result[abs_foo]
+        assert 11 in result[abs_foo]

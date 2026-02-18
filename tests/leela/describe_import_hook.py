@@ -233,6 +233,81 @@ def describe_Return_mutations():
         # Should be just the operand (Name 'x'), not UnaryOp
         assert isinstance(ret_node.value, ast.Name)
 
+    def it_applies_expr_mutation_to_return_none():
+        """return None -> return True when replacement is 'expr'.
+
+        Kills: line 122 == → !=, is not → is, is → is not.
+        """
+        source = "def f():\n    return None\n"
+        tree = ast.parse(source)
+        mutant = _make_mutant(
+            lineno=2, col_offset=4,
+            node_type="Return", original_op="None", replacement_op="expr",
+        )
+        applier = MutantApplier(mutant)
+        new_tree = applier.visit(tree)
+        ast.fix_missing_locations(new_tree)
+        assert applier.applied is True
+        ret_node = new_tree.body[0].body[0]
+        assert isinstance(ret_node.value, ast.Constant)
+        assert ret_node.value.value is True
+
+    def it_does_not_apply_expr_mutation_to_non_none_return():
+        """return 42 should NOT be changed by expr replacement.
+
+        Kills: line 122 is → is not (checking node.value.value is None).
+        """
+        source = "def f():\n    return 42\n"
+        tree = ast.parse(source)
+        mutant = _make_mutant(
+            lineno=2, col_offset=4,
+            node_type="Return", original_op="int_literal", replacement_op="expr",
+        )
+        applier = MutantApplier(mutant)
+        new_tree = applier.visit(tree)
+        ast.fix_missing_locations(new_tree)
+        assert applier.applied is False
+        ret_node = new_tree.body[0].body[0]
+        assert isinstance(ret_node.value, ast.Constant)
+        assert ret_node.value.value == 42
+
+    def it_does_not_apply_expr_mutation_to_bare_return():
+        """Bare return (no value) should NOT be changed by expr replacement.
+
+        Kills: line 122 is not → is (checking node.value is not None).
+        """
+        source = "def f():\n    return\n"
+        tree = ast.parse(source)
+        mutant = _make_mutant(
+            lineno=2, col_offset=4,
+            node_type="Return", original_op="None", replacement_op="expr",
+        )
+        applier = MutantApplier(mutant)
+        new_tree = applier.visit(tree)
+        ast.fix_missing_locations(new_tree)
+        assert applier.applied is False
+        ret_node = new_tree.body[0].body[0]
+        assert ret_node.value is None
+
+    def it_does_not_apply_expr_to_non_expr_replacement():
+        """The 'False' replacement must NOT trigger the expr handler.
+
+        Kills: line 122 == → != (checking replacement == 'expr').
+        """
+        source = "def f():\n    return None\n"
+        tree = ast.parse(source)
+        mutant = _make_mutant(
+            lineno=2, col_offset=4,
+            node_type="Return", original_op="None", replacement_op="False",
+        )
+        applier = MutantApplier(mutant)
+        new_tree = applier.visit(tree)
+        ast.fix_missing_locations(new_tree)
+        assert applier.applied is True
+        ret_node = new_tree.body[0].body[0]
+        # Should be False (from the "False" handler), not True (from "expr" handler)
+        assert ret_node.value.value is False
+
     def it_does_not_apply_negate_expr_when_value_is_none():
         """negate_expr requires node.value is not None."""
         source = "def f():\n    return None\n"
@@ -311,6 +386,31 @@ def describe_node_type_discrimination():
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
         assert applier.applied is False
+        assert isinstance(new_tree.body.op, ast.And)
+
+    def it_does_not_apply_non_boolop_mutant_to_boolop_with_valid_replacement():
+        """A non-BoolOp mutant at matching position must not mutate a BoolOp.
+
+        This kills the `and → or` mutant on line 75 of import_hook.py:
+            if self._matches(node) and self.mutant.point.node_type == "BoolOp"
+        With `or`, the condition would fire when _matches is True regardless
+        of node_type. Using a valid replacement_op (one that exists in
+        _OP_CLASSES) ensures the mutation would actually be applied if the
+        guard fails.
+        """
+        source = "a and b\n"
+        tree = ast.parse(source, mode="eval")
+        # Position matches the BoolOp node, but node_type says "BinOp"
+        # replacement_op "Or" IS in _OP_CLASSES — so if the guard fails,
+        # the mutation would be applied
+        mutant = _make_mutant(
+            lineno=1, col_offset=0,
+            node_type="BinOp", original_op="And", replacement_op="Or",
+        )
+        applier = MutantApplier(mutant)
+        new_tree = applier.visit(tree)
+        assert applier.applied is False
+        # The BoolOp operator must remain And (not changed to Or)
         assert isinstance(new_tree.body.op, ast.And)
 
     def it_does_not_apply_return_mutant_to_binop():

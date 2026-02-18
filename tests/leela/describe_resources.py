@@ -1,5 +1,6 @@
 """Tests for pytest_leela.resources — CPU and memory resource limiting."""
 
+import math
 from unittest.mock import mock_open, patch
 
 from pytest_leela.resources import (
@@ -155,6 +156,16 @@ def describe_check_memory_usage():
         with patch("builtins.open", mock_open(read_data=meminfo)):
             result = check_memory_usage()
         assert result == 0.0
+
+    def it_returns_positive_zero_on_error():
+        """Fallback must return +0.0, not -0.0.
+
+        Kills: line 52 return 0.0 → return -0.0.
+        math.copysign distinguishes the sign bit of IEEE 754 floats.
+        """
+        with patch("builtins.open", side_effect=OSError):
+            result = check_memory_usage()
+        assert math.copysign(1, result) == 1.0
 
 
 def describe_apply_limits():

@@ -2,8 +2,10 @@
 
 import json
 
+import pytest
+
 from pytest_leela.models import Mutant, MutantResult, MutationPoint, RunResult
-from pytest_leela.output import _op_display, format_json_report, format_terminal_report
+from pytest_leela.output import _op_display, _pct, format_json_report, format_terminal_report
 
 
 def _make_point(
@@ -103,6 +105,16 @@ def describe_op_display():
     def it_handles_remove_unary_mutation():
         assert _op_display("USub", "_remove") == "- x \u2192 x"
         assert _op_display("Not", "_remove") == "not x \u2192 x"
+
+    def it_falls_through_when_original_not_in_constant_set():
+        """Replacement in constant set but original is NOT — `and` condition is False.
+
+        If `and` mutated to `or`, this would incorrectly enter the return-constant
+        branch producing "return Mult \u2192 return True" instead of "* \u2192 True".
+        """
+        assert _op_display("Mult", "True") == "* \u2192 True"
+        assert _op_display("Div", "False") == "/ \u2192 False"
+        assert _op_display("Add", "None") == "+ \u2192 None"
 
 
 def describe_format_terminal_report():
@@ -226,6 +238,26 @@ def describe_format_terminal_report():
         report = format_terminal_report(run)
         assert "0/0 killed (0.0%)" in report
 
+    def it_calculates_fractional_percentage_on_per_file_line():
+        """1/3 killed = 33.3% must appear on the per-file line, not just Overall."""
+        results = [
+            _make_result(killed=True, mutant_id=1),
+            _make_result(killed=False, mutant_id=2, replacement_op="Mult"),
+            _make_result(killed=False, mutant_id=3, replacement_op="Div"),
+        ]
+        run = RunResult(
+            target_files=["src/app.py"],
+            total_mutants=3,
+            mutants_tested=3,
+            mutants_pruned=0,
+            results=results,
+            wall_time_seconds=1.0,
+        )
+        report = format_terminal_report(run)
+        per_file_lines = [l for l in report.split("\n") if "app.py" in l]
+        assert len(per_file_lines) == 1
+        assert "1/3 killed (33.3%)" in per_file_lines[0]
+
     def it_shows_no_survived_when_all_killed():
         """When all mutants are killed, SURVIVED should not appear for that file."""
         results = [
@@ -242,6 +274,26 @@ def describe_format_terminal_report():
         )
         report = format_terminal_report(run)
         assert "SURVIVED" not in report
+
+
+def describe_pct():
+    def it_computes_fractional_percentage():
+        """1/3 = 33.33...; kills / -> *, / -> //, * -> +, * -> //, > -> <=."""
+        assert _pct(1, 3) == pytest.approx(33.333333, abs=0.001)
+
+    def it_returns_100_when_total_is_zero():
+        """total=0 exercises the else branch; kills > -> >=.
+
+        Original: 0 > 0 is False -> 100.0
+        Mutant >= : 0 >= 0 is True -> 0/0*100 -> ZeroDivisionError
+        """
+        assert _pct(0, 0) == 100.0
+
+    def it_returns_zero_when_none_killed():
+        assert _pct(0, 5) == 0.0
+
+    def it_returns_100_when_all_killed():
+        assert _pct(5, 5) == 100.0
 
 
 def describe_format_json_report():
