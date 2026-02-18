@@ -30,6 +30,21 @@ _KEEP_PREFIXES = (
 )
 
 
+def _clear_framework_caches() -> None:
+    """Clear framework-specific caches that may hold references to user modules.
+
+    Frameworks like Django cache view function references (via URL resolver),
+    so mutations won't take effect unless these caches are cleared between
+    mutant runs.
+    """
+    # Django URL resolver caches view function references via @functools.cache
+    try:
+        from django.urls import clear_url_caches
+        clear_url_caches()
+    except ImportError:
+        pass
+
+
 def _clear_user_modules() -> None:
     """Remove project-local modules (tests + targets) from sys.modules.
 
@@ -90,6 +105,7 @@ def run_tests_for_mutant(
     # ``from target.X import func``).
     clear_target_modules(module_names)
     _clear_user_modules()
+    _clear_framework_caches()
 
     try:
         collector = _ResultCollector()
@@ -169,6 +185,7 @@ def run_tests_for_mutant(
         remove_hook(finder)
         clear_target_modules(module_names)
         _clear_user_modules()
+        _clear_framework_caches()
 
         # Safety net: remove any stale MutatingFinders left on
         # sys.meta_path from crashed previous runs.

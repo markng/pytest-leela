@@ -1,8 +1,14 @@
 """Tests for pytest_leela.runner — test execution against mutants."""
 
+from unittest.mock import MagicMock, patch
+
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.models import Mutant, MutantResult
-from pytest_leela.runner import _ResultCollector, run_tests_for_mutant
+from pytest_leela.runner import (
+    _ResultCollector,
+    _clear_framework_caches,
+    run_tests_for_mutant,
+)
 
 
 class _FakeReport:
@@ -62,7 +68,69 @@ def describe_ResultCollector():
         assert collector.failed == ["test_2"]
 
 
+def describe_clear_framework_caches():
+    def it_does_not_raise_when_django_is_not_installed():
+        with patch.dict("sys.modules", {"django.urls": None}):
+            # Should silently pass when Django is unavailable
+            _clear_framework_caches()
+
+    def it_calls_clear_url_caches_when_django_is_available():
+        mock_clear = MagicMock()
+        mock_django_urls = MagicMock()
+        mock_django_urls.clear_url_caches = mock_clear
+
+        with patch.dict("sys.modules", {"django.urls": mock_django_urls}):
+            _clear_framework_caches()
+
+        mock_clear.assert_called_once()
+
+    def it_is_idempotent_when_called_multiple_times():
+        mock_clear = MagicMock()
+        mock_django_urls = MagicMock()
+        mock_django_urls.clear_url_caches = mock_clear
+
+        with patch.dict("sys.modules", {"django.urls": mock_django_urls}):
+            _clear_framework_caches()
+            _clear_framework_caches()
+            _clear_framework_caches()
+
+        assert mock_clear.call_count == 3
+
+
 def describe_run_tests_for_mutant():
+    def it_calls_clear_framework_caches_at_both_call_sites(tmp_path, monkeypatch):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "runner_caches.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_caches_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_caches.py").write_text(
+            "from runner_caches import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_caches")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        with patch("pytest_leela.runner._clear_framework_caches") as mock_clear:
+            run_tests_for_mutant(
+                mutant,
+                {"runner_caches": source},
+                {"runner_caches": str(target)},
+                test_dir=str(test_dir),
+            )
+
+        # Called at both sites: pre-test setup (line 108) and finally cleanup (line 188)
+        assert mock_clear.call_count == 2
+
     def it_kills_a_detectable_mutant(tmp_path, monkeypatch):
         source = "def add(a, b):\n    return a + b\n"
         target = tmp_path / "runner_target.py"

@@ -4,7 +4,36 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from pytest_leela.plugin import _find_default_targets, _find_target_files
+from pytest_leela.plugin import _find_default_targets, _find_target_files, _is_test_file
+
+
+def describe_is_test_file():
+    def it_detects_test_prefix():
+        assert _is_test_file("test_foo.py") is True
+
+    def it_detects_test_suffix():
+        assert _is_test_file("foo_test.py") is True
+
+    def it_detects_conftest():
+        assert _is_test_file("conftest.py") is True
+
+    def it_detects_tests_py():
+        assert _is_test_file("tests.py") is True
+
+    def it_allows_regular_modules():
+        assert _is_test_file("models.py") is False
+
+    def it_allows_modules_with_test_in_name():
+        """A module like 'contest.py' should not be flagged."""
+        assert _is_test_file("contest.py") is False
+
+    def it_detects_tests_prefix():
+        """Django projects often use 'tests_mailerlite.py' etc."""
+        assert _is_test_file("tests_mailerlite.py") is True
+
+    def it_requires_exact_prefix_match():
+        """'testing_utils.py' starts with 'test' but not 'test_'."""
+        assert _is_test_file("testing_utils.py") is False
 
 
 def describe_find_target_files():
@@ -81,6 +110,22 @@ def describe_find_target_files():
         assert result == []
         assert result is not None
 
+    def it_excludes_test_files_from_directory(tmp_path):
+        (tmp_path / "models.py").write_text("x = 1\n")
+        (tmp_path / "test_models.py").write_text("def test(): pass\n")
+        (tmp_path / "views_test.py").write_text("def test(): pass\n")
+        (tmp_path / "conftest.py").write_text("import pytest\n")
+        (tmp_path / "tests.py").write_text("from django.test import TestCase\n")
+        (tmp_path / "tests_mailerlite.py").write_text("def test(): pass\n")
+        result = _find_target_files(str(tmp_path))
+        basenames = [os.path.basename(f) for f in result]
+        assert "models.py" in basenames
+        assert "test_models.py" not in basenames
+        assert "views_test.py" not in basenames
+        assert "conftest.py" not in basenames
+        assert "tests.py" not in basenames
+        assert "tests_mailerlite.py" not in basenames
+
 
 def describe_find_default_targets():
     def it_finds_files_in_target_directory(tmp_path):
@@ -145,6 +190,20 @@ def describe_find_default_targets():
         assert len(result) >= 1
         assert any("nested.py" in f for f in result)
 
+    def it_excludes_test_files(tmp_path):
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        (src_dir / "app.py").write_text("x = 1\n")
+        (src_dir / "test_app.py").write_text("def test(): pass\n")
+        (src_dir / "conftest.py").write_text("import pytest\n")
+        (src_dir / "tests.py").write_text("from django.test import TestCase\n")
+        result = _find_default_targets(tmp_path)
+        basenames = [os.path.basename(f) for f in result]
+        assert "app.py" in basenames
+        assert "test_app.py" not in basenames
+        assert "conftest.py" not in basenames
+        assert "tests.py" not in basenames
+
 
 def describe_LeelaPlugin():
     def it_skips_mutation_when_exit_status_nonzero():
@@ -200,7 +259,7 @@ def describe_LeelaPlugin():
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
-            "target": "/fake/target.py",
+            "target": ["/fake/target.py"],
             "diff": None,
             "max_cores": None,
             "max_memory": None,
@@ -210,6 +269,7 @@ def describe_LeelaPlugin():
         session = MagicMock()
         session.config = config
         session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
 
         mock_engine = MagicMock()
         mock_result = MagicMock()
@@ -226,17 +286,17 @@ def describe_LeelaPlugin():
         # should NOT have triggered early return
         mock_engine.return_value.run.assert_called_once()
 
-    def it_constructs_test_dir_with_path_join():
-        """test_dir uses Path / operator (line 98): rootpath / 'tests'.
+    def it_collects_test_node_ids_from_session():
+        """test_node_ids are collected from session.items (line 116).
 
-        The `/` → `*` and `/` → `//` mutations would crash or produce
-        wrong paths. Verify the constructed test_dir is correct.
+        This replaced the old hardcoded ``rootpath / 'tests'`` approach,
+        letting pytest-leela work with any test layout.
         """
         from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
-            "target": "/fake/mod.py",
+            "target": ["/fake/mod.py"],
             "diff": None,
             "max_cores": None,
             "max_memory": None,
@@ -246,6 +306,10 @@ def describe_LeelaPlugin():
         session = MagicMock()
         session.config = config
         session.config.rootpath = Path("/tmp/myproject")
+        session.items = [
+            MagicMock(nodeid="tests/test_a.py::test_one"),
+            MagicMock(nodeid="tests/test_b.py::test_two"),
+        ]
 
         mock_engine_cls = MagicMock()
         mock_engine = mock_engine_cls.return_value
@@ -258,8 +322,10 @@ def describe_LeelaPlugin():
         ):
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
-        # Verify engine.run was called with the correct test_dir
-        call_args = mock_engine.run.call_args
-        test_dir = call_args.kwargs.get("test_dir") or call_args[0][1]
-        assert test_dir == str(Path("/tmp/myproject") / "tests")
-        assert test_dir == "/tmp/myproject/tests"
+        # Verify engine.run was called with test_node_ids from session.items
+        call_kwargs = mock_engine.run.call_args.kwargs
+        assert "test_node_ids" in call_kwargs
+        assert call_kwargs["test_node_ids"] == [
+            "tests/test_a.py::test_one",
+            "tests/test_b.py::test_two",
+        ]

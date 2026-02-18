@@ -90,9 +90,10 @@ class Engine:
     def run(
         self,
         target_files: list[str],
-        test_dir: str,
+        test_dir: str | None = None,
         limits: ResourceLimits | None = None,
         diff_base: str | None = None,
+        test_node_ids: list[str] | None = None,
     ) -> RunResult:
         start = time.monotonic()
 
@@ -153,7 +154,9 @@ class Engine:
         # 7. Collect per-test coverage if enabled
         coverage_map: CoverageMap | None = None
         if self.use_coverage:
-            coverage_map = collect_coverage(target_files, test_dir)
+            coverage_map = collect_coverage(
+                target_files, test_dir, test_node_ids=test_node_ids
+            )
 
         # 8. Run each mutant
         results: list[MutantResult] = []
@@ -170,7 +173,10 @@ class Engine:
                 )
                 if covered:
                     test_ids = sorted(covered)
-                # When no tests cover the line, run against all tests (test_ids=None)
+
+            # Fallback: use all session tests when no coverage info available
+            if test_ids is None and test_node_ids is not None:
+                test_ids = test_node_ids
 
             result = run_tests_for_mutant(
                 mutant,

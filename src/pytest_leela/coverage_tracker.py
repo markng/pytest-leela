@@ -72,19 +72,26 @@ class CoveragePlugin:
 
 def collect_coverage(
     target_files: list[str],
-    test_dir: str,
+    test_dir: str | None = None,
     extra_args: list[str] | None = None,
+    test_node_ids: list[str] | None = None,
 ) -> CoverageMap:
     """Run all tests once, collecting per-test line coverage."""
     plugin = CoveragePlugin(set(target_files))
 
     args = [
-        test_dir, "--tb=no", "-q", "--no-header",
+        "--tb=no", "-q", "--no-header",
         "--override-ini=addopts=",
         "-p", "no:leela",
         "-p", "no:leela-benchmark",
         "--capture=sys",
     ]
+
+    if test_node_ids:
+        args.extend(test_node_ids)
+    elif test_dir:
+        args.append(test_dir)
+
     if extra_args:
         args.extend(extra_args)
 

@@ -12,6 +12,17 @@ from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
 
 
+def _is_test_file(basename: str) -> bool:
+    """Return True if the filename looks like a test file."""
+    return (
+        basename.startswith("test_")
+        or basename.startswith("tests_")
+        or basename.endswith("_test.py")
+        or basename == "conftest.py"
+        or basename == "tests.py"
+    )
+
+
 def pytest_addoption(parser):  # type: ignore[no-untyped-def]
     group = parser.getgroup("leela", "mutation testing")
     group.addoption(
@@ -21,7 +32,7 @@ def pytest_addoption(parser):  # type: ignore[no-untyped-def]
         "--diff", default=None, help="Only mutate files changed since this git ref"
     )
     group.addoption(
-        "--target", default=None, help="Specific file/directory to mutate"
+        "--target", action="append", default=[], help="File/directory to mutate (repeatable)"
     )
     group.addoption(
         "--max-cores", type=int, default=None, help="Max CPU cores"
@@ -56,6 +67,7 @@ def _find_target_files(target: str) -> list[str]:
             os.path.abspath(p)
             for p in _glob.glob(os.path.join(target_path, "**", "*.py"), recursive=True)
             if not os.path.basename(p).startswith("__")
+            and not _is_test_file(os.path.basename(p))
         )
     return []
 
@@ -69,6 +81,7 @@ def _find_default_targets(rootpath: Path) -> list[str]:
                 os.path.abspath(str(p))
                 for p in candidate_dir.rglob("*.py")
                 if not p.name.startswith("__")
+                and not _is_test_file(p.name)
             )
     return []
 
@@ -81,12 +94,15 @@ class LeelaPlugin:
         if exitstatus != 0:
             return
 
-        target = self.config.getoption("target", default=None)
+        targets = self.config.getoption("target", default=[])
         diff_base = self.config.getoption("diff", default=None)
 
         # Determine target files
-        if target:
-            target_files = _find_target_files(target)
+        if targets:
+            target_files: list[str] = []
+            for t in targets:
+                target_files.extend(_find_target_files(t))
+            target_files = sorted(set(target_files))
         elif diff_base:
             target_files = changed_files(diff_base)
         else:
@@ -95,7 +111,10 @@ class LeelaPlugin:
         if not target_files:
             return
 
-        test_dir = str(session.config.rootpath / "tests")
+        # Collect test node IDs from the session instead of hardcoding a
+        # ``tests/`` directory.  This lets pytest-leela work with any test
+        # layout (Django apps, flat repos, monorepos, etc.).
+        test_node_ids = [item.nodeid for item in session.items]
 
         limits = ResourceLimits(
             max_cores=self.config.getoption("max_cores", default=None),
@@ -104,7 +123,7 @@ class LeelaPlugin:
 
         engine = Engine()
         result = engine.run(
-            target_files, test_dir, limits=limits, diff_base=diff_base
+            target_files, test_node_ids=test_node_ids, limits=limits, diff_base=diff_base
         )
 
         report = format_terminal_report(result)
