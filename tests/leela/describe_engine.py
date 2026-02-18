@@ -2,12 +2,15 @@
 
 import os
 import sys
+import tempfile
+import types
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pytest_leela.engine import Engine, _module_name_from_path
-from pytest_leela.models import RunResult
+from pytest_leela.engine import Engine, _clean_process_state, _module_name_from_path
+from pytest_leela.import_hook import MutatingFinder
+from pytest_leela.models import Mutant, MutationPoint, RunResult
 from pytest_leela.resources import ResourceLimits
 
 
@@ -16,6 +19,85 @@ def describe_engine():
         from pytest_leela.engine import Engine
 
         assert Engine is not None
+
+
+def _make_dummy_finder() -> MutatingFinder:
+    """Create a MutatingFinder with minimal dummy data."""
+    point = MutationPoint(
+        file_path="dummy.py",
+        module_name="dummy",
+        lineno=1,
+        col_offset=0,
+        node_type="BinOp",
+        original_op="Add",
+        inferred_type=None,
+    )
+    mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+    return MutatingFinder(target_modules={"dummy": "x = 1"}, mutant=mutant)
+
+
+def describe_clean_process_state():
+    def it_removes_stale_mutating_finders_from_meta_path():
+        """Kills engine.py line 67: not isinstance(f, MutatingFinder) → isinstance(...)."""
+        stale_finder = _make_dummy_finder()
+        original_meta_path = sys.meta_path[:]
+        try:
+            sys.meta_path.insert(0, stale_finder)
+            assert stale_finder in sys.meta_path
+
+            _clean_process_state()
+
+            assert stale_finder not in sys.meta_path
+        finally:
+            sys.meta_path[:] = original_meta_path
+
+    def it_preserves_non_mutating_finders_in_meta_path():
+        original_meta_path = sys.meta_path[:]
+        original_non_mutating = [
+            f for f in sys.meta_path if not isinstance(f, MutatingFinder)
+        ]
+        stale_finder = _make_dummy_finder()
+        try:
+            sys.meta_path.insert(0, stale_finder)
+
+            _clean_process_state()
+
+            remaining = [
+                f for f in sys.meta_path if not isinstance(f, MutatingFinder)
+            ]
+            assert remaining == original_non_mutating
+        finally:
+            sys.meta_path[:] = original_meta_path
+
+    def it_removes_modules_loaded_from_temp_directories():
+        tmp_dir = tempfile.gettempdir()
+        fake_mod = types.ModuleType("_stale_tmp_fixture_mod")
+        fake_mod.__file__ = os.path.join(tmp_dir, "stale_target.py")
+        try:
+            sys.modules["_stale_tmp_fixture_mod"] = fake_mod
+            assert "_stale_tmp_fixture_mod" in sys.modules
+
+            _clean_process_state()
+
+            assert "_stale_tmp_fixture_mod" not in sys.modules
+        finally:
+            sys.modules.pop("_stale_tmp_fixture_mod", None)
+
+    def it_keeps_non_temp_modules():
+        original_keys = set(sys.modules.keys())
+
+        _clean_process_state()
+
+        # All non-temp modules should still be present
+        for key in original_keys:
+            mod = sys.modules.get(key)
+            if mod is None:
+                continue
+            mod_file = getattr(mod, "__file__", None)
+            if mod_file is None:
+                assert key in sys.modules
+            elif not mod_file.startswith(tempfile.gettempdir() + os.sep):
+                assert key in sys.modules
 
 
 def describe_module_name_from_path():
