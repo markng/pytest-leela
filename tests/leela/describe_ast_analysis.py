@@ -146,6 +146,13 @@ def describe_find_mutation_points():
         # +x is UnaryOp(UAdd), not negation (USub)
         assert returns[0].original_op == "expr"
 
+    def it_classifies_return_empty_str_literal():
+        source = "def f() -> str:\n    return ''\n"
+        points = find_mutation_points(source, "test.py", "test")
+        returns = [p for p in points if p.node_type == "Return"]
+        assert len(returns) == 1
+        assert returns[0].original_op == "empty_str_literal"
+
     def it_returns_distinct_values_for_return_types():
         """Verify each return classification gives a unique string."""
         classifications = set()
@@ -160,14 +167,15 @@ def describe_find_mutation_points():
             "def f8(x): return x\n",
             "def f9(): return 0\n",
             "def f10(): return 0.0\n",
+            "def f11(): return ''\n",
         ]
         for src in test_cases:
             points = find_mutation_points(src, "test.py", "test")
             returns = [p for p in points if p.node_type == "Return"]
             assert len(returns) >= 1
             classifications.add(returns[0].original_op)
-        # All 10 should have distinct classifications
-        assert len(classifications) == 10
+        # All 11 should have distinct classifications
+        assert len(classifications) == 11
 
 
 def describe_find_mutation_points_in_file():

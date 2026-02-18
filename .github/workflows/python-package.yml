@@ -36,3 +36,6 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: Mutation testing (self-check)
+      run: |
+        pytest --leela

@@ -52,8 +52,4 @@ def is_non_negative(n: int) -> bool:
 
 
 def clamp_to_range(value: int, low: int, high: int) -> int:
-    if value < low:
-        return low
-    if value > high:
-        return high
-    return value
+    return max(low, min(value, high))

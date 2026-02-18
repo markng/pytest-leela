@@ -8,7 +8,7 @@ from target.calculator import (
     multiply,
     integer_divide,
     negate,
-    absolute,
+    sign,
     clamp,
     sum_of_squares,
     distance,
@@ -77,15 +77,15 @@ def describe_negate():
         assert negate(0) == 0
 
 
-def describe_absolute():
-    def it_returns_positive_for_negative_input():
-        assert absolute(-5) == 5
+def describe_sign():
+    def it_returns_negative_one_for_negative_input():
+        assert sign(-5) == -1
 
-    def it_returns_same_for_positive_input():
-        assert absolute(5) == 5
+    def it_returns_positive_one_for_positive_input():
+        assert sign(5) == 1
 
     def it_returns_zero_for_zero():
-        assert absolute(0) == 0
+        assert sign(0) == 0
 
 
 def describe_clamp():

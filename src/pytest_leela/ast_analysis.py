@@ -156,6 +156,8 @@ def _classify_return_value(node: ast.expr) -> str:
                 return "zero_float_literal"
             return "float_literal"
         if isinstance(node.value, str):
+            if node.value == "":
+                return "empty_str_literal"
             return "str_literal"
     if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.USub):
         return "negation"

@@ -25,18 +25,16 @@ def negate(x: int) -> int:
     return -x
 
 
-def absolute(x: int) -> int:
+def sign(x: int) -> int:
     if x < 0:
-        return -x
-    return x
+        return -1
+    if x > 0:
+        return 1
+    return 0
 
 
 def clamp(value: int, low: int, high: int) -> int:
-    if value < low:
-        return low
-    if value > high:
-        return high
-    return value
+    return max(low, min(value, high))
 
 
 def sum_of_squares(a: int, b: int) -> int:

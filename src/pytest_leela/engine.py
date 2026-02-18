@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import ntpath  # noqa: F401 — keep in sys.modules; Python 3.13 pathlib lazily
+#                              imports ntpath from PurePath.__init__, and
+#                              pytest's assertion rewriter calls PurePath in
+#                              find_spec — if ntpath is absent the import
+#                              re-enters find_spec causing infinite recursion.
 import os
 import sys
 import tempfile

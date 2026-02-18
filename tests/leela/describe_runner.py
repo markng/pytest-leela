@@ -70,26 +70,22 @@ def describe_ResultCollector():
 
 def describe_clear_framework_caches():
     def it_does_not_raise_when_django_is_not_installed():
-        with patch.dict("sys.modules", {"django.urls": None}):
+        with patch("pytest_leela.runner._django_clear_url_caches", None):
             # Should silently pass when Django is unavailable
             _clear_framework_caches()
 
     def it_calls_clear_url_caches_when_django_is_available():
         mock_clear = MagicMock()
-        mock_django_urls = MagicMock()
-        mock_django_urls.clear_url_caches = mock_clear
 
-        with patch.dict("sys.modules", {"django.urls": mock_django_urls}):
+        with patch("pytest_leela.runner._django_clear_url_caches", mock_clear):
             _clear_framework_caches()
 
         mock_clear.assert_called_once()
 
     def it_is_idempotent_when_called_multiple_times():
         mock_clear = MagicMock()
-        mock_django_urls = MagicMock()
-        mock_django_urls.clear_url_caches = mock_clear
 
-        with patch.dict("sys.modules", {"django.urls": mock_django_urls}):
+        with patch("pytest_leela.runner._django_clear_url_caches", mock_clear):
             _clear_framework_caches()
             _clear_framework_caches()
             _clear_framework_caches()

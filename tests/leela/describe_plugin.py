@@ -329,3 +329,160 @@ def describe_LeelaPlugin():
             "tests/test_a.py::test_one",
             "tests/test_b.py::test_two",
         ]
+
+    def it_sets_exitstatus_to_1_when_mutants_survived():
+        """When result.survived is non-empty, exitstatus should be 1."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.models import RunResult, MutantResult, Mutant, MutationPoint
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+
+        # Create a RunResult with one survived mutant
+        point = MutationPoint(
+            file_path="/fake/mod.py",
+            module_name="mod",
+            lineno=10,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type="int",
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=1)
+        survived_result = MutantResult(
+            mutant=mutant, killed=False, tests_run=5, killing_test=None, time_seconds=0.1
+        )
+        run_result = RunResult(
+            target_files=["/fake/mod.py"],
+            total_mutants=1,
+            mutants_tested=1,
+            mutants_pruned=0,
+            results=[survived_result],
+            wall_time_seconds=0.5,
+        )
+
+        mock_engine_cls = MagicMock()
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = run_result
+
+        with (
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Verify exitstatus was set to 1
+        assert session.exitstatus == 1
+
+    def it_keeps_exitstatus_0_when_all_mutants_killed():
+        """When result.survived is empty, exitstatus should remain 0."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.models import RunResult, MutantResult, Mutant, MutationPoint
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0  # Start with 0
+
+        # Create a RunResult with no survived mutants (all killed)
+        point = MutationPoint(
+            file_path="/fake/mod.py",
+            module_name="mod",
+            lineno=10,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type="int",
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=1)
+        killed_result = MutantResult(
+            mutant=mutant, killed=True, tests_run=5, killing_test="test_a.py::test_one", time_seconds=0.1
+        )
+        run_result = RunResult(
+            target_files=["/fake/mod.py"],
+            total_mutants=1,
+            mutants_tested=1,
+            mutants_pruned=0,
+            results=[killed_result],
+            wall_time_seconds=0.5,
+        )
+
+        mock_engine_cls = MagicMock()
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = run_result
+
+        with (
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Verify exitstatus remained 0
+        assert session.exitstatus == 0
+
+    def it_keeps_exitstatus_0_when_no_mutants_found():
+        """When total_mutants is 0, exitstatus should remain 0."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.models import RunResult
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0  # Start with 0
+
+        # Create a RunResult with no mutants found
+        run_result = RunResult(
+            target_files=["/fake/mod.py"],
+            total_mutants=0,
+            mutants_tested=0,
+            mutants_pruned=0,
+            results=[],
+            wall_time_seconds=0.1,
+        )
+
+        mock_engine_cls = MagicMock()
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = run_result
+
+        with (
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Verify exitstatus remained 0
+        assert session.exitstatus == 0

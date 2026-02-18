@@ -36,13 +36,8 @@ def first_char(text: str) -> str | None:
 
 
 def safe_upper(text: str | None) -> str:
-    if text is None:
-        return ""
-    return text.upper()
+    return (text or "").upper()
 
 
 def pad_left(text: str, width: int, char: str) -> str:
-    if len(text) >= width:
-        return text
-    padding: str = char * (width - len(text))
-    return padding + text
+    return text.rjust(width, char)

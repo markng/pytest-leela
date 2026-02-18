@@ -137,3 +137,6 @@ class LeelaPlugin:
             tw.write(report)
         else:
             print(report)
+
+        if result.survived:
+            session.exitstatus = 1

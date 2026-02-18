@@ -4,10 +4,21 @@ from __future__ import annotations
 
 import contextlib
 import io
+import ntpath  # noqa: F401 — keep in sys.modules (see engine.py comment)
 import os
+import posixpath  # noqa: F401 — same as ntpath
 import sys
 import time
 from typing import Any
+
+# Save references to stdlib path modules.  During self-mutation the inner
+# pytest.main() may evict these from sys.modules; we need to restore them
+# *without* going through the import machinery (which would trigger
+# pytest's assertion rewriter → PurePath → import ntpath → recursion).
+_STDLIB_PATH_MODULES = {
+    "ntpath": sys.modules["ntpath"],
+    "posixpath": sys.modules["posixpath"],
+}
 
 import pytest
 
@@ -18,6 +29,18 @@ from pytest_leela.import_hook import (
     remove_hook,
 )
 from pytest_leela.models import Mutant, MutantResult
+
+# Pre-cache Django's clear_url_caches at import time.  Doing the import
+# inside _clear_framework_caches() is fragile: during self-mutation the
+# import machinery may be in a degraded state (pytest's assertion rewriter
+# creates PurePath objects which lazily ``import ntpath`` on Python 3.13,
+# causing infinite recursion through find_spec when ntpath is absent from
+# sys.modules).  Capturing the reference once at module load avoids the
+# problem entirely.
+try:
+    from django.urls import clear_url_caches as _django_clear_url_caches
+except ImportError:
+    _django_clear_url_caches = None
 
 # Prefixes for modules that should never be evicted between mutation runs.
 _KEEP_PREFIXES = (
@@ -37,12 +60,8 @@ def _clear_framework_caches() -> None:
     so mutations won't take effect unless these caches are cleared between
     mutant runs.
     """
-    # Django URL resolver caches view function references via @functools.cache
-    try:
-        from django.urls import clear_url_caches
-        clear_url_caches()
-    except ImportError:
-        pass
+    if _django_clear_url_caches is not None:
+        _django_clear_url_caches()
 
 
 def _clear_user_modules() -> None:
@@ -129,8 +148,13 @@ def run_tests_for_mutant(
         # (AssertionRewritingHook, etc.) and imports modules.  Without
         # restoring after each run, hooks accumulate across 300+ mutant
         # runs and break test collection/execution.
+        #
+        # IMPORTANT: save full sys.modules snapshot (not just keys).
+        # During self-mutation, mutated cleanup code (e.g. _clear_user_modules
+        # with ``and`` → ``or``) can mass-evict stdlib modules.  We must
+        # restore them after each inner run.
         saved_meta_path = sys.meta_path[:]
-        saved_module_keys = set(sys.modules.keys())
+        saved_modules = dict(sys.modules)
 
         # Run pytest in-process (suppress noisy output)
         try:
@@ -153,12 +177,13 @@ def run_tests_for_mutant(
             # so outer state is preserved.
             sys.meta_path[:] = saved_meta_path
 
-            # Remove CWD-local modules added by the inner run.  We must
-            # NOT evict stdlib/frozen modules (ntpath, posixpath etc.)
-            # as they are needed by pytest teardown.
+            # Restore any modules evicted during the inner run (e.g. by
+            # mutated cleanup code).  Then remove CWD-local modules that
+            # the inner run added.
+            sys.modules.update(saved_modules)
             cwd_prefix = os.getcwd() + os.sep
             for key in list(sys.modules.keys()):
-                if key not in saved_module_keys:
+                if key not in saved_modules:
                     mod = sys.modules.get(key)
                     mod_file = getattr(mod, "__file__", None) if mod is not None else None
                     if mod_file is not None and mod_file.startswith(cwd_prefix):
@@ -193,3 +218,10 @@ def run_tests_for_mutant(
             f for f in sys.meta_path
             if not isinstance(f, MutatingFinder)
         ]
+
+        # Restore stdlib path modules that may have been evicted during
+        # cleanup.  Must use direct dict assignment — ``import ntpath``
+        # would go through the import machinery, hitting pytest's
+        # assertion rewriter → PurePath → import ntpath → recursion.
+        for mod_name, mod_obj in _STDLIB_PATH_MODULES.items():
+            sys.modules.setdefault(mod_name, mod_obj)
