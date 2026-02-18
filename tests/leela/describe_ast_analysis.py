@@ -123,6 +123,20 @@ def describe_find_mutation_points():
         assert len(returns) == 1
         assert returns[0].original_op == "negation"
 
+    def it_classifies_return_zero_int_literal():
+        source = "def f() -> int:\n    return 0\n"
+        points = find_mutation_points(source, "test.py", "test")
+        returns = [p for p in points if p.node_type == "Return"]
+        assert len(returns) == 1
+        assert returns[0].original_op == "zero_int_literal"
+
+    def it_classifies_return_zero_float_literal():
+        source = "def f() -> float:\n    return 0.0\n"
+        points = find_mutation_points(source, "test.py", "test")
+        returns = [p for p in points if p.node_type == "Return"]
+        assert len(returns) == 1
+        assert returns[0].original_op == "zero_float_literal"
+
     def it_classifies_return_negation_not_uadd():
         """UnaryOp with UAdd (e.g. return +x) is NOT 'negation'."""
         source = "def f(x):\n    return +x\n"
@@ -144,14 +158,16 @@ def describe_find_mutation_points():
             "def f6(): return 'hello'\n",
             "def f7(x): return -x\n",
             "def f8(x): return x\n",
+            "def f9(): return 0\n",
+            "def f10(): return 0.0\n",
         ]
         for src in test_cases:
             points = find_mutation_points(src, "test.py", "test")
             returns = [p for p in points if p.node_type == "Return"]
             assert len(returns) >= 1
             classifications.add(returns[0].original_op)
-        # All 8 should have distinct classifications
-        assert len(classifications) == 8
+        # All 10 should have distinct classifications
+        assert len(classifications) == 10
 
 
 def describe_find_mutation_points_in_file():

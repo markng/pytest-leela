@@ -145,8 +145,15 @@ def _classify_return_value(node: ast.expr) -> str:
         if node.value is None:
             return "None"
         if isinstance(node.value, int):
+            # -0 == 0 in Python (integer negative zero is identical to zero),
+            # so negating 0 produces an equivalent mutant.  Skip it.
+            if node.value == 0:
+                return "zero_int_literal"
             return "int_literal"
         if isinstance(node.value, float):
+            # -0.0 == 0.0 in Python, so negating 0.0 is equivalent.
+            if node.value == 0.0:
+                return "zero_float_literal"
             return "float_literal"
         if isinstance(node.value, str):
             return "str_literal"

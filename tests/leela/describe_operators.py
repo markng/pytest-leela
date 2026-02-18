@@ -57,6 +57,36 @@ def describe_mutations_for():
         muts = mutations_for(point, use_types=True)
         assert "False" in muts
 
+    def it_skips_negate_for_zero_int_literal():
+        """return 0 → return -0 is equivalent; no mutation should be generated."""
+        point = _make_point(node_type="Return", original_op="zero_int_literal")
+        assert mutations_for(point, use_types=False) == []
+
+    def it_skips_negate_for_zero_int_literal_typed():
+        """Typed variant: return 0 should also produce no mutations."""
+        point = _make_point(node_type="Return", original_op="zero_int_literal", inferred_type="int")
+        assert mutations_for(point, use_types=True) == []
+
+    def it_skips_negate_for_zero_float_literal():
+        """return 0.0 → return -0.0 is equivalent; no mutation should be generated."""
+        point = _make_point(node_type="Return", original_op="zero_float_literal")
+        assert mutations_for(point, use_types=False) == []
+
+    def it_skips_negate_for_zero_float_literal_typed():
+        """Typed variant: return 0.0 should also produce no mutations."""
+        point = _make_point(node_type="Return", original_op="zero_float_literal", inferred_type="float")
+        assert mutations_for(point, use_types=True) == []
+
+    def it_still_negates_nonzero_int_literal():
+        """Non-zero int literals should still get the negate mutation."""
+        point = _make_point(node_type="Return", original_op="int_literal")
+        assert mutations_for(point, use_types=False) == ["negate"]
+
+    def it_still_negates_nonzero_float_literal():
+        """Non-zero float literals should still get the negate mutation."""
+        point = _make_point(node_type="Return", original_op="float_literal")
+        assert mutations_for(point, use_types=False) == ["negate"]
+
     def it_falls_through_to_untyped_for_unknown_typed_key():
         # A type that doesn't have a typed rule should fall through to untyped
         point = _make_point(node_type="BinOp", original_op="Add", inferred_type="complex")
