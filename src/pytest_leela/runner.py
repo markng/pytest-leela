@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from pytest_leela.import_hook import (
+    MutatingFinder,
     clear_target_modules,
     install_hook,
     remove_hook,
@@ -90,12 +91,6 @@ def run_tests_for_mutant(
     clear_target_modules(module_names)
     _clear_user_modules()
 
-    # Snapshot sys.meta_path and sys.modules keys so the inner
-    # pytest.main() cannot corrupt the outer process state (e.g. by
-    # accumulating stale assertion rewriters or evicting stdlib modules).
-    saved_meta_path = sys.meta_path.copy()
-    saved_module_keys = set(sys.modules.keys())
-
     try:
         collector = _ResultCollector()
 
@@ -113,6 +108,14 @@ def run_tests_for_mutant(
         elif test_dir:
             args.append(test_dir)
 
+        # Snapshot sys.meta_path and sys.modules right BEFORE the inner
+        # pytest.main() call.  Each inner run adds its own hooks
+        # (AssertionRewritingHook, etc.) and imports modules.  Without
+        # restoring after each run, hooks accumulate across 300+ mutant
+        # runs and break test collection/execution.
+        saved_meta_path = sys.meta_path[:]
+        saved_module_keys = set(sys.modules.keys())
+
         # Run pytest in-process (suppress noisy output)
         try:
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
@@ -127,6 +130,23 @@ def run_tests_for_mutant(
                 killing_test="<crashed>",
                 time_seconds=elapsed,
             )
+        finally:
+            # Restore meta_path: removes hooks that inner pytest.main()
+            # added (AssertionRewritingHook etc.).  The saved snapshot
+            # includes our MutatingFinder + the outer session's hooks,
+            # so outer state is preserved.
+            sys.meta_path[:] = saved_meta_path
+
+            # Remove CWD-local modules added by the inner run.  We must
+            # NOT evict stdlib/frozen modules (ntpath, posixpath etc.)
+            # as they are needed by pytest teardown.
+            cwd_prefix = os.getcwd() + os.sep
+            for key in list(sys.modules.keys()):
+                if key not in saved_module_keys:
+                    mod = sys.modules.get(key)
+                    mod_file = getattr(mod, "__file__", None) if mod is not None else None
+                    if mod_file is not None and mod_file.startswith(cwd_prefix):
+                        sys.modules.pop(key, None)
 
         killed = len(collector.failed) > 0 or len(collector.errors) > 0
         killing_test = None
@@ -150,17 +170,9 @@ def run_tests_for_mutant(
         clear_target_modules(module_names)
         _clear_user_modules()
 
-        # Restore sys.meta_path to prevent assertion rewriter accumulation
-        sys.meta_path[:] = saved_meta_path
-
-        # Re-add any stdlib/site-packages modules that were evicted
-        for key in saved_module_keys:
-            if key not in sys.modules:
-                # Module was evicted during inner run — can't restore the
-                # object (it may be stale), but avoid KeyError by leaving
-                # it out.  The important thing is we don't ADD junk.
-                pass
-        # Remove modules added by the inner run that weren't there before
-        for key in list(sys.modules.keys()):
-            if key not in saved_module_keys:
-                sys.modules.pop(key, None)
+        # Safety net: remove any stale MutatingFinders left on
+        # sys.meta_path from crashed previous runs.
+        sys.meta_path[:] = [
+            f for f in sys.meta_path
+            if not isinstance(f, MutatingFinder)
+        ]

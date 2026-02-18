@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import time
 
 from pytest_leela.ast_analysis import find_mutation_points
@@ -49,6 +50,36 @@ def _module_name_from_path(file_path: str) -> str:
     return rel.replace(os.sep, ".")
 
 
+def _clean_process_state() -> None:
+    """Remove stale state left by prior test runs.
+
+    When the engine runs inside ``pytest_sessionfinish`` (i.e. self-
+    mutation), the outer test session may have polluted ``sys.meta_path``
+    with stale ``MutatingFinder`` instances and ``sys.modules`` with
+    temporary modules from test fixtures.  Both must be cleaned up before
+    inner ``pytest.main()`` calls can work correctly.
+    """
+    from pytest_leela.import_hook import MutatingFinder
+
+    # 1. Remove stale MutatingFinders from sys.meta_path
+    sys.meta_path[:] = [
+        f for f in sys.meta_path
+        if not isinstance(f, MutatingFinder)
+    ]
+
+    # 2. Remove modules loaded from temp directories (left by test
+    #    fixtures that create throwaway target files).
+    tmp_prefix = tempfile.gettempdir() + os.sep
+    stale = [
+        name for name, mod in sys.modules.items()
+        if mod is not None
+        and getattr(mod, "__file__", None) is not None
+        and mod.__file__.startswith(tmp_prefix)
+    ]
+    for name in stale:
+        sys.modules.pop(name, None)
+
+
 class Engine:
     """Orchestrates a full mutation testing run."""
 
@@ -64,6 +95,8 @@ class Engine:
         diff_base: str | None = None,
     ) -> RunResult:
         start = time.monotonic()
+
+        _clean_process_state()
 
         if limits is not None:
             apply_limits(limits)

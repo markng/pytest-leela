@@ -79,7 +79,7 @@ def collect_coverage(
     plugin = CoveragePlugin(set(target_files))
 
     args = [
-        test_dir, "-x", "--tb=no", "-q", "--no-header",
+        test_dir, "--tb=no", "-q", "--no-header",
         "--override-ini=addopts=",
         "-p", "no:leela",
         "-p", "no:leela-benchmark",
