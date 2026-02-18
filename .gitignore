@@ -15,7 +15,7 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
-target/
+/target/
 
 # Virtual environments
 .venv/
