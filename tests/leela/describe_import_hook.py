@@ -381,6 +381,83 @@ def describe_MutantApplier():
             assert new_tree.body.body.id == "x"
             assert new_tree.body.orelse.id == "y"
 
+    def describe_break_continue():
+        def it_replaces_break_with_continue():
+            source = "for i in range(10):\n    break\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=2, col_offset=4,
+                node_type="Break", original_op="break", replacement_op="continue",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body[0].body[0], ast.Continue)
+
+        def it_replaces_continue_with_break():
+            source = "for i in range(10):\n    continue\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=2, col_offset=4,
+                node_type="Continue", original_op="continue", replacement_op="break",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body[0].body[0], ast.Break)
+
+        def it_does_not_apply_break_mutant_to_continue():
+            source = "for i in range(10):\n    continue\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=2, col_offset=4,
+                node_type="Break", original_op="break", replacement_op="continue",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body[0].body[0], ast.Continue)
+
+        def it_does_not_apply_continue_mutant_to_break():
+            source = "for i in range(10):\n    break\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=2, col_offset=4,
+                node_type="Continue", original_op="continue", replacement_op="break",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body[0].body[0], ast.Break)
+
+        def it_does_not_apply_non_break_mutant_to_break_node():
+            """Kills and→or on visit_Break guard: _matches True but wrong node_type."""
+            source = "for i in range(10):\n    break\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=2, col_offset=4,
+                node_type="BinOp", original_op="Add", replacement_op="continue",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body[0].body[0], ast.Break)
+
+        def it_does_not_apply_non_continue_mutant_to_continue_node():
+            """Kills and→or on visit_Continue guard: _matches True but wrong node_type."""
+            source = "for i in range(10):\n    continue\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=2, col_offset=4,
+                node_type="BinOp", original_op="Add", replacement_op="break",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body[0].body[0], ast.Continue)
+
     def it_does_not_apply_when_location_mismatches():
         source = "x + y"
         tree = ast.parse(source, mode="eval")

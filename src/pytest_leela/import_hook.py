@@ -106,6 +106,20 @@ class MutantApplier(ast.NodeTransformer):
                 return ast.copy_location(node.orelse, node)
         return self.generic_visit(node)
 
+    def visit_Break(self, node: ast.Break) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "Break":
+            if self.mutant.replacement_op == "continue":
+                self.applied = True
+                return ast.copy_location(ast.Continue(), node)
+        return self.generic_visit(node)
+
+    def visit_Continue(self, node: ast.Continue) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "Continue":
+            if self.mutant.replacement_op == "break":
+                self.applied = True
+                return ast.copy_location(ast.Break(), node)
+        return self.generic_visit(node)
+
     def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "UnaryOp":
             if self.mutant.replacement_op == "_remove":

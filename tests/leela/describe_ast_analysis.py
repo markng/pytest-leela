@@ -323,6 +323,37 @@ def describe_find_mutation_points():
             assert len(ifexps) == 2
 
 
+    def describe_break_continue():
+        def it_finds_break():
+            source = "def f():\n    for i in range(10):\n        break\n"
+            points = find_mutation_points(source, "test.py", "test")
+            breaks = [p for p in points if p.node_type == "Break"]
+            assert len(breaks) == 1
+            assert breaks[0].original_op == "break"
+            assert breaks[0].lineno == 3
+
+        def it_finds_continue():
+            source = "def f():\n    for i in range(10):\n        continue\n"
+            points = find_mutation_points(source, "test.py", "test")
+            continues = [p for p in points if p.node_type == "Continue"]
+            assert len(continues) == 1
+            assert continues[0].original_op == "continue"
+
+        def it_finds_both_in_same_loop():
+            source = (
+                "def f():\n"
+                "    for i in range(10):\n"
+                "        if i == 5:\n"
+                "            break\n"
+                "        continue\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            breaks = [p for p in points if p.node_type == "Break"]
+            continues = [p for p in points if p.node_type == "Continue"]
+            assert len(breaks) == 1
+            assert len(continues) == 1
+
+
 def describe_find_mutation_points_in_file():
     def it_reads_file_and_finds_points(tmp_path):
         from pytest_leela.ast_analysis import find_mutation_points_in_file

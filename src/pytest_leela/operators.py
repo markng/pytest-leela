@@ -52,6 +52,9 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     ("UnaryOp", "Not"): ["_remove"],  # Remove the `not`
     # IfExp (ternary)
     ("IfExp", "ternary"): ["swap_branches", "always_true", "always_false"],
+    # Break/Continue
+    ("Break", "break"): ["continue"],
+    ("Continue", "continue"): ["break"],
     # Return
     ("Return", "True"): ["False"],
     ("Return", "False"): ["True"],
