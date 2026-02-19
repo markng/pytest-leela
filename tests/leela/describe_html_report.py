@@ -9,6 +9,7 @@ from pytest_leela.html_report import (
     _build_html_viewer,
     _build_report_data,
     _escape_json_for_html,
+    _extract_test_sources,
     _format_test_name,
     generate_html_report,
 )
@@ -147,6 +148,10 @@ def describe_format_test_name():
         result = _format_test_name("tests/describe_auth.py::describe_login::context_with_valid_creds::it_returns_200")
         assert result == "login > with valid creds > returns 200"
 
+    def it_strips_it_prefix_from_top_level_test():
+        result = _format_test_name("tests/test.py::it_does_thing")
+        assert result == "does thing"
+
 
 def describe_build_report_data():
     def it_includes_summary_fields():
@@ -185,9 +190,14 @@ def describe_build_report_data():
         lines = file_data["lines"]
         assert "10" in lines
         assert "11" in lines
-        # Coverage entries should be formatted test names, sorted
-        assert lines["10"]["coverage"] == ["add", "sub"]
-        assert lines["11"]["coverage"] == ["add"]
+        # Coverage entries should include formatted display names and original IDs, sorted
+        assert lines["10"]["coverage"] == [
+            {"display": "add", "id": "tests/test_app.py::test_add"},
+            {"display": "sub", "id": "tests/test_app.py::test_sub"},
+        ]
+        assert lines["11"]["coverage"] == [
+            {"display": "add", "id": "tests/test_app.py::test_add"},
+        ]
 
     def it_includes_all_mutants_not_just_survivors():
         killed = _make_mutant_result(True, mutant_id=1)
@@ -237,10 +247,17 @@ def describe_build_report_data():
         data = _build_report_data(run)
 
         mutant_data = list(data["files"].values())[0]["mutants"][0]
-        # Test names are formatted via _format_test_name
-        assert mutant_data["test_ids_run"] == ["add", "sub"]
-        assert mutant_data["killing_tests"] == ["add"]
-        assert mutant_data["killing_test"] == "add"
+        # Test names include display and original ID
+        assert mutant_data["test_ids_run"] == [
+            {"display": "add", "id": "tests/test_app.py::test_add"},
+            {"display": "sub", "id": "tests/test_app.py::test_sub"},
+        ]
+        assert mutant_data["killing_tests"] == [
+            {"display": "add", "id": "tests/test_app.py::test_add"},
+        ]
+        assert mutant_data["killing_test"] == {
+            "display": "add", "id": "tests/test_app.py::test_add",
+        }
 
     def it_handles_empty_results():
         run = _make_run_result(
@@ -390,6 +407,275 @@ def describe_build_report_data():
         assert file_data["mutants"][0]["killed"] is True
 
 
+def describe_extract_test_sources():
+    def it_extracts_function_body_from_simple_test_file(tmp_path):
+        test_file = tmp_path / "test_example.py"
+        test_file.write_text("def test_add():\n    assert 1 + 1 == 2\n")
+
+        node_id = f"{test_file}::test_add"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert node_id in sources
+        assert "def test_add():" in sources[node_id]
+        assert "assert 1 + 1 == 2" in sources[node_id]
+
+    def it_extracts_method_from_test_class(tmp_path):
+        test_file = tmp_path / "test_class.py"
+        test_file.write_text(
+            "class TestMath:\n"
+            "    def test_add(self):\n"
+            "        assert 1 + 1 == 2\n"
+        )
+
+        node_id = f"{test_file}::TestMath::test_add"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert node_id in sources
+        assert "def test_add(self):" in sources[node_id]
+        assert "assert 1 + 1 == 2" in sources[node_id]
+
+    def it_handles_missing_test_file_gracefully():
+        node_id = "/nonexistent/test_missing.py::test_foo"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert sources == {}
+
+    def it_handles_missing_function_gracefully(tmp_path):
+        test_file = tmp_path / "test_other.py"
+        test_file.write_text("def test_real():\n    pass\n")
+
+        node_id = f"{test_file}::test_nonexistent"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert node_id not in sources
+
+    def it_deduplicates_across_mutants(tmp_path):
+        test_file = tmp_path / "test_dedup.py"
+        test_file.write_text("def test_add():\n    assert 1 + 1 == 2\n")
+
+        node_id = f"{test_file}::test_add"
+        mr1 = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        mr2 = MutantResult(
+            mutant=Mutant(
+                point=_make_point(lineno=20), replacement_op="Mult", mutant_id=2,
+            ),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr1, mr2])
+
+        sources = _extract_test_sources(run)
+        assert len(sources) == 1
+        assert node_id in sources
+
+    def it_handles_parametrized_test_node_ids(tmp_path):
+        test_file = tmp_path / "test_param.py"
+        test_file.write_text("def test_add():\n    assert 1 + 1 == 2\n")
+
+        node_id = f"{test_file}::test_add[param1]"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        # Key should be the ORIGINAL node ID (with params)
+        assert node_id in sources
+        assert "def test_add():" in sources[node_id]
+
+    def it_includes_test_sources_in_report_data(tmp_path):
+        test_file = tmp_path / "test_integration.py"
+        test_file.write_text("def test_foo():\n    assert True\n")
+
+        node_id = f"{test_file}::test_foo"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        data = _build_report_data(run)
+        assert "test_sources" in data
+        assert node_id in data["test_sources"]
+
+    def it_extracts_from_nested_describe_blocks(tmp_path):
+        test_file = tmp_path / "describe_math.py"
+        test_file.write_text(
+            "def describe_math():\n"
+            "    def context_addition():\n"
+            "        def it_adds_numbers():\n"
+            "            assert 1 + 1 == 2\n"
+        )
+
+        node_id = f"{test_file}::describe_math::context_addition::it_adds_numbers"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert node_id in sources
+        assert "def it_adds_numbers():" in sources[node_id]
+        assert "assert 1 + 1 == 2" in sources[node_id]
+
+    def it_collects_test_ids_from_coverage_map(tmp_path):
+        test_file = tmp_path / "test_cov.py"
+        test_file.write_text("def test_covered():\n    assert True\n")
+
+        node_id = f"{test_file}::test_covered"
+        cov = CoverageMap()
+        cov.add("/src/app.py", 10, node_id)
+
+        # No test_ids_run or killing_tests — only coverage map references this test
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=False,
+            tests_run=0,
+            killing_test=None,
+            time_seconds=0.01,
+            test_ids_run=[],
+            killing_tests=[],
+        )
+        run = _make_run_result(results=[mr], coverage_map=cov)
+
+        sources = _extract_test_sources(run)
+        assert node_id in sources
+        assert "def test_covered():" in sources[node_id]
+
+    def it_returns_empty_dict_for_no_test_ids():
+        run = _make_run_result(
+            results=[],
+            total_mutants=0,
+            mutants_tested=0,
+        )
+        sources = _extract_test_sources(run)
+        assert sources == {}
+
+    def it_handles_missing_class_container_gracefully(tmp_path):
+        test_file = tmp_path / "test_no_class.py"
+        test_file.write_text("def test_fn():\n    pass\n")
+
+        node_id = f"{test_file}::NonExistentClass::test_fn"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert node_id not in sources
+
+    def it_skips_bare_test_ids_without_separator():
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test="bare_test_name",
+            time_seconds=0.01,
+            test_ids_run=["bare_test_name"],
+            killing_tests=["bare_test_name"],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert "bare_test_name" not in sources
+
+    def it_extracts_async_function_body(tmp_path):
+        test_file = tmp_path / "test_async.py"
+        test_file.write_text("async def test_async():\n    assert True\n")
+
+        node_id = f"{test_file}::test_async"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+
+        sources = _extract_test_sources(run)
+        assert node_id in sources
+        assert "async def test_async():" in sources[node_id]
+        assert "assert True" in sources[node_id]
+
+
 def describe_escape_json_for_html():
     def it_replaces_closing_script_tag():
         assert _escape_json_for_html("</script>") == "<\\/script>"
@@ -445,6 +731,45 @@ def describe_build_html_viewer():
         assert 'id="main"' in html
         assert 'id="footer"' in html
         assert 'id="overlay"' in html
+
+    def it_renders_test_names_as_clickable_links():
+        html = _build_html_viewer("{}")
+        assert 'class="test-link"' in html
+        assert "data-test-id" in html
+
+    def it_includes_test_overlay_markup():
+        html = _build_html_viewer("{}")
+        assert 'id="test-overlay"' in html
+        assert 'id="test-overlay-box"' in html
+        assert 'id="test-overlay-close"' in html
+        assert 'id="test-overlay-source"' in html
+        assert 'id="test-overlay-footer"' in html
+        assert 'id="test-overlay-nav"' in html
+
+    def it_embeds_test_sources_in_json_data(tmp_path):
+        test_file = tmp_path / "test_embed.py"
+        test_file.write_text("def test_hello():\n    assert True\n")
+
+        node_id = f"{test_file}::test_hello"
+        mr = MutantResult(
+            mutant=Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1),
+            killed=True,
+            tests_run=1,
+            killing_test=node_id,
+            time_seconds=0.01,
+            test_ids_run=[node_id],
+            killing_tests=[node_id],
+        )
+        run = _make_run_result(results=[mr])
+        output = str(tmp_path / "report.html")
+        generate_html_report(run, output)
+
+        with open(output) as f:
+            html = f.read()
+        data = _extract_json_from_html(html)
+        assert "test_sources" in data
+        assert node_id in data["test_sources"]
+        assert "def test_hello():" in data["test_sources"][node_id]
 
 
 def _extract_json_from_html(html_content: str) -> dict:

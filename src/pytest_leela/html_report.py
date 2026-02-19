@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
+import textwrap
 from datetime import datetime, timezone
 from typing import Any
 
@@ -62,6 +64,92 @@ def _format_test_name(test_id: str) -> str:
     return " > ".join(cleaned)
 
 
+def _find_function_node(
+    tree: ast.Module, containers: list[str], func_name: str
+) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    """Find a function node in an AST by traversing container scopes.
+
+    ``containers`` is a list of class or function names to drill through
+    (may be empty for top-level functions).  ``func_name`` is the target
+    function name to locate within the innermost scope.
+    """
+    scope: ast.AST = tree
+    for container_name in containers:
+        found = False
+        for node in ast.iter_child_nodes(scope):
+            if (
+                isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == container_name
+            ):
+                scope = node
+                found = True
+                break
+        if not found:
+            return None
+
+    for node in ast.iter_child_nodes(scope):
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == func_name
+        ):
+            return node
+    return None
+
+
+def _extract_test_sources(result: RunResult) -> dict[str, str]:
+    """Extract source code for test functions referenced in the run result.
+
+    Collects all unique test node IDs from mutant results and the coverage
+    map, parses their source files, and returns a mapping from the original
+    node ID to the dedented source code of that test function.
+    """
+    all_test_ids: set[str] = set()
+    for mr in result.results:
+        all_test_ids.update(mr.test_ids_run)
+        all_test_ids.update(mr.killing_tests)
+    if result.coverage_map is not None:
+        for test_ids in result.coverage_map.line_to_tests.values():
+            all_test_ids.update(test_ids)
+
+    if not all_test_ids:
+        return {}
+
+    # Group lookups by file path so each file is read and parsed once.
+    # Each entry is (containers, func_name, original_node_id).
+    file_groups: dict[str, list[tuple[list[str], str, str]]] = {}
+    for node_id in all_test_ids:
+        parts = node_id.split("::")
+        if len(parts) < 2:
+            continue
+        file_path = parts[0]
+        last_part = parts[-1]
+        func_name = last_part.split("[")[0] if "[" in last_part else last_part
+        containers = list(parts[1:-1])
+        if file_path not in file_groups:
+            file_groups[file_path] = []
+        file_groups[file_path].append((containers, func_name, node_id))
+
+    sources: dict[str, str] = {}
+    for file_path, lookups in file_groups.items():
+        try:
+            with open(file_path) as f:
+                file_source = f.read()
+            tree = ast.parse(file_source)
+            file_lines = file_source.splitlines()
+        except (OSError, SyntaxError):
+            continue
+
+        for containers, func_name, node_id in lookups:
+            func_node = _find_function_node(tree, containers, func_name)
+            if func_node is None or func_node.end_lineno is None:
+                continue
+            source_lines = file_lines[func_node.lineno - 1 : func_node.end_lineno]
+            source = textwrap.dedent("\n".join(source_lines))
+            sources[node_id] = source
+
+    return sources
+
+
 def _build_report_data(result: RunResult) -> dict[str, Any]:
     """Build a JSON-serializable data structure from a RunResult.
 
@@ -104,15 +192,15 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
             "tests_run": mr.tests_run,
             "time_seconds": mr.time_seconds,
             "killing_test": (
-                _format_test_name(mr.killing_test)
+                {"display": _format_test_name(mr.killing_test), "id": mr.killing_test}
                 if mr.killing_test
                 else None
             ),
             "killing_tests": [
-                _format_test_name(t) for t in mr.killing_tests
+                {"display": _format_test_name(t), "id": t} for t in mr.killing_tests
             ],
             "test_ids_run": [
-                _format_test_name(t) for t in mr.test_ids_run
+                {"display": _format_test_name(t), "id": t} for t in mr.test_ids_run
             ],
         }
         file_results[rel].append((idx, mutant_data))
@@ -128,7 +216,10 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
         if result.coverage_map is not None:
             for (cov_fp, lineno), test_ids in result.coverage_map.line_to_tests.items():
                 if cov_fp == fp:
-                    formatted = sorted(_format_test_name(t) for t in test_ids)
+                    formatted = sorted(
+                        ({"display": _format_test_name(t), "id": t} for t in test_ids),
+                        key=lambda x: x["display"],
+                    )
                     lines[str(lineno)] = {"coverage": formatted}
 
         # Collect mutants for this file
@@ -180,6 +271,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
         },
         "files": files,
         "survived_index": survived_index,
+        "test_sources": _extract_test_sources(result),
     }
 
 
@@ -543,6 +635,123 @@ html, body {{
     font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
     font-size: 12px;
 }}
+/* --- Test Link --- */
+.test-link {{
+    color: #89b4fa;
+    cursor: pointer;
+}}
+.test-link:hover {{
+    text-decoration: underline;
+}}
+/* --- Test Overlay --- */
+#test-overlay {{
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(17, 17, 27, 0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}}
+#test-overlay.visible {{
+    display: flex;
+}}
+#test-overlay-box {{
+    background: #313244;
+    border: 1px solid #45475a;
+    border-radius: 10px;
+    width: 700px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}}
+#test-overlay-header {{
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #45475a;
+    gap: 8px;
+}}
+#test-overlay-header h2 {{
+    font-size: 15px;
+    font-weight: 600;
+    word-break: break-all;
+}}
+#test-overlay-header .to-file {{
+    flex: 1;
+    font-size: 12px;
+    color: #6c7086;
+    text-align: right;
+}}
+#test-overlay-close {{
+    background: none;
+    border: none;
+    color: #a6adc8;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+}}
+#test-overlay-close:hover {{ color: #cdd6f4; }}
+#test-overlay-body {{
+    overflow-y: auto;
+    flex: 1;
+}}
+#test-overlay-source table {{
+    border-collapse: collapse;
+    width: 100%;
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.55;
+}}
+#test-overlay-source td {{
+    padding: 0 8px;
+    white-space: pre;
+    vertical-align: top;
+}}
+#test-overlay-footer {{
+    border-top: 1px solid #45475a;
+    padding: 10px 16px;
+    font-size: 12px;
+    max-height: 30vh;
+    overflow-y: auto;
+}}
+.to-section {{
+    margin-bottom: 8px;
+}}
+.to-section:last-child {{
+    margin-bottom: 0;
+}}
+.to-label {{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #6c7086;
+    font-weight: 600;
+    margin-bottom: 2px;
+}}
+.to-mutant {{
+    color: #a6e3a1;
+    padding: 1px 0;
+    font-size: 12px;
+}}
+.to-lines {{
+    color: #a6adc8;
+    font-size: 12px;
+    padding: 1px 0;
+}}
+#test-overlay-nav {{
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-top: 1px solid #45475a;
+    padding: 8px 16px;
+}}
+.to-pos {{
+    flex: 1;
+    font-size: 12px;
+    color: #6c7086;
+    text-align: center;
+}}
 /* --- Footer --- */
 #footer {{
     height: 24px;
@@ -590,6 +799,25 @@ html, body {{
         <div id="overlay-list"></div>
     </div>
 </div>
+<!-- Test overlay -->
+<div id="test-overlay">
+    <div id="test-overlay-box">
+        <div id="test-overlay-header">
+            <h2 id="test-overlay-name"></h2>
+            <span class="to-file" id="test-overlay-file"></span>
+            <button id="test-overlay-close">&times;</button>
+        </div>
+        <div id="test-overlay-body">
+            <div id="test-overlay-source"></div>
+        </div>
+        <div id="test-overlay-footer"></div>
+        <div id="test-overlay-nav">
+            <button class="hdr-btn" id="btn-test-prev">&lt; Prev</button>
+            <span id="test-overlay-pos" class="to-pos"></span>
+            <button class="hdr-btn" id="btn-test-next">Next &gt;</button>
+        </div>
+    </div>
+</div>
 <!-- Footer -->
 <div id="footer">Generated by pytest-leela</div>
 <script>
@@ -600,6 +828,10 @@ window.LEELA_DATA = {json_data};
     var summary = D.summary;
     var files = D.files;
     var survivedIndex = D.survived_index;
+    var testSources = D.test_sources || {{}};
+    var testIndex = {{}};
+    var allTestIds = [];
+    var testOverlayPos = -1;
     var currentFile = null;
     var selectedLine = null;
     var survivorPos = -1;
@@ -855,7 +1087,7 @@ window.LEELA_DATA = {json_data};
         if (covInfo && covInfo.coverage && covInfo.coverage.length > 0) {{
             html += '<div class="detail-section"><h3>Coverage (' + covInfo.coverage.length + " tests)</h3>";
             covInfo.coverage.forEach(function(t) {{
-                html += '<div class="detail-test">' + esc(t) + "</div>";
+                html += '<div class="detail-test"><span class="test-link" data-test-id="' + esc(t.id) + '">' + esc(t.display) + "</span></div>";
             }});
             html += "</div>";
         }} else {{
@@ -880,14 +1112,14 @@ window.LEELA_DATA = {json_data};
                 if (m.killed && m.killing_tests && m.killing_tests.length > 0) {{
                     html += '<div class="mc-tests"><div class="mc-label">Killing tests:</div>';
                     m.killing_tests.forEach(function(t) {{
-                        html += '<div class="detail-test" style="color:#a6e3a1;">' + esc(t) + "</div>";
+                        html += '<div class="detail-test"><span class="test-link" data-test-id="' + esc(t.id) + '" style="color:#a6e3a1;">' + esc(t.display) + "</span></div>";
                     }});
                     html += "</div>";
                 }}
                 if (m.test_ids_run && m.test_ids_run.length > 0) {{
                     html += '<div class="mc-tests"><div class="mc-label">Tests run (' + m.tests_run + "):</div>";
                     m.test_ids_run.forEach(function(t) {{
-                        html += '<div class="detail-test">' + esc(t) + "</div>";
+                        html += '<div class="detail-test"><span class="test-link" data-test-id="' + esc(t.id) + '">' + esc(t.display) + "</span></div>";
                     }});
                     html += "</div>";
                 }}
@@ -959,6 +1191,103 @@ window.LEELA_DATA = {json_data};
         }}
     }}
 
+    /* --- Test Index --- */
+    function buildTestIndex() {{
+        var idSet = {{}};
+        Object.keys(files).forEach(function(fname) {{
+            var f = files[fname];
+            f.mutants.forEach(function(m) {{
+                if (m.killing_tests) m.killing_tests.forEach(function(t) {{
+                    idSet[t.id] = true;
+                    if (!testIndex[t.id]) testIndex[t.id] = {{mutants_killed: [], lines_covered: {{}}}};
+                    testIndex[t.id].mutants_killed.push({{file: fname, lineno: m.lineno, description: m.description}});
+                }});
+                if (m.test_ids_run) m.test_ids_run.forEach(function(t) {{ idSet[t.id] = true; }});
+            }});
+            Object.keys(f.lines).forEach(function(lnStr) {{
+                var covInfo = f.lines[lnStr];
+                if (covInfo && covInfo.coverage) {{
+                    covInfo.coverage.forEach(function(t) {{
+                        idSet[t.id] = true;
+                        if (!testIndex[t.id]) testIndex[t.id] = {{mutants_killed: [], lines_covered: {{}}}};
+                        if (!testIndex[t.id].lines_covered[fname]) testIndex[t.id].lines_covered[fname] = [];
+                        testIndex[t.id].lines_covered[fname].push(parseInt(lnStr, 10));
+                    }});
+                }}
+            }});
+        }});
+        allTestIds = Object.keys(idSet).sort();
+    }}
+
+    /* --- Test Overlay --- */
+    function showTestOverlay(testId) {{
+        toggleOverlay(false);
+        var source = testSources[testId];
+        var info = testIndex[testId] || {{mutants_killed: [], lines_covered: {{}}}};
+        var pos = allTestIds.indexOf(testId);
+        testOverlayPos = pos;
+
+        var parts = testId.split("::");
+        var filePath = parts[0];
+        var testName = parts.slice(1).join(" :: ");
+        document.getElementById("test-overlay-name").textContent = testName;
+        document.getElementById("test-overlay-file").textContent = filePath;
+
+        var sourceEl = document.getElementById("test-overlay-source");
+        if (source) {{
+            var lines = source.split("\\n");
+            var shtml = "<table><tbody>";
+            lines.forEach(function(line, idx) {{
+                shtml += '<tr><td class="ln">' + (idx + 1) + '</td><td class="code-cell">' + highlight(line) + "</td></tr>";
+            }});
+            shtml += "</tbody></table>";
+            sourceEl.innerHTML = shtml;
+        }} else {{
+            sourceEl.innerHTML = '<div style="padding:16px;color:#6c7086;">Source not available</div>';
+        }}
+
+        var footerEl = document.getElementById("test-overlay-footer");
+        var fhtml = "";
+        if (info.mutants_killed.length > 0) {{
+            fhtml += '<div class="to-section"><div class="to-label">Kills ' + info.mutants_killed.length + " mutant(s)</div>";
+            info.mutants_killed.forEach(function(mk) {{
+                fhtml += '<div class="to-mutant">' + esc(mk.file) + ":" + mk.lineno + " " + esc(mk.description) + "</div>";
+            }});
+            fhtml += "</div>";
+        }}
+        var covFiles = Object.keys(info.lines_covered).sort();
+        if (covFiles.length > 0) {{
+            fhtml += '<div class="to-section"><div class="to-label">Covers lines</div>';
+            covFiles.forEach(function(cf) {{
+                var lineNums = info.lines_covered[cf].sort(function(a, b) {{ return a - b; }});
+                fhtml += '<div class="to-lines">' + esc(cf) + ": " + lineNums.join(", ") + "</div>";
+            }});
+            fhtml += "</div>";
+        }}
+        footerEl.innerHTML = fhtml;
+
+        document.getElementById("test-overlay-pos").textContent = (pos + 1) + " / " + allTestIds.length;
+        document.getElementById("test-overlay").classList.add("visible");
+    }}
+
+    function closeTestOverlay() {{
+        document.getElementById("test-overlay").classList.remove("visible");
+    }}
+
+    function nextTest() {{
+        if (allTestIds.length === 0) return;
+        var pos = testOverlayPos + 1;
+        if (pos >= allTestIds.length) pos = 0;
+        showTestOverlay(allTestIds[pos]);
+    }}
+
+    function prevTest() {{
+        if (allTestIds.length === 0) return;
+        var pos = testOverlayPos - 1;
+        if (pos < 0) pos = allTestIds.length - 1;
+        showTestOverlay(allTestIds[pos]);
+    }}
+
     /* --- Event Binding --- */
     document.getElementById("btn-next").addEventListener("click", nextSurvivor);
     document.getElementById("btn-prev").addEventListener("click", prevSurvivor);
@@ -967,15 +1296,39 @@ window.LEELA_DATA = {json_data};
     document.getElementById("overlay").addEventListener("click", function(e) {{
         if (e.target === this) toggleOverlay(false);
     }});
+    document.getElementById("btn-test-prev").addEventListener("click", prevTest);
+    document.getElementById("btn-test-next").addEventListener("click", nextTest);
+    document.getElementById("test-overlay-close").addEventListener("click", closeTestOverlay);
+    document.getElementById("test-overlay").addEventListener("click", function(e) {{
+        if (e.target === this) closeTestOverlay();
+    }});
+    document.addEventListener("click", function(e) {{
+        var link = e.target.closest(".test-link");
+        if (link) {{
+            e.stopPropagation();
+            var testId = link.getAttribute("data-test-id");
+            if (testId) showTestOverlay(testId);
+        }}
+    }});
     document.addEventListener("keydown", function(e) {{
         if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-        if (e.key === "n") nextSurvivor();
-        else if (e.key === "p") prevSurvivor();
-        else if (e.key === "l") toggleOverlay();
-        else if (e.key === "Escape") toggleOverlay(false);
+        var testOvVisible = document.getElementById("test-overlay").classList.contains("visible");
+        var survivorOvVisible = document.getElementById("overlay").classList.contains("visible");
+        if (e.key === "Escape") {{
+            if (testOvVisible) closeTestOverlay();
+            else if (survivorOvVisible) toggleOverlay(false);
+        }} else if (testOvVisible) {{
+            if (e.key === "ArrowRight" || e.key === "n") nextTest();
+            else if (e.key === "ArrowLeft" || e.key === "p") prevTest();
+        }} else {{
+            if (e.key === "n") nextSurvivor();
+            else if (e.key === "p") prevSurvivor();
+            else if (e.key === "l") toggleOverlay();
+        }}
     }});
 
     /* --- Init --- */
+    buildTestIndex();
     renderHeader();
     var sortedFileNames = Object.keys(files).sort();
     if (sortedFileNames.length > 0) loadFile(sortedFileNames[0]);
