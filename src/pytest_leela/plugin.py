@@ -6,6 +6,8 @@ import glob as _glob
 import os
 from pathlib import Path
 
+import pytest
+
 from pytest_leela.engine import Engine
 from pytest_leela.git_diff import changed_files
 from pytest_leela.output import format_terminal_report
@@ -23,7 +25,7 @@ def _is_test_file(basename: str) -> bool:
     )
 
 
-def pytest_addoption(parser):  # type: ignore[no-untyped-def]
+def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("leela", "mutation testing")
     group.addoption(
         "--leela", action="store_true", default=False, help="Enable mutation testing"
@@ -41,6 +43,10 @@ def pytest_addoption(parser):  # type: ignore[no-untyped-def]
         "--max-memory", type=int, default=None, help="Max memory percent"
     )
     group.addoption(
+        "--leela-html", default=None, metavar="PATH",
+        help="Generate interactive HTML mutation report at PATH",
+    )
+    group.addoption(
         "--leela-benchmark",
         action="store_true",
         default=False,
@@ -48,8 +54,8 @@ def pytest_addoption(parser):  # type: ignore[no-untyped-def]
     )
 
 
-def pytest_configure(config):  # type: ignore[no-untyped-def]
-    if config.getoption("leela", default=False):
+def pytest_configure(config: pytest.Config) -> None:
+    if config.getoption("leela", default=False) or config.getoption("leela_html", default=None):
         config.pluginmanager.register(LeelaPlugin(config), "leela-plugin")
     elif config.getoption("leela_benchmark", default=False):
         from pytest_leela.benchmark import BenchmarkPlugin
@@ -87,10 +93,10 @@ def _find_default_targets(rootpath: Path) -> list[str]:
 
 
 class LeelaPlugin:
-    def __init__(self, config):  # type: ignore[no-untyped-def]
+    def __init__(self, config: pytest.Config) -> None:
         self.config = config
 
-    def pytest_sessionfinish(self, session, exitstatus):  # type: ignore[no-untyped-def]
+    def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
             return
 
@@ -137,6 +143,11 @@ class LeelaPlugin:
             tw.write(report)
         else:
             print(report)
+
+        html_path = self.config.getoption("leela_html", default=None)
+        if html_path is not None:
+            from pytest_leela.html_report import generate_html_report
+            generate_html_report(result, html_path)
 
         if result.survived:
             session.exitstatus = 1

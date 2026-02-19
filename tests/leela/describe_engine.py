@@ -336,6 +336,65 @@ def describe_Engine_run():
         assert result.wall_time_seconds == pytest.approx(0.5)
 
 
+    def it_populates_coverage_map_in_run_result(tmp_path, monkeypatch):
+        target = tmp_path / "eng_cov.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "eng_cov_tests"
+        test_dir.mkdir()
+        (test_dir / "test_eng_cov.py").write_text(
+            "from eng_cov import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        engine = Engine(use_types=False, use_coverage=True)
+        result = engine.run([str(target)], str(test_dir))
+
+        assert result.coverage_map is not None
+        assert isinstance(result.coverage_map, CoverageMap)
+
+    def it_sets_coverage_map_to_none_when_coverage_disabled(tmp_path, monkeypatch):
+        target = tmp_path / "eng_nocov.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "eng_nocov_tests"
+        test_dir.mkdir()
+        (test_dir / "test_eng_nocov.py").write_text(
+            "from eng_nocov import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        engine = Engine(use_types=False, use_coverage=False)
+        result = engine.run([str(target)], str(test_dir))
+
+        assert result.coverage_map is None
+
+    def it_populates_target_sources_keyed_by_file_path(tmp_path, monkeypatch):
+        target = tmp_path / "eng_src.py"
+        source = "def add(a, b):\n    return a + b\n"
+        target.write_text(source)
+        test_dir = tmp_path / "eng_src_tests"
+        test_dir.mkdir()
+        (test_dir / "test_eng_src.py").write_text(
+            "from eng_src import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        engine = Engine(use_types=False, use_coverage=False)
+        result = engine.run([str(target)], str(test_dir))
+
+        abs_target = os.path.abspath(str(target))
+        assert abs_target in result.target_sources
+        assert result.target_sources[abs_target] == source
+
+
 def _make_fake_runner(captured_test_ids: list) -> callable:
     """Factory for a fake ``run_tests_for_mutant`` that records test_ids."""
 

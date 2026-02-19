@@ -75,8 +75,8 @@ def _clear_user_modules() -> None:
     to_remove = [
         name for name, mod in sys.modules.items()
         if mod is not None
-        and getattr(mod, "__file__", None) is not None
-        and mod.__file__.startswith(cwd)
+        and (f := getattr(mod, "__file__", None)) is not None
+        and f.startswith(cwd)
         and not name.startswith(_KEEP_PREFIXES)
     ]
     for name in to_remove:
@@ -169,6 +169,8 @@ def run_tests_for_mutant(
                 tests_run=collector.total,
                 killing_test="<crashed>",
                 time_seconds=elapsed,
+                test_ids_run=[],
+                killing_tests=["<crashed>"],
             )
         finally:
             # Restore meta_path: removes hooks that inner pytest.main()
@@ -204,6 +206,8 @@ def run_tests_for_mutant(
             tests_run=collector.total,
             killing_test=killing_test,
             time_seconds=elapsed,
+            test_ids_run=collector.passed + collector.failed + collector.errors,
+            killing_tests=collector.failed + collector.errors,
         )
     finally:
         # Cleanup: remove hook and clear cached modules

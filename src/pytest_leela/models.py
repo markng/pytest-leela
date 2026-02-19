@@ -36,6 +36,8 @@ class MutantResult:
     tests_run: int
     killing_test: str | None  # Which test killed it
     time_seconds: float
+    test_ids_run: list[str] = field(default_factory=list)  # all tests executed
+    killing_tests: list[str] = field(default_factory=list)  # all failing tests
 
 
 @dataclass
@@ -64,6 +66,8 @@ class RunResult:
     mutants_pruned: int  # Removed by type analysis
     results: list[MutantResult]
     wall_time_seconds: float
+    coverage_map: CoverageMap | None = None
+    target_sources: dict[str, str] = field(default_factory=dict)  # file_path -> source
 
     @property
     def killed(self) -> int:

@@ -2,9 +2,15 @@
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
-from pytest_leela.plugin import _find_default_targets, _find_target_files, _is_test_file
+from pytest_leela.plugin import (
+    _find_default_targets,
+    _find_target_files,
+    _is_test_file,
+    pytest_addoption,
+    pytest_configure,
+)
 
 
 def describe_is_test_file():
@@ -486,3 +492,128 @@ def describe_LeelaPlugin():
 
         # Verify exitstatus remained 0
         assert session.exitstatus == 0
+
+    def it_registers_leela_html_option():
+        """--leela-html should be registered as a plugin option."""
+        parser = MagicMock()
+        group = MagicMock()
+        parser.getgroup.return_value = group
+
+        pytest_addoption(parser)
+
+        # Collect all addoption calls and find the --leela-html one
+        leela_html_calls = [
+            c for c in group.addoption.call_args_list
+            if c.args and c.args[0] == "--leela-html"
+        ]
+        assert len(leela_html_calls) == 1
+        kwargs = leela_html_calls[0].kwargs
+        assert kwargs["default"] is None
+        assert kwargs["metavar"] == "PATH"
+
+    def it_activates_plugin_with_leela_html_only():
+        """Plugin should register even without --leela when --leela-html is set."""
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "leela": False,
+            "leela_html": "/tmp/report.html",
+            "leela_benchmark": False,
+        }.get(key, default)
+
+        pytest_configure(config)
+
+        config.pluginmanager.register.assert_called_once()
+        args = config.pluginmanager.register.call_args
+        assert args[1] == {} or args.kwargs == {}
+        # Second positional arg is the name
+        assert args[0][1] == "leela-plugin"
+
+    def it_calls_generate_html_report_when_flag_set():
+        """generate_html_report should be called with result and path."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.models import RunResult
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+            "leela_html": "/tmp/report.html",
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+
+        run_result = RunResult(
+            target_files=["/fake/mod.py"],
+            total_mutants=0,
+            mutants_tested=0,
+            mutants_pruned=0,
+            results=[],
+            wall_time_seconds=0.1,
+        )
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.return_value = run_result
+
+        mock_generate = MagicMock()
+
+        with (
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+            patch("pytest_leela.html_report.generate_html_report", mock_generate),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        mock_generate.assert_called_once_with(run_result, "/tmp/report.html")
+
+    def it_does_not_generate_html_report_without_flag():
+        """No HTML report when --leela-html is not set."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.models import RunResult
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+            "leela_html": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+
+        run_result = RunResult(
+            target_files=["/fake/mod.py"],
+            total_mutants=0,
+            mutants_tested=0,
+            mutants_pruned=0,
+            results=[],
+            wall_time_seconds=0.1,
+        )
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.return_value = run_result
+
+        mock_generate = MagicMock()
+
+        with (
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+            patch("pytest_leela.html_report.generate_html_report", mock_generate),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        mock_generate.assert_not_called()

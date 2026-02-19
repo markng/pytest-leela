@@ -78,8 +78,8 @@ def _clean_process_state() -> None:
     stale = [
         name for name, mod in sys.modules.items()
         if mod is not None
-        and getattr(mod, "__file__", None) is not None
-        and mod.__file__.startswith(tmp_prefix)
+        and (f := getattr(mod, "__file__", None)) is not None
+        and f.startswith(tmp_prefix)
     ]
     for name in stale:
         sys.modules.pop(name, None)
@@ -201,4 +201,6 @@ class Engine:
             mutants_pruned=total_pruned,
             results=results,
             wall_time_seconds=wall_time,
+            coverage_map=coverage_map,
+            target_sources={module_to_file[mod]: src for mod, src in target_sources.items()},
         )

@@ -353,6 +353,103 @@ def describe_run_tests_for_mutant():
 
         assert result.time_seconds == pytest.approx(5.0)
 
+    def it_populates_test_ids_run_and_killing_tests_on_kill(tmp_path, monkeypatch):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "runner_ids_kill.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_ids_kill_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_ids_kill.py").write_text(
+            "from runner_ids_kill import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_ids_kill")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"runner_ids_kill": source},
+            {"runner_ids_kill": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.killed is True
+        assert len(result.test_ids_run) >= 1
+        assert len(result.killing_tests) >= 1
+        # killing_tests should be a subset of test_ids_run
+        assert set(result.killing_tests).issubset(set(result.test_ids_run))
+
+    def it_populates_test_ids_run_with_empty_killing_tests_on_survive(tmp_path, monkeypatch):
+        source = "def is_positive(n):\n    return n > 0\n"
+        target = tmp_path / "runner_ids_surv.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_ids_surv_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_ids_surv.py").write_text(
+            "from runner_ids_surv import is_positive\n\n"
+            "def test_positive():\n"
+            "    assert is_positive(5) is True\n\n"
+            "def test_negative():\n"
+            "    assert is_positive(-5) is False\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_ids_surv")
+        cmp_point = next(
+            p for p in points
+            if p.node_type == "Compare" and p.original_op == "Gt"
+        )
+        mutant = Mutant(point=cmp_point, replacement_op="GtE", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"runner_ids_surv": source},
+            {"runner_ids_surv": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.killed is False
+        assert len(result.test_ids_run) >= 1
+        assert result.killing_tests == []
+
+    def it_populates_crash_fields_when_pytest_main_crashes(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "crash_ids_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "crash_ids_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=RuntimeError("boom")):
+            result = run_tests_for_mutant(
+                mutant,
+                {"crash_ids_target": source},
+                {"crash_ids_target": str(target)},
+                test_dir=str(tmp_path),
+            )
+
+        assert result.killed is True
+        assert result.test_ids_run == []
+        assert result.killing_tests == ["<crashed>"]
+
     def it_removes_stale_mutating_finders_from_meta_path(tmp_path, monkeypatch):
         """Kills line 219: ``not isinstance → isinstance``.
 

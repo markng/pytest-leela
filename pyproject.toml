@@ -51,4 +51,17 @@ pythonpath = ["src", "."]
 python_files = ["test_*.py", "describe_*.py"]
 
 [tool.mypy]
+python_version = "3.12"
 strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+files = ["src/pytest_leela"]
+
+[[tool.mypy.overrides]]
+module = "django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_leela.coverage_tracker"
+disable_error_code = ["arg-type"]

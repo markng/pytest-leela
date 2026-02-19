@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import os
 import time
 from dataclasses import dataclass
-from pathlib import Path
+
+import pytest
 
 from pytest_leela.engine import Engine
 from pytest_leela.plugin import _find_default_targets, _find_target_files
@@ -22,16 +22,19 @@ class _BenchmarkRow:
 class BenchmarkPlugin:
     """Runs mutation testing under different configurations to show speedup attribution."""
 
-    def __init__(self, config):  # type: ignore[no-untyped-def]
+    def __init__(self, config: pytest.Config) -> None:
         self.config = config
 
-    def pytest_sessionfinish(self, session, exitstatus):  # type: ignore[no-untyped-def]
+    def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
             return
 
-        target = self.config.getoption("target", default=None)
-        if target:
-            target_files = _find_target_files(target)
+        targets = self.config.getoption("target", default=[])
+        if targets:
+            target_files: list[str] = []
+            for t in targets:
+                target_files.extend(_find_target_files(t))
+            target_files = sorted(set(target_files))
         else:
             target_files = _find_default_targets(session.config.rootpath)
 
