@@ -92,6 +92,20 @@ class MutantApplier(ast.NodeTransformer):
                 self.applied = True
         return self.generic_visit(node)
 
+    def visit_IfExp(self, node: ast.IfExp) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "IfExp":
+            replacement = self.mutant.replacement_op
+            if replacement == "swap_branches":
+                node.body, node.orelse = node.orelse, node.body
+                self.applied = True
+            elif replacement == "always_true":
+                self.applied = True
+                return ast.copy_location(node.body, node)
+            elif replacement == "always_false":
+                self.applied = True
+                return ast.copy_location(node.orelse, node)
+        return self.generic_visit(node)
+
     def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "UnaryOp":
             if self.mutant.replacement_op == "_remove":

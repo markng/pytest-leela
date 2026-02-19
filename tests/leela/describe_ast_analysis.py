@@ -301,6 +301,28 @@ def describe_find_mutation_points():
             assert augassigns[0].original_op == "RShift"
 
 
+    def describe_ifexp():
+        def it_finds_ternary_expression():
+            source = "def f(x: int) -> int:\n    return x if x > 0 else -x\n"
+            points = find_mutation_points(source, "test.py", "test")
+            ifexps = [p for p in points if p.node_type == "IfExp"]
+            assert len(ifexps) == 1
+            assert ifexps[0].original_op == "ternary"
+
+        def it_records_correct_line_and_col():
+            source = "def f(x):\n    y = x if x else 0\n"
+            points = find_mutation_points(source, "test.py", "test")
+            ifexps = [p for p in points if p.node_type == "IfExp"]
+            assert len(ifexps) == 1
+            assert ifexps[0].lineno == 2
+
+        def it_finds_nested_ternaries():
+            source = "def f(a, b):\n    return a if a else (b if b else 0)\n"
+            points = find_mutation_points(source, "test.py", "test")
+            ifexps = [p for p in points if p.node_type == "IfExp"]
+            assert len(ifexps) == 2
+
+
 def describe_find_mutation_points_in_file():
     def it_reads_file_and_finds_points(tmp_path):
         from pytest_leela.ast_analysis import find_mutation_points_in_file

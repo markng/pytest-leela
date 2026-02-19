@@ -293,6 +293,94 @@ def describe_MutantApplier():
             assert applier.applied is False
             assert isinstance(new_tree.body[0].op, ast.Add)
 
+    def describe_ifexp():
+        def it_swaps_branches():
+            source = "x if cond else y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="IfExp", original_op="ternary", replacement_op="swap_branches",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            # After swap: body should be y (was x), orelse should be x (was y)
+            assert isinstance(new_tree.body, ast.IfExp)
+            assert new_tree.body.body.id == "y"
+            assert new_tree.body.orelse.id == "x"
+
+        def it_replaces_with_always_true_branch():
+            source = "x if cond else y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="IfExp", original_op="ternary", replacement_op="always_true",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            # Entire IfExp replaced with just the body (x)
+            assert isinstance(new_tree.body, ast.Name)
+            assert new_tree.body.id == "x"
+
+        def it_replaces_with_always_false_branch():
+            source = "x if cond else y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="IfExp", original_op="ternary", replacement_op="always_false",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            # Entire IfExp replaced with just the orelse (y)
+            assert isinstance(new_tree.body, ast.Name)
+            assert new_tree.body.id == "y"
+
+        def it_does_not_apply_ifexp_mutant_to_binop():
+            source = "x + y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="IfExp", original_op="ternary", replacement_op="swap_branches",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+
+        def it_does_not_apply_binop_mutant_to_ifexp():
+            source = "x if cond else y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="Add", replacement_op="Sub",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body, ast.IfExp)
+
+        def it_does_not_apply_non_ifexp_mutant_to_ifexp_with_valid_replacement():
+            """Kills and→or on visit_IfExp guard: _matches True but wrong node_type."""
+            source = "x if cond else y"
+            tree = ast.parse(source, mode="eval")
+            # Position matches the IfExp, but node_type says BoolOp
+            # replacement_op swap_branches would apply if guard fails
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BoolOp", original_op="And", replacement_op="swap_branches",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            # IfExp branches must NOT be swapped
+            assert isinstance(new_tree.body, ast.IfExp)
+            assert new_tree.body.body.id == "x"
+            assert new_tree.body.orelse.id == "y"
+
     def it_does_not_apply_when_location_mismatches():
         source = "x + y"
         tree = ast.parse(source, mode="eval")

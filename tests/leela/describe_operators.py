@@ -230,6 +230,17 @@ def describe_mutations_for():
             assert "Sub" in muts
             assert "Mult" in muts
 
+    def describe_ifexp():
+        def it_returns_all_three_mutations():
+            point = _make_point(node_type="IfExp", original_op="ternary")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["swap_branches", "always_true", "always_false"]
+
+        def it_returns_same_mutations_with_types_enabled():
+            point = _make_point(node_type="IfExp", original_op="ternary")
+            muts = mutations_for(point, use_types=True)
+            assert muts == ["swap_branches", "always_true", "always_false"]
+
     def it_falls_through_to_untyped_for_unknown_typed_key():
         # A type that doesn't have a typed rule should fall through to untyped
         point = _make_point(node_type="BinOp", original_op="Add", inferred_type="complex")
