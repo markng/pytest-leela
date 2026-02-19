@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytest-leela"
-version = "0.1.0"
+version = "0.2.0"
 description = "Type-aware mutation testing for Python — fast, opinionated, pytest-native"
 requires-python = ">=3.12"
 readme = "README.md"
