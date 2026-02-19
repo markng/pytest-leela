@@ -458,6 +458,165 @@ def describe_MutantApplier():
             assert applier.applied is False
             assert isinstance(new_tree.body[0].body[0], ast.Continue)
 
+    def describe_except_handler():
+        def it_broadens_typed_except_to_exception():
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    pass\n"
+            )
+            tree = ast.parse(source)
+            # ExceptHandler is at line 3, col 0
+            mutant = _make_mutant(
+                lineno=3, col_offset=0,
+                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            handler = new_tree.body[0].handlers[0]
+            assert isinstance(handler.type, ast.Name)
+            assert handler.type.id == "Exception"
+
+        def it_replaces_body_with_raise():
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    print('error')\n"
+            )
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=3, col_offset=0,
+                node_type="ExceptHandler", original_op="typed", replacement_op="body_to_raise",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            handler = new_tree.body[0].handlers[0]
+            assert len(handler.body) == 1
+            assert isinstance(handler.body[0], ast.Raise)
+
+        def it_replaces_bare_except_body_with_raise():
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except:\n"
+                "    print('error')\n"
+            )
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=3, col_offset=0,
+                node_type="ExceptHandler", original_op="bare", replacement_op="body_to_raise",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            handler = new_tree.body[0].handlers[0]
+            assert len(handler.body) == 1
+            assert isinstance(handler.body[0], ast.Raise)
+
+        def it_does_not_broaden_bare_except():
+            """Bare except has no type to broaden — broaden should not apply."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except:\n"
+                "    pass\n"
+            )
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=3, col_offset=0,
+                node_type="ExceptHandler", original_op="bare", replacement_op="broaden",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+
+        def it_does_not_apply_except_mutant_to_other_node():
+            """ExceptHandler mutant should not affect a BinOp."""
+            source = "x + y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body.op, ast.Add)
+
+        def it_does_not_apply_non_except_mutant_to_except_handler():
+            """Kills and→or on visit_ExceptHandler guard: _matches True but wrong node_type."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    pass\n"
+            )
+            tree = ast.parse(source)
+            # Position matches the ExceptHandler, but node_type says BinOp
+            mutant = _make_mutant(
+                lineno=3, col_offset=0,
+                node_type="BinOp", original_op="Add", replacement_op="broaden",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            handler = new_tree.body[0].handlers[0]
+            # Handler type must remain ValueError, not broadened
+            assert isinstance(handler.type, ast.Name)
+            assert handler.type.id == "ValueError"
+
+        def it_preserves_exception_name_binding():
+            """Broadening should preserve 'as e' binding."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError as e:\n"
+                "    print(e)\n"
+            )
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=3, col_offset=0,
+                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            handler = new_tree.body[0].handlers[0]
+            assert handler.name == "e"
+            assert isinstance(handler.type, ast.Name)
+            assert handler.type.id == "Exception"
+
+        def it_copies_location_from_original_type_not_handler():
+            """Broaden should copy location from the original exception type node."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    pass\n"
+            )
+            tree = ast.parse(source)
+            handler = tree.body[0].handlers[0]
+            original_type_col = handler.type.col_offset
+            mutant = _make_mutant(
+                lineno=3, col_offset=0,
+                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            new_handler = new_tree.body[0].handlers[0]
+            # Exception name should have col_offset of original ValueError, not handler col 0
+            assert new_handler.type.col_offset == original_type_col
+
     def it_does_not_apply_when_location_mismatches():
         source = "x + y"
         tree = ast.parse(source, mode="eval")
@@ -506,6 +665,37 @@ def describe_install_and_remove_hook():
         # Should not raise
         remove_hook(finder)
         assert finder not in sys.meta_path
+
+    def it_propagates_non_valueerror_from_remove():
+        """Non-ValueError exceptions in remove_hook must propagate.
+
+        Kills broaden mutation on except ValueError: pass (line 265).
+        """
+        import pytest
+
+        source = "x = 1\n"
+        point = _make_point(lineno=1, col_offset=0, node_type="BinOp", original_op="Add")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        target_modules = {"__test_dummy_module3__": source}
+        finder = install_hook(target_modules, mutant)
+
+        class BadRemoveList(list):
+            def remove(self, item):
+                raise RuntimeError("unexpected error in meta_path")
+
+        original_meta_path = sys.meta_path
+        sys.meta_path = BadRemoveList(original_meta_path)
+        try:
+            with pytest.raises(RuntimeError, match="unexpected error"):
+                remove_hook(finder)
+        finally:
+            sys.meta_path = original_meta_path
+            # Clean up the finder from the original list
+            try:
+                sys.meta_path.remove(finder)
+            except ValueError:
+                pass
 
 
 def describe_UnaryOp_mutation():

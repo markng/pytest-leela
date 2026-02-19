@@ -241,6 +241,33 @@ def describe_mutations_for():
             muts = mutations_for(point, use_types=True)
             assert muts == ["swap_branches", "always_true", "always_false"]
 
+    def describe_except_handler():
+        def it_returns_broaden_and_body_to_raise_for_typed():
+            point = _make_point(node_type="ExceptHandler", original_op="typed")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["broaden", "body_to_raise"]
+
+        def it_returns_only_body_to_raise_for_bare():
+            point = _make_point(node_type="ExceptHandler", original_op="bare")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["body_to_raise"]
+
+        def it_returns_only_body_to_raise_for_typed_broadest():
+            point = _make_point(node_type="ExceptHandler", original_op="typed_broadest")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["body_to_raise"]
+
+        def it_returns_only_broaden_for_typed_raise_body():
+            point = _make_point(node_type="ExceptHandler", original_op="typed_raise_body")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["broaden"]
+
+        def it_falls_through_to_untyped_with_types_enabled():
+            """No typed rules for ExceptHandler, so falls through to untyped."""
+            point = _make_point(node_type="ExceptHandler", original_op="typed")
+            muts = mutations_for(point, use_types=True)
+            assert muts == ["broaden", "body_to_raise"]
+
     def describe_break_continue():
         def it_mutates_break_to_continue():
             point = _make_point(node_type="Break", original_op="break")
@@ -265,6 +292,21 @@ def describe_mutations_for():
         # Falls through to untyped: ["Sub", "Mult"]
         assert "Sub" in muts
         assert "Mult" in muts
+
+    def it_uses_untyped_when_types_disabled_even_with_inferred_type():
+        """Kills and→or on `if use_types and point.inferred_type:`."""
+        point = _make_point(node_type="BinOp", original_op="Add", inferred_type="int")
+        # With use_types=False, should return untyped [Sub, Mult] (2 items)
+        # not typed int [Sub, Mult, FloorDiv] (3 items)
+        muts = mutations_for(point, use_types=False)
+        assert muts == ["Sub", "Mult"]
+
+    def it_returns_empty_list_for_unknown_node_type():
+        """Kills return expr→return None on UNTYPED_MUTATIONS.get fallback."""
+        point = _make_point(node_type="UnknownNode", original_op="unknown_op")
+        muts = mutations_for(point, use_types=False)
+        assert muts == []
+        assert isinstance(muts, list)
 
 
 def describe_count_pruned():

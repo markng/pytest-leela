@@ -323,6 +323,128 @@ def describe_find_mutation_points():
             assert len(ifexps) == 2
 
 
+    def describe_except_handler():
+        def it_finds_typed_except_handler():
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    pass\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 1
+            assert handlers[0].original_op == "typed"
+            assert handlers[0].lineno == 3
+
+        def it_finds_bare_except_handler():
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except:\n"
+                "    pass\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 1
+            assert handlers[0].original_op == "bare"
+
+        def it_finds_multiple_except_handlers():
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    pass\n"
+                "except TypeError:\n"
+                "    pass\n"
+                "except:\n"
+                "    pass\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 3
+            assert handlers[0].original_op == "typed"
+            assert handlers[1].original_op == "typed"
+            assert handlers[2].original_op == "bare"
+
+        def it_finds_nested_try_except():
+            source = (
+                "try:\n"
+                "    try:\n"
+                "        pass\n"
+                "    except KeyError:\n"
+                "        pass\n"
+                "except ValueError:\n"
+                "    pass\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 2
+            assert all(h.original_op == "typed" for h in handlers)
+
+        def it_skips_broaden_for_except_exception():
+            """except Exception: is already broadest — only body_to_raise."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except Exception:\n"
+                "    print('error')\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 1
+            assert handlers[0].original_op == "typed_broadest"
+
+        def it_skips_body_to_raise_for_bare_raise_body():
+            """Handler body that's already `raise` — only broaden."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    raise\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 1
+            assert handlers[0].original_op == "typed_raise_body"
+
+        def it_skips_entirely_for_except_exception_with_bare_raise():
+            """except Exception: raise — no mutations possible."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except Exception:\n"
+                "    raise\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 0
+
+        def it_skips_bare_except_with_bare_raise_body():
+            """Bare except with just raise — no mutations possible."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except:\n"
+                "    raise\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 0
+
+        def it_does_not_skip_raise_with_explicit_exception():
+            """raise ValueError() is NOT a bare raise — body_to_raise applies."""
+            source = (
+                "try:\n"
+                "    pass\n"
+                "except ValueError:\n"
+                "    raise ValueError('oops')\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            handlers = [p for p in points if p.node_type == "ExceptHandler"]
+            assert len(handlers) == 1
+            assert handlers[0].original_op == "typed"
+
     def describe_break_continue():
         def it_finds_break():
             source = "def f():\n    for i in range(10):\n        break\n"

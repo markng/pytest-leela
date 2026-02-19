@@ -55,6 +55,11 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     # Break/Continue
     ("Break", "break"): ["continue"],
     ("Continue", "continue"): ["break"],
+    # ExceptHandler
+    ("ExceptHandler", "typed"): ["broaden", "body_to_raise"],
+    ("ExceptHandler", "typed_broadest"): ["body_to_raise"],
+    ("ExceptHandler", "typed_raise_body"): ["broaden"],
+    ("ExceptHandler", "bare"): ["body_to_raise"],
     # Return
     ("Return", "True"): ["False"],
     ("Return", "False"): ["True"],

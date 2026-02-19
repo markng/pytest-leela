@@ -120,6 +120,21 @@ class MutantApplier(ast.NodeTransformer):
                 return ast.copy_location(ast.Break(), node)
         return self.generic_visit(node)
 
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "ExceptHandler":
+            replacement = self.mutant.replacement_op
+            if replacement == "broaden" and node.type is not None:
+                original_type = node.type
+                node.type = ast.Name(id="Exception", ctx=ast.Load())
+                ast.copy_location(node.type, original_type)
+                self.applied = True
+            elif replacement == "body_to_raise":
+                raise_stmt = ast.Raise()
+                ast.copy_location(raise_stmt, node)
+                node.body = [raise_stmt]
+                self.applied = True
+        return self.generic_visit(node)
+
     def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "UnaryOp":
             if self.mutant.replacement_op == "_remove":

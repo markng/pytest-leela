@@ -180,6 +180,45 @@ class _MutationPointCollector(ast.NodeVisitor):
         )
         self.generic_visit(node)
 
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        is_already_exception = (
+            isinstance(node.type, ast.Name) and node.type.id == "Exception"
+        )
+        body_is_bare_raise = (
+            len(node.body) == 1
+            and isinstance(node.body[0], ast.Raise)
+            and node.body[0].exc is None
+        )
+
+        if node.type is not None:
+            if is_already_exception and body_is_bare_raise:
+                # No mutations possible — skip entirely
+                pass
+            elif is_already_exception:
+                original_op = "typed_broadest"
+                self._add_except_handler_point(node, original_op)
+            elif body_is_bare_raise:
+                original_op = "typed_raise_body"
+                self._add_except_handler_point(node, original_op)
+            else:
+                self._add_except_handler_point(node, "typed")
+        elif not body_is_bare_raise:
+            self._add_except_handler_point(node, "bare")
+        self.generic_visit(node)
+
+    def _add_except_handler_point(self, node: ast.ExceptHandler, original_op: str) -> None:
+        self.points.append(
+            MutationPoint(
+                file_path=self.file_path,
+                module_name=self.module_name,
+                lineno=node.lineno,
+                col_offset=node.col_offset,
+                node_type="ExceptHandler",
+                original_op=original_op,
+                inferred_type=None,
+            )
+        )
+
     def visit_Return(self, node: ast.Return) -> None:
         if node.value is not None:
             # Determine the original "op" for return mutations
