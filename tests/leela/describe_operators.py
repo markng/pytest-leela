@@ -87,6 +87,80 @@ def describe_mutations_for():
         point = _make_point(node_type="Return", original_op="float_literal")
         assert mutations_for(point, use_types=False) == ["negate"]
 
+    def describe_bitwise_operators():
+        def it_mutates_bitand_untyped():
+            point = _make_point(node_type="BinOp", original_op="BitAnd")
+            muts = mutations_for(point, use_types=False)
+            assert "BitOr" in muts
+            assert "BitXor" in muts
+
+        def it_mutates_bitor_untyped():
+            point = _make_point(node_type="BinOp", original_op="BitOr")
+            muts = mutations_for(point, use_types=False)
+            assert "BitAnd" in muts
+            assert "BitXor" in muts
+
+        def it_mutates_bitxor_untyped():
+            point = _make_point(node_type="BinOp", original_op="BitXor")
+            muts = mutations_for(point, use_types=False)
+            assert "BitAnd" in muts
+            assert "BitOr" in muts
+
+        def it_mutates_lshift_untyped():
+            point = _make_point(node_type="BinOp", original_op="LShift")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["RShift"]
+
+        def it_mutates_rshift_untyped():
+            point = _make_point(node_type="BinOp", original_op="RShift")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["LShift"]
+
+        def it_keeps_all_mutations_for_int_bitand():
+            point = _make_point(node_type="BinOp", original_op="BitAnd", inferred_type="int")
+            muts = mutations_for(point, use_types=True)
+            assert "BitOr" in muts
+            assert "BitXor" in muts
+
+        def it_keeps_all_mutations_for_int_bitor():
+            point = _make_point(node_type="BinOp", original_op="BitOr", inferred_type="int")
+            muts = mutations_for(point, use_types=True)
+            assert "BitAnd" in muts
+            assert "BitXor" in muts
+
+        def it_keeps_all_mutations_for_int_bitxor():
+            point = _make_point(node_type="BinOp", original_op="BitXor", inferred_type="int")
+            muts = mutations_for(point, use_types=True)
+            assert "BitAnd" in muts
+            assert "BitOr" in muts
+
+        def it_keeps_shift_mutations_for_int():
+            point_l = _make_point(node_type="BinOp", original_op="LShift", inferred_type="int")
+            point_r = _make_point(node_type="BinOp", original_op="RShift", inferred_type="int")
+            assert mutations_for(point_l, use_types=True) == ["RShift"]
+            assert mutations_for(point_r, use_types=True) == ["LShift"]
+
+        def it_prunes_bool_bitand_to_single_mutation():
+            point = _make_point(node_type="BinOp", original_op="BitAnd", inferred_type="bool")
+            muts = mutations_for(point, use_types=True)
+            assert muts == ["BitOr"]
+
+        def it_prunes_bool_bitor_to_single_mutation():
+            point = _make_point(node_type="BinOp", original_op="BitOr", inferred_type="bool")
+            muts = mutations_for(point, use_types=True)
+            assert muts == ["BitAnd"]
+
+        def it_keeps_both_mutations_for_bool_bitxor():
+            point = _make_point(node_type="BinOp", original_op="BitXor", inferred_type="bool")
+            muts = mutations_for(point, use_types=True)
+            assert muts == ["BitAnd", "BitOr"]
+
+        def it_falls_through_to_untyped_for_bool_shifts():
+            point_l = _make_point(node_type="BinOp", original_op="LShift", inferred_type="bool")
+            point_r = _make_point(node_type="BinOp", original_op="RShift", inferred_type="bool")
+            assert mutations_for(point_l, use_types=True) == ["RShift"]
+            assert mutations_for(point_r, use_types=True) == ["LShift"]
+
     def it_falls_through_to_untyped_for_unknown_typed_key():
         # A type that doesn't have a typed rule should fall through to untyped
         point = _make_point(node_type="BinOp", original_op="Add", inferred_type="complex")

@@ -178,6 +178,43 @@ def describe_find_mutation_points():
         assert len(classifications) == 11
 
 
+    def describe_bitwise_operators():
+        def it_finds_bitand():
+            source = "def f(x: int, y: int) -> int:\n    return x & y\n"
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) == 1
+            assert binops[0].original_op == "BitAnd"
+
+        def it_finds_bitor():
+            source = "def f(x: int, y: int) -> int:\n    return x | y\n"
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) == 1
+            assert binops[0].original_op == "BitOr"
+
+        def it_finds_bitxor():
+            source = "def f(x: int, y: int) -> int:\n    return x ^ y\n"
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) == 1
+            assert binops[0].original_op == "BitXor"
+
+        def it_finds_lshift():
+            source = "def f(x: int, y: int) -> int:\n    return x << y\n"
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) == 1
+            assert binops[0].original_op == "LShift"
+
+        def it_finds_rshift():
+            source = "def f(x: int, y: int) -> int:\n    return x >> y\n"
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) == 1
+            assert binops[0].original_op == "RShift"
+
+
 def describe_find_mutation_points_in_file():
     def it_reads_file_and_finds_points(tmp_path):
         from pytest_leela.ast_analysis import find_mutation_points_in_file

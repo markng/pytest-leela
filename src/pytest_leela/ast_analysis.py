@@ -17,6 +17,11 @@ _BINOP_NAMES: dict[type, str] = {
     ast.FloorDiv: "FloorDiv",
     ast.Mod: "Mod",
     ast.Pow: "Pow",
+    ast.BitAnd: "BitAnd",
+    ast.BitOr: "BitOr",
+    ast.BitXor: "BitXor",
+    ast.LShift: "LShift",
+    ast.RShift: "RShift",
 }
 
 _CMPOP_NAMES: dict[type, str] = {

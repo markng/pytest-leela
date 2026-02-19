@@ -14,6 +14,11 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     ("BinOp", "FloorDiv"): ["Div", "Mult"],
     ("BinOp", "Mod"): ["FloorDiv", "Mult"],
     ("BinOp", "Pow"): ["Mult"],
+    ("BinOp", "BitAnd"): ["BitOr", "BitXor"],
+    ("BinOp", "BitOr"): ["BitAnd", "BitXor"],
+    ("BinOp", "BitXor"): ["BitAnd", "BitOr"],
+    ("BinOp", "LShift"): ["RShift"],
+    ("BinOp", "RShift"): ["LShift"],
     # Compare
     ("Compare", "Eq"): ["NotEq"],
     ("Compare", "NotEq"): ["Eq"],
@@ -53,12 +58,22 @@ TYPED_MUTATIONS: dict[tuple[str, str, str], list[str]] = {
     ("BinOp", "FloorDiv", "int"): ["Mult", "Add"],
     ("BinOp", "Mod", "int"): ["FloorDiv"],
     ("BinOp", "Pow", "int"): ["Mult"],
+    # int bitwise: full set
+    ("BinOp", "BitAnd", "int"): ["BitOr", "BitXor"],
+    ("BinOp", "BitOr", "int"): ["BitAnd", "BitXor"],
+    ("BinOp", "BitXor", "int"): ["BitAnd", "BitOr"],
+    ("BinOp", "LShift", "int"): ["RShift"],
+    ("BinOp", "RShift", "int"): ["LShift"],
     # float arithmetic
     ("BinOp", "Add", "float"): ["Sub", "Mult", "Div"],
     ("BinOp", "Sub", "float"): ["Add", "Mult"],
     ("BinOp", "Mult", "float"): ["Add", "Div"],
     ("BinOp", "Div", "float"): ["Mult", "Sub"],
     ("BinOp", "Pow", "float"): ["Mult"],
+    # bool bitwise: pruned (bitwise on bools is suspicious)
+    ("BinOp", "BitAnd", "bool"): ["BitOr"],
+    ("BinOp", "BitOr", "bool"): ["BitAnd"],
+    ("BinOp", "BitXor", "bool"): ["BitAnd", "BitOr"],
     # str: only + is valid, and we prune it (can't meaningfully mutate str concat)
     ("BinOp", "Add", "str"): [],
     ("BinOp", "Mult", "str"): [],  # str * int is valid but mutation is meaningless

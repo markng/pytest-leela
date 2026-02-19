@@ -98,6 +98,111 @@ def describe_MutantApplier():
         assert isinstance(ret_node.value, ast.Constant)
         assert ret_node.value.value is False
 
+    def describe_bitwise_operators():
+        def it_applies_bitand_to_bitor():
+            source = "x & y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="BitAnd", replacement_op="BitOr",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.BitOr)
+
+        def it_applies_bitand_to_bitxor():
+            source = "x & y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="BitAnd", replacement_op="BitXor",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.BitXor)
+
+        def it_applies_bitor_to_bitand():
+            source = "x | y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="BitOr", replacement_op="BitAnd",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.BitAnd)
+
+        def it_applies_bitor_to_bitxor():
+            source = "x | y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="BitOr", replacement_op="BitXor",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.BitXor)
+
+        def it_applies_bitxor_to_bitand():
+            source = "x ^ y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="BitXor", replacement_op="BitAnd",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.BitAnd)
+
+        def it_applies_bitxor_to_bitor():
+            source = "x ^ y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="BitXor", replacement_op="BitOr",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.BitOr)
+
+        def it_applies_lshift_to_rshift():
+            source = "x << y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="LShift", replacement_op="RShift",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.RShift)
+
+        def it_applies_rshift_to_lshift():
+            source = "x >> y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="RShift", replacement_op="LShift",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body.op, ast.LShift)
+
     def it_does_not_apply_when_location_mismatches():
         source = "x + y"
         tree = ast.parse(source, mode="eval")

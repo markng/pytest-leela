@@ -36,6 +36,11 @@ _OP_CLASSES: dict[str, type] = {
     "UAdd": ast.UAdd,
     "USub": ast.USub,
     "Not": ast.Not,
+    "BitAnd": ast.BitAnd,
+    "BitOr": ast.BitOr,
+    "BitXor": ast.BitXor,
+    "LShift": ast.LShift,
+    "RShift": ast.RShift,
 }
 
 

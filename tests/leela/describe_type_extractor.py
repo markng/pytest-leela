@@ -218,10 +218,11 @@ def describe_enrich_mutation_points():
             source = "def f(x: foo() | bar()) -> int:\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
             enriched = enrich_mutation_points(source, points)
-            binops = [p for p in enriched if p.node_type == "BinOp"]
-            assert len(binops) >= 1
+            # Filter to the Add BinOp on line 2 (not the BitOr in the annotation)
+            add_binops = [p for p in enriched if p.node_type == "BinOp" and p.original_op == "Add"]
+            assert len(add_binops) >= 1
             # x annotation unresolvable, but right operand 1 is int
-            assert binops[0].inferred_type == "int"
+            assert add_binops[0].inferred_type == "int"
 
         def it_returns_none_for_unsupported_annotation_node():
             """L42: final return None for unhandled AST node types (e.g. Set)."""
