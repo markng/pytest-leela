@@ -67,6 +67,18 @@ pytest --leela --max-memory 4096
 pytest --leela --diff main --max-cores 4 --max-memory 4096
 ```
 
+**Generate an interactive HTML report:**
+
+```bash
+pytest --leela --leela-html report.html
+```
+
+**Benchmark optimization layers:**
+
+```bash
+pytest --leela-benchmark
+```
+
 ---
 
 ## Features
@@ -80,6 +92,27 @@ pytest --leela --diff main --max-cores 4 --max-memory 4096
 - **Git diff mode** — `--diff <ref>` limits mutations to lines changed since that ref
 - **Framework-aware** — clears Django URL caches between mutants so view reloads work correctly
 - **Resource limits** — `--max-cores N` caps parallelism; `--max-memory MB` guards memory
+- **HTML report** — `--leela-html` generates an interactive single-file report with source viewer, survivor navigation, and test source overlay
+- **CI exit codes** — exits non-zero when mutants survive, so CI pipelines fail on incomplete kill rates
+- **Benchmark mode** — `--leela-benchmark` measures the speedup from each optimization layer
+
+---
+
+## HTML Report
+
+`--leela-html report.html` generates a single self-contained HTML file with no external dependencies.
+
+**What it shows:**
+- Overall mutation score badge
+- Per-file breakdown with kill/survive/timeout counts
+- Source code viewer with syntax highlighting
+
+**Interactive features:**
+- Click any line to see mutant details (original → mutated code, status, relevant tests)
+- Survivor navigation overlay — keyboard shortcuts: `n` next survivor, `p` previous, `l` list all, `Esc` close
+- Test source overlay — click any test name to see its source code
+
+Uses the Catppuccin Mocha dark theme.
 
 ---
 
