@@ -215,6 +215,92 @@ def describe_find_mutation_points():
             assert binops[0].original_op == "RShift"
 
 
+    def describe_augmented_assignment():
+        def it_finds_augassign_add():
+            source = "def f(x: int) -> None:\n    x += 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "Add"
+
+        def it_finds_augassign_sub():
+            source = "def f(x: int) -> None:\n    x -= 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "Sub"
+
+        def it_finds_augassign_mult():
+            source = "def f(x: int) -> None:\n    x *= 2\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "Mult"
+
+        def it_finds_augassign_div():
+            source = "def f(x: float) -> None:\n    x /= 2\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "Div"
+
+        def it_finds_augassign_floordiv():
+            source = "def f(x: int) -> None:\n    x //= 2\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "FloorDiv"
+
+        def it_finds_augassign_mod():
+            source = "def f(x: int) -> None:\n    x %= 2\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "Mod"
+
+        def it_finds_augassign_pow():
+            source = "def f(x: int) -> None:\n    x **= 2\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "Pow"
+
+        def it_finds_augassign_bitand():
+            source = "def f(x: int) -> None:\n    x &= 0xFF\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "BitAnd"
+
+        def it_finds_augassign_bitor():
+            source = "def f(x: int) -> None:\n    x |= 0xFF\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "BitOr"
+
+        def it_finds_augassign_bitxor():
+            source = "def f(x: int) -> None:\n    x ^= 0xFF\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "BitXor"
+
+        def it_finds_augassign_lshift():
+            source = "def f(x: int) -> None:\n    x <<= 2\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "LShift"
+
+        def it_finds_augassign_rshift():
+            source = "def f(x: int) -> None:\n    x >>= 2\n"
+            points = find_mutation_points(source, "test.py", "test")
+            augassigns = [p for p in points if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].original_op == "RShift"
+
+
 def describe_find_mutation_points_in_file():
     def it_reads_file_and_finds_points(tmp_path):
         from pytest_leela.ast_analysis import find_mutation_points_in_file

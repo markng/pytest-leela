@@ -220,7 +220,7 @@ def describe_enrich_mutation_points():
             enriched = enrich_mutation_points(source, points)
             # Filter to the Add BinOp on line 2 (not the BitOr in the annotation)
             add_binops = [p for p in enriched if p.node_type == "BinOp" and p.original_op == "Add"]
-            assert len(add_binops) >= 1
+            assert len(add_binops) == 1
             # x annotation unresolvable, but right operand 1 is int
             assert add_binops[0].inferred_type == "int"
 
@@ -481,3 +481,50 @@ def describe_enrich_mutation_points():
             )
             enriched = enrich_mutation_points(source, [unknown_point])
             assert enriched[0].inferred_type is None
+
+    def describe_augmented_assignment():
+        def it_infers_type_from_target_annotation():
+            source = "def f(x: int) -> None:\n    x += 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            augassigns = [p for p in enriched if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].inferred_type == "int"
+
+        def it_infers_type_from_value_when_target_untyped():
+            source = "def f(x) -> None:\n    x += 1.5\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            augassigns = [p for p in enriched if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].inferred_type == "float"
+
+        def it_leaves_type_none_when_both_untyped():
+            source = "def f(x) -> None:\n    x += y\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            augassigns = [p for p in enriched if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].inferred_type is None
+
+        def it_leaves_type_none_when_node_not_found():
+            source = "def f(x: int) -> None:\n    x += 1\n"
+            bad_point = MutationPoint(
+                file_path="test.py",
+                module_name="test",
+                lineno=2,
+                col_offset=999,
+                node_type="AugAssign",
+                original_op="Add",
+                inferred_type=None,
+            )
+            enriched = enrich_mutation_points(source, [bad_point])
+            assert enriched[0].inferred_type is None
+
+        def it_infers_str_type_from_target():
+            source = "def f(s: str) -> None:\n    s += 'world'\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            augassigns = [p for p in enriched if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].inferred_type == "str"

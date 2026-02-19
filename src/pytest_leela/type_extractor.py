@@ -63,7 +63,7 @@ class _TypeCollector(ast.NodeVisitor):
                 if type_str is not None:
                     param_types[arg.arg] = type_str
 
-        return_type: str | None = None
+        return_type = None
         if node.returns is not None:
             return_type = _annotation_to_str(node.returns)
 
@@ -142,6 +142,19 @@ def _infer_expr_type(node: ast.expr, func: _FuncInfo) -> str | None:
     return None
 
 
+def _infer_augassign_type(
+    node: ast.AugAssign, func: _FuncInfo
+) -> str | None:
+    """Infer the type of an AugAssign from target or value annotations."""
+    # Check target (e.g., x += 1 — look up x's type)
+    target_type = _infer_expr_type(node.target, func)
+    if target_type is not None:
+        return target_type
+    # Check value expression
+    value_type = _infer_expr_type(node.value, func)
+    return value_type
+
+
 def _infer_compare_type(
     node: ast.Compare, func: _FuncInfo
 ) -> str | None:
@@ -188,7 +201,7 @@ def enrich_mutation_points(
             enriched.append(point)
             continue
 
-        inferred_type: str | None = None
+        inferred_type = None
 
         if point.node_type == "Return":
             inferred_type = func.return_type
@@ -202,6 +215,11 @@ def enrich_mutation_points(
             node = _find_node_at(tree, point.lineno, point.col_offset, "Compare")
             if isinstance(node, ast.Compare):
                 inferred_type = _infer_compare_type(node, func)
+
+        elif point.node_type == "AugAssign":
+            node = _find_node_at(tree, point.lineno, point.col_offset, "AugAssign")
+            if isinstance(node, ast.AugAssign):
+                inferred_type = _infer_augassign_type(node, func)
 
         elif point.node_type == "BoolOp":
             inferred_type = "bool"

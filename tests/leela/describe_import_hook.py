@@ -203,6 +203,96 @@ def describe_MutantApplier():
             assert applier.applied is True
             assert isinstance(new_tree.body.op, ast.LShift)
 
+    def describe_augmented_assignment():
+        def it_applies_augassign_add_to_sub():
+            source = "x += y\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="AugAssign", original_op="Add", replacement_op="Sub",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body[0].op, ast.Sub)
+
+        def it_applies_augassign_sub_to_add():
+            source = "x -= y\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="AugAssign", original_op="Sub", replacement_op="Add",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body[0].op, ast.Add)
+
+        def it_applies_augassign_mult_to_floordiv():
+            source = "x *= y\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="AugAssign", original_op="Mult", replacement_op="FloorDiv",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body[0].op, ast.FloorDiv)
+
+        def it_applies_augassign_bitand_to_bitor():
+            source = "x &= y\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="AugAssign", original_op="BitAnd", replacement_op="BitOr",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body[0].op, ast.BitOr)
+
+        def it_applies_augassign_lshift_to_rshift():
+            source = "x <<= y\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="AugAssign", original_op="LShift", replacement_op="RShift",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            ast.fix_missing_locations(new_tree)
+            assert applier.applied is True
+            assert isinstance(new_tree.body[0].op, ast.RShift)
+
+        def it_does_not_apply_augassign_mutant_to_binop():
+            source = "x + y"
+            tree = ast.parse(source, mode="eval")
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="AugAssign", original_op="Add", replacement_op="Sub",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body.op, ast.Add)
+
+        def it_does_not_apply_binop_mutant_to_augassign():
+            source = "x += y\n"
+            tree = ast.parse(source)
+            mutant = _make_mutant(
+                lineno=1, col_offset=0,
+                node_type="BinOp", original_op="Add", replacement_op="Sub",
+            )
+            applier = MutantApplier(mutant)
+            new_tree = applier.visit(tree)
+            assert applier.applied is False
+            assert isinstance(new_tree.body[0].op, ast.Add)
+
     def it_does_not_apply_when_location_mismatches():
         source = "x + y"
         tree = ast.parse(source, mode="eval")

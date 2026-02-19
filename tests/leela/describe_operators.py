@@ -161,6 +161,75 @@ def describe_mutations_for():
             assert mutations_for(point_l, use_types=True) == ["RShift"]
             assert mutations_for(point_r, use_types=True) == ["LShift"]
 
+    def describe_augmented_assignment():
+        def it_mutates_augassign_add_untyped():
+            point = _make_point(node_type="AugAssign", original_op="Add")
+            muts = mutations_for(point, use_types=False)
+            assert "Sub" in muts
+            assert "Mult" in muts
+
+        def it_mutates_augassign_sub_untyped():
+            point = _make_point(node_type="AugAssign", original_op="Sub")
+            muts = mutations_for(point, use_types=False)
+            assert "Add" in muts
+            assert "Mult" in muts
+
+        def it_mutates_augassign_mult_untyped():
+            point = _make_point(node_type="AugAssign", original_op="Mult")
+            muts = mutations_for(point, use_types=False)
+            assert "Add" in muts
+            assert "FloorDiv" in muts
+
+        def it_mutates_augassign_pow_untyped():
+            point = _make_point(node_type="AugAssign", original_op="Pow")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["Mult"]
+
+        def it_mutates_augassign_bitand_untyped():
+            point = _make_point(node_type="AugAssign", original_op="BitAnd")
+            muts = mutations_for(point, use_types=False)
+            assert "BitOr" in muts
+            assert "BitXor" in muts
+
+        def it_mutates_augassign_lshift_untyped():
+            point = _make_point(node_type="AugAssign", original_op="LShift")
+            muts = mutations_for(point, use_types=False)
+            assert muts == ["RShift"]
+
+        def it_expands_augassign_add_for_int():
+            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="int")
+            muts = mutations_for(point, use_types=True)
+            assert "Sub" in muts
+            assert "Mult" in muts
+            assert "FloorDiv" in muts
+
+        def it_prunes_augassign_add_for_str():
+            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="str")
+            muts = mutations_for(point, use_types=True)
+            assert muts == []
+
+        def it_expands_augassign_add_for_float():
+            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="float")
+            muts = mutations_for(point, use_types=True)
+            assert "Sub" in muts
+            assert "Div" in muts
+
+        def it_prunes_augassign_bitand_for_bool():
+            point = _make_point(node_type="AugAssign", original_op="BitAnd", inferred_type="bool")
+            muts = mutations_for(point, use_types=True)
+            assert muts == ["BitOr"]
+
+        def it_keeps_augassign_bitxor_mutations_for_bool():
+            point = _make_point(node_type="AugAssign", original_op="BitXor", inferred_type="bool")
+            muts = mutations_for(point, use_types=True)
+            assert muts == ["BitAnd", "BitOr"]
+
+        def it_falls_through_for_augassign_unknown_type():
+            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="complex")
+            muts = mutations_for(point, use_types=True)
+            assert "Sub" in muts
+            assert "Mult" in muts
+
     def it_falls_through_to_untyped_for_unknown_typed_key():
         # A type that doesn't have a typed rule should fall through to untyped
         point = _make_point(node_type="BinOp", original_op="Add", inferred_type="complex")

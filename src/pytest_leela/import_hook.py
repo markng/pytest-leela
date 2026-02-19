@@ -84,6 +84,14 @@ class MutantApplier(ast.NodeTransformer):
                 self.applied = True
         return self.generic_visit(node)
 
+    def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "AugAssign":
+            op_class = _OP_CLASSES.get(self.mutant.replacement_op)
+            if op_class is not None:
+                node.op = op_class()
+                self.applied = True
+        return self.generic_visit(node)
+
     def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "UnaryOp":
             if self.mutant.replacement_op == "_remove":
