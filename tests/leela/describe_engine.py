@@ -10,7 +10,7 @@ import pytest
 
 from pytest_leela.engine import Engine, _clean_process_state, _module_name_from_path
 from pytest_leela.import_hook import MutatingFinder
-from pytest_leela.models import Mutant, MutationPoint, RunResult
+from pytest_leela.models import CoverageMap, Mutant, MutantResult, MutationPoint, RunResult
 from pytest_leela.resources import ResourceLimits
 
 
@@ -334,3 +334,144 @@ def describe_Engine_run():
 
         # 1000.5 - 1000.0 = 0.5 (not 2000.5 from + or 1000500.0 from *)
         assert result.wall_time_seconds == pytest.approx(0.5)
+
+
+def _make_fake_runner(captured_test_ids: list) -> callable:
+    """Factory for a fake ``run_tests_for_mutant`` that records test_ids."""
+
+    def fake_run(mutant, target_sources, module_to_file,
+                 test_ids=None, test_dir=None):
+        captured_test_ids.append(test_ids)
+        return MutantResult(
+            mutant=mutant,
+            killed=True,
+            tests_run=1,
+            killing_test="fake::test",
+            time_seconds=0.01,
+        )
+
+    return fake_run
+
+
+def describe_Engine_run_test_id_fallback():
+    """Tests for line 183: if test_ids is None and test_node_ids is not None."""
+
+    def it_uses_coverage_mapped_tests_not_session_fallback(tmp_path, monkeypatch):
+        """Kills `and → or` and `is → is not` on line 183.
+
+        When coverage maps a mutant line to specific tests, those tests
+        should be used — NOT the session test_node_ids fallback.
+
+        Mutant `and → or`: condition becomes ``test_ids is None or
+        test_node_ids is not None``, which fires even when test_ids is
+        already set by coverage.
+        Mutant `is → is not`: condition becomes ``test_ids is not None
+        and test_node_ids is not None``, which also fires when test_ids
+        is already set.
+        """
+        target = tmp_path / "fb_cov.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        abs_target = os.path.abspath(str(target))
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        # Coverage maps every line to a specific test
+        cov_map = CoverageMap()
+        for lineno in range(1, 10):
+            cov_map.add(abs_target, lineno, "tests/test_specific.py::test_mapped")
+
+        session_tests = [
+            "tests/test_all.py::test_one",
+            "tests/test_all.py::test_two",
+        ]
+        captured: list[list[str] | None] = []
+
+        with patch("pytest_leela.engine.collect_coverage", return_value=cov_map), \
+             patch("pytest_leela.engine.run_tests_for_mutant",
+                   side_effect=_make_fake_runner(captured)):
+            engine = Engine(use_types=False, use_coverage=True)
+            result = engine.run(
+                [str(target)], test_node_ids=session_tests,
+            )
+
+        assert result.mutants_tested > 0
+        for test_ids in captured:
+            # Coverage found tests → use those, not the session fallback
+            assert test_ids == ["tests/test_specific.py::test_mapped"]
+
+    def it_falls_back_to_session_tests_when_no_coverage_match(
+        tmp_path, monkeypatch
+    ):
+        """Kills `is → is not` and `is not → is` on line 183.
+
+        When coverage returns no match for a mutant line but
+        test_node_ids is provided, the engine should fall back to
+        session tests.
+
+        Mutant `is → is not`: condition becomes ``test_ids is not None
+        and test_node_ids is not None`` — first clause is False (test_ids
+        is None from empty coverage), so fallback never fires.
+        Mutant `is not → is`: condition becomes ``test_ids is None and
+        test_node_ids is None`` — second clause is False (test_node_ids
+        is provided), so fallback never fires.
+        """
+        target = tmp_path / "fb_no_cov.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        # Empty coverage map — no tests match any mutant line
+        cov_map = CoverageMap()
+
+        session_tests = [
+            "tests/test_session.py::test_a",
+            "tests/test_session.py::test_b",
+        ]
+        captured: list[list[str] | None] = []
+
+        with patch("pytest_leela.engine.collect_coverage", return_value=cov_map), \
+             patch("pytest_leela.engine.run_tests_for_mutant",
+                   side_effect=_make_fake_runner(captured)):
+            engine = Engine(use_types=False, use_coverage=True)
+            result = engine.run(
+                [str(target)], test_node_ids=session_tests,
+            )
+
+        assert result.mutants_tested > 0
+        for test_ids in captured:
+            # No coverage match → should fall back to session tests
+            assert test_ids == session_tests
+
+    def it_preserves_coverage_tests_when_no_session_tests_available(
+        tmp_path, monkeypatch
+    ):
+        """Validates coverage-mapped tests survive when test_node_ids is None.
+
+        Coverage returns specific tests, test_node_ids is None.
+        Verify the coverage-mapped tests are passed to the runner
+        without being overwritten by the fallback.
+        """
+        target = tmp_path / "fb_covonly.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        abs_target = os.path.abspath(str(target))
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        # Coverage maps every line to a specific test
+        cov_map = CoverageMap()
+        for lineno in range(1, 10):
+            cov_map.add(abs_target, lineno, "tests/test_cov.py::test_one")
+
+        captured: list[list[str] | None] = []
+
+        with patch("pytest_leela.engine.collect_coverage", return_value=cov_map), \
+             patch("pytest_leela.engine.run_tests_for_mutant",
+                   side_effect=_make_fake_runner(captured)):
+            engine = Engine(use_types=False, use_coverage=True)
+            # No session tests available
+            result = engine.run([str(target)], test_node_ids=None)
+
+        assert result.mutants_tested > 0
+        for test_ids in captured:
+            # Coverage found tests → use those, no fallback to overwrite
+            assert test_ids == ["tests/test_cov.py::test_one"]

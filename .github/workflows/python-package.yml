@@ -38,4 +38,4 @@ jobs:
         pytest
     - name: Mutation testing (self-check)
       run: |
-        pytest --leela
+        pytest --leela --target src/pytest_leela/

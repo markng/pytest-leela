@@ -27,8 +27,6 @@ def _annotation_to_str(node: ast.expr) -> str | None:
             inner = _annotation_to_str(node.slice)
             if inner is not None:
                 return f"Optional[{inner}]"
-        if base in ("list", "dict", "set", "tuple"):
-            return base
         return base
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
         # X | None style union
