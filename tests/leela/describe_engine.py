@@ -395,6 +395,127 @@ def describe_Engine_run():
         assert result.target_sources[abs_target] == source
 
 
+def describe_Engine_enabled_categories():
+    def it_stores_enabled_categories_as_none_by_default():
+        engine = Engine()
+        assert engine._enabled_categories is None
+
+    def it_stores_enabled_categories_when_provided():
+        engine = Engine(enabled_categories=["arithmetic", "comparison"])
+        assert engine._enabled_categories == ["arithmetic", "comparison"]
+
+    def it_passes_categories_through_to_mutations_for(tmp_path, monkeypatch):
+        """Verify enabled_categories is forwarded to mutations_for during run."""
+        target = tmp_path / "cat_target.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat.py").write_text(
+            "from cat_target import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        captured_categories: list = []
+        original_mutations_for = __import__(
+            "pytest_leela.operators", fromlist=["mutations_for"]
+        ).mutations_for
+
+        def spy_mutations_for(point, use_types=True, enabled_categories=None):
+            captured_categories.append(enabled_categories)
+            return original_mutations_for(point, use_types, enabled_categories=enabled_categories)
+
+        with patch("pytest_leela.engine.mutations_for", side_effect=spy_mutations_for):
+            engine = Engine(use_types=False, use_coverage=False, enabled_categories=["arithmetic"])
+            engine.run([str(target)], str(test_dir))
+
+        assert len(captured_categories) > 0
+        for cat in captured_categories:
+            assert cat == ["arithmetic"]
+
+    def it_passes_categories_through_to_count_pruned(tmp_path, monkeypatch):
+        """Verify enabled_categories is forwarded to count_pruned during run."""
+        target = tmp_path / "cat_pruned.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_pruned_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat_pruned.py").write_text(
+            "from cat_pruned import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        captured_categories: list = []
+        original_count_pruned = __import__(
+            "pytest_leela.operators", fromlist=["count_pruned"]
+        ).count_pruned
+
+        def spy_count_pruned(points, use_types=True, enabled_categories=None):
+            captured_categories.append(enabled_categories)
+            return original_count_pruned(points, use_types, enabled_categories=enabled_categories)
+
+        with patch("pytest_leela.engine.count_pruned", side_effect=spy_count_pruned):
+            engine = Engine(use_types=True, use_coverage=False, enabled_categories=["comparison"])
+            engine.run([str(target)], str(test_dir))
+
+        assert len(captured_categories) > 0
+        for cat in captured_categories:
+            assert cat == ["comparison"]
+
+    def it_filters_mutants_when_category_restricts_operators(tmp_path, monkeypatch):
+        """With only 'return' enabled, BinOp mutants should be excluded."""
+        target = tmp_path / "cat_filter.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_filter_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat_filter.py").write_text(
+            "from cat_filter import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        # With all categories (None) — should get both BinOp and Return mutants
+        engine_all = Engine(use_types=False, use_coverage=False, enabled_categories=None)
+        result_all = engine_all.run([str(target)], str(test_dir))
+
+        # With only 'return' — should get only Return mutants
+        engine_return = Engine(use_types=False, use_coverage=False, enabled_categories=["return"])
+        result_return = engine_return.run([str(target)], str(test_dir))
+
+        assert result_all.mutants_tested > result_return.mutants_tested
+        for r in result_return.results:
+            assert r.mutant.point.node_type == "Return"
+
+    def it_is_backwards_compatible_with_none_categories(tmp_path, monkeypatch):
+        """None categories = all operators, same as no filtering."""
+        target = tmp_path / "cat_compat.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_compat_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat_compat.py").write_text(
+            "from cat_compat import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        engine_default = Engine(use_types=False, use_coverage=False)
+        result_default = engine_default.run([str(target)], str(test_dir))
+
+        engine_none = Engine(use_types=False, use_coverage=False, enabled_categories=None)
+        result_none = engine_none.run([str(target)], str(test_dir))
+
+        assert result_default.mutants_tested == result_none.mutants_tested
+        assert result_default.total_mutants == result_none.total_mutants
+
+
 def _make_fake_runner(captured_test_ids: list) -> callable:
     """Factory for a fake ``run_tests_for_mutant`` that records test_ids."""
 
