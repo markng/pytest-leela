@@ -1,7 +1,17 @@
 """Tests for pytest_leela.operators — mutation operator registry."""
 
+import pytest
+
 from pytest_leela.models import MutationPoint
-from pytest_leela.operators import count_pruned, mutations_for
+from pytest_leela.operators import (
+    ALL_OPERATORS,
+    DEFAULT_OPERATORS,
+    OPERATOR_CATEGORIES,
+    TYPED_MUTATIONS,
+    UNTYPED_MUTATIONS,
+    count_pruned,
+    mutations_for,
+)
 
 
 def _make_point(
@@ -350,3 +360,230 @@ def describe_count_pruned():
         # str Add: untyped 2, typed 0 -> pruned 2
         # str Mult: untyped 2, typed 0 -> pruned 2
         assert pruned == 4
+
+    def describe_with_enabled_categories():
+        def it_passes_categories_through_to_mutations_for():
+            """count_pruned respects enabled_categories filtering."""
+            point = _make_point(node_type="BinOp", original_op="Add", inferred_type="str")
+            # With arithmetic enabled, str Add still gets pruned (typed=[], untyped=2)
+            pruned = count_pruned([point], use_types=True, enabled_categories=["arithmetic"])
+            assert pruned == 2
+
+        def it_returns_zero_for_filtered_out_category():
+            """Points not in enabled categories produce 0 pruned (both typed and untyped are 0)."""
+            point = _make_point(node_type="BinOp", original_op="Add", inferred_type="str")
+            pruned = count_pruned([point], use_types=True, enabled_categories=["comparison"])
+            assert pruned == 0
+
+
+def describe_operator_categories():
+    def it_covers_every_untyped_mutation_key():
+        """Every key in UNTYPED_MUTATIONS must appear in exactly one category."""
+        all_categorised: set[tuple[str, str]] = set()
+        for keys in OPERATOR_CATEGORIES.values():
+            all_categorised |= keys
+        for key in UNTYPED_MUTATIONS:
+            assert key in all_categorised, f"UNTYPED key {key} not in any category"
+
+    def it_covers_every_typed_mutation_key():
+        """Every (node_type, op) prefix of TYPED_MUTATIONS must appear in a category."""
+        all_categorised: set[tuple[str, str]] = set()
+        for keys in OPERATOR_CATEGORIES.values():
+            all_categorised |= keys
+        for key in TYPED_MUTATIONS:
+            prefix = (key[0], key[1])
+            assert prefix in all_categorised, f"TYPED key prefix {prefix} (from {key}) not in any category"
+
+    def it_assigns_each_key_to_exactly_one_category():
+        """No key appears in more than one category."""
+        seen: dict[tuple[str, str], str] = {}
+        for cat_name, keys in OPERATOR_CATEGORIES.items():
+            for key in keys:
+                assert key not in seen, (
+                    f"Key {key} appears in both '{seen[key]}' and '{cat_name}'"
+                )
+                seen[key] = cat_name
+
+    def it_has_no_empty_categories():
+        """Every category must contain at least one key."""
+        for cat_name, keys in OPERATOR_CATEGORIES.items():
+            assert len(keys) > 0, f"Category '{cat_name}' is empty"
+
+    def it_has_correct_default_operators():
+        """DEFAULT_OPERATORS contains the expected v0.1.0 categories."""
+        assert DEFAULT_OPERATORS == ["arithmetic", "comparison", "boolean", "unary", "return"]
+
+    def it_has_all_operators_matching_category_keys():
+        """ALL_OPERATORS contains every category name."""
+        assert set(ALL_OPERATORS) == set(OPERATOR_CATEGORIES.keys())
+
+    def it_default_operators_are_subset_of_all():
+        """Every default operator is a valid category."""
+        for op in DEFAULT_OPERATORS:
+            assert op in ALL_OPERATORS, f"Default operator '{op}' not in ALL_OPERATORS"
+
+
+def describe_mutations_for_with_categories():
+    def it_returns_mutations_when_category_is_enabled():
+        """An arithmetic operator returns mutations when 'arithmetic' is enabled."""
+        point = _make_point(node_type="BinOp", original_op="Add")
+        muts = mutations_for(point, use_types=False, enabled_categories=["arithmetic"])
+        assert muts == ["Sub", "Mult"]
+
+    def it_returns_empty_when_category_is_not_enabled():
+        """An arithmetic operator returns [] when only 'comparison' is enabled."""
+        point = _make_point(node_type="BinOp", original_op="Add")
+        muts = mutations_for(point, use_types=False, enabled_categories=["comparison"])
+        assert muts == []
+
+    def it_returns_all_when_enabled_categories_is_none():
+        """None means no filtering — backwards compatible."""
+        point = _make_point(node_type="BinOp", original_op="Add")
+        muts = mutations_for(point, use_types=False, enabled_categories=None)
+        assert muts == ["Sub", "Mult"]
+
+    def it_raises_for_unknown_category():
+        """Unknown category names raise ValueError."""
+        point = _make_point(node_type="BinOp", original_op="Add")
+        with pytest.raises(ValueError, match="Unknown operator categories"):
+            mutations_for(point, enabled_categories=["nonexistent"])
+
+    def it_raises_for_mixed_valid_and_unknown():
+        """Even if some categories are valid, unknown ones raise ValueError."""
+        point = _make_point(node_type="BinOp", original_op="Add")
+        with pytest.raises(ValueError, match="nonexistent"):
+            mutations_for(point, enabled_categories=["arithmetic", "nonexistent"])
+
+    def it_filters_comparison_operators():
+        """Comparison operators return mutations when 'comparison' is enabled."""
+        point = _make_point(node_type="Compare", original_op="Lt")
+        muts = mutations_for(point, use_types=False, enabled_categories=["comparison"])
+        assert "LtE" in muts
+        assert "GtE" in muts
+
+    def it_filters_boolean_operators():
+        """Boolean operators work when 'boolean' is enabled."""
+        point = _make_point(node_type="BoolOp", original_op="And")
+        muts = mutations_for(point, use_types=False, enabled_categories=["boolean"])
+        assert muts == ["Or"]
+
+    def it_filters_unary_operators():
+        """Unary operators work when 'unary' is enabled."""
+        point = _make_point(node_type="UnaryOp", original_op="Not")
+        muts = mutations_for(point, use_types=False, enabled_categories=["unary"])
+        assert muts == ["_remove"]
+
+    def it_filters_return_operators():
+        """Return mutations work when 'return' is enabled."""
+        point = _make_point(node_type="Return", original_op="True")
+        muts = mutations_for(point, use_types=False, enabled_categories=["return"])
+        assert muts == ["False"]
+
+    def it_filters_bitwise_operators():
+        """Bitwise operators work when 'bitwise' is enabled."""
+        point = _make_point(node_type="BinOp", original_op="BitAnd")
+        muts = mutations_for(point, use_types=False, enabled_categories=["bitwise"])
+        assert "BitOr" in muts
+        assert "BitXor" in muts
+
+    def it_filters_augmented_assign():
+        """AugAssign operators work when 'augmented_assign' is enabled."""
+        point = _make_point(node_type="AugAssign", original_op="Add")
+        muts = mutations_for(point, use_types=False, enabled_categories=["augmented_assign"])
+        assert "Sub" in muts
+        assert "Mult" in muts
+
+    def it_filters_ternary():
+        """IfExp operators work when 'ternary' is enabled."""
+        point = _make_point(node_type="IfExp", original_op="ternary")
+        muts = mutations_for(point, use_types=False, enabled_categories=["ternary"])
+        assert muts == ["swap_branches", "always_true", "always_false"]
+
+    def it_filters_control_flow():
+        """Break/Continue operators work when 'control_flow' is enabled."""
+        point = _make_point(node_type="Break", original_op="break")
+        muts = mutations_for(point, use_types=False, enabled_categories=["control_flow"])
+        assert muts == ["continue"]
+
+    def it_filters_exception():
+        """ExceptHandler operators work when 'exception' is enabled."""
+        point = _make_point(node_type="ExceptHandler", original_op="typed")
+        muts = mutations_for(point, use_types=False, enabled_categories=["exception"])
+        assert muts == ["broaden", "body_to_raise"]
+
+    def it_supports_multiple_categories():
+        """Multiple categories can be combined."""
+        point_arith = _make_point(node_type="BinOp", original_op="Add")
+        point_cmp = _make_point(node_type="Compare", original_op="Lt")
+        cats = ["arithmetic", "comparison"]
+        assert mutations_for(point_arith, use_types=False, enabled_categories=cats) == ["Sub", "Mult"]
+        assert "LtE" in mutations_for(point_cmp, use_types=False, enabled_categories=cats)
+
+    def it_respects_type_awareness_within_category():
+        """Category filtering and type awareness work together."""
+        point = _make_point(node_type="BinOp", original_op="Add", inferred_type="int")
+        muts = mutations_for(point, use_types=True, enabled_categories=["arithmetic"])
+        assert "FloorDiv" in muts  # typed int Add includes FloorDiv
+
+    def it_prunes_typed_within_category():
+        """Category filtering + type pruning: str Add typed to [] within arithmetic."""
+        point = _make_point(node_type="BinOp", original_op="Add", inferred_type="str")
+        muts = mutations_for(point, use_types=True, enabled_categories=["arithmetic"])
+        assert muts == []
+
+    def describe_default_categories():
+        def it_includes_arithmetic():
+            point = _make_point(node_type="BinOp", original_op="Add")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == ["Sub", "Mult"]
+
+        def it_includes_comparison():
+            point = _make_point(node_type="Compare", original_op="Eq")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == ["NotEq"]
+
+        def it_includes_boolean():
+            point = _make_point(node_type="BoolOp", original_op="And")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == ["Or"]
+
+        def it_includes_unary():
+            point = _make_point(node_type="UnaryOp", original_op="USub")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == ["UAdd"]
+
+        def it_includes_return():
+            point = _make_point(node_type="Return", original_op="True")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == ["False"]
+
+        def it_excludes_bitwise():
+            point = _make_point(node_type="BinOp", original_op="BitAnd")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == []
+
+        def it_excludes_augmented_assign():
+            point = _make_point(node_type="AugAssign", original_op="Add")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == []
+
+        def it_excludes_ternary():
+            point = _make_point(node_type="IfExp", original_op="ternary")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == []
+
+        def it_excludes_control_flow():
+            point = _make_point(node_type="Break", original_op="break")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == []
+
+        def it_excludes_exception():
+            point = _make_point(node_type="ExceptHandler", original_op="typed")
+            muts = mutations_for(point, use_types=False, enabled_categories=DEFAULT_OPERATORS)
+            assert muts == []
+
+    def it_allows_empty_category_list():
+        """Empty list means nothing is enabled — all mutations are filtered out."""
+        point = _make_point(node_type="BinOp", original_op="Add")
+        muts = mutations_for(point, use_types=False, enabled_categories=[])
+        assert muts == []

@@ -266,12 +266,32 @@ def _classify_return_value(node: ast.expr) -> str:
     return "expr"
 
 
+_SKIP_PRAGMA = "# leela: skip"
+
+
+def _skipped_lines(source: str) -> set[int]:
+    """Return the set of 1-based line numbers containing ``# leela: skip``."""
+    skipped: set[int] = set()
+    for lineno_0, line in enumerate(source.splitlines()):
+        if _SKIP_PRAGMA in line:
+            skipped.add(lineno_0 + 1)  # AST uses 1-based line numbers
+    return skipped
+
+
 def find_mutation_points(source: str, file_path: str, module_name: str) -> list[MutationPoint]:
     """Parse source code and find all mutable AST nodes."""
+    skipped = _skipped_lines(source)
+
+    # Line 1 pragma → skip entire file
+    if 1 in skipped:
+        return []
+
     tree = ast.parse(source, filename=file_path)
     collector = _MutationPointCollector(file_path, module_name)
     collector.visit(tree)
-    return collector.points
+
+    # Filter out mutation points on skipped lines
+    return [p for p in collector.points if p.lineno not in skipped]
 
 
 def find_mutation_points_in_file(file_path: str) -> list[MutationPoint]:

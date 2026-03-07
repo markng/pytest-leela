@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import fnmatch
 import glob as _glob
 import os
 from pathlib import Path
 
 import pytest
 
+from pytest_leela.config import ALL_OPERATORS, load_config
 from pytest_leela.engine import Engine
 from pytest_leela.git_diff import changed_files
 from pytest_leela.output import format_terminal_report
@@ -79,7 +81,11 @@ def _find_target_files(target: str) -> list[str]:
 
 
 def _find_default_targets(rootpath: Path) -> list[str]:
-    """Look for common source directories to use as default targets."""
+    """Look for common source directories to use as default targets.
+
+    Falls back to rootpath itself when no ``src/`` or ``target/`` directory
+    exists, so that projects with a flat layout still get mutation coverage.
+    """
     for candidate in ("target", "src"):
         candidate_dir = rootpath / candidate
         if candidate_dir.is_dir():
@@ -89,7 +95,30 @@ def _find_default_targets(rootpath: Path) -> list[str]:
                 if not p.name.startswith("__")
                 and not _is_test_file(p.name)
             )
-    return []
+    # Fallback: scan rootpath itself for a flat-layout project
+    return sorted(
+        os.path.abspath(str(p))
+        for p in rootpath.rglob("*.py")
+        if not p.name.startswith("__")
+        and not _is_test_file(p.name)
+    )
+
+
+def _apply_excludes(files: list[str], excludes: list[str], rootpath: Path) -> list[str]:
+    """Filter out files matching any of the exclude glob patterns.
+
+    Each file path is made relative to *rootpath* before matching against
+    patterns with :func:`fnmatch.fnmatch`.
+    """
+    if not excludes:
+        return files
+    root = str(rootpath)
+    result: list[str] = []
+    for filepath in files:
+        rel = os.path.relpath(filepath, root)
+        if not any(fnmatch.fnmatch(rel, pat) for pat in excludes):
+            result.append(filepath)
+    return result
 
 
 class LeelaPlugin:
@@ -99,6 +128,14 @@ class LeelaPlugin:
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
             return
+
+        rootpath = session.config.rootpath
+        leela_config = load_config(rootpath)
+
+        # Resolve operator categories
+        enabled_categories = leela_config.operators
+        if "all" in enabled_categories:
+            enabled_categories = list(ALL_OPERATORS)
 
         targets = self.config.getoption("target", default=[])
         diff_base = self.config.getoption("diff", default=None)
@@ -112,7 +149,10 @@ class LeelaPlugin:
         elif diff_base:
             target_files = changed_files(diff_base)
         else:
-            target_files = _find_default_targets(session.config.rootpath)
+            target_files = _find_default_targets(rootpath)
+
+        # Apply exclude patterns from config
+        target_files = _apply_excludes(target_files, leela_config.exclude, rootpath)
 
         if not target_files:
             return
@@ -127,7 +167,7 @@ class LeelaPlugin:
             max_memory_percent=self.config.getoption("max_memory", default=None),
         )
 
-        engine = Engine()
+        engine = Engine(enabled_categories=enabled_categories)
         result = engine.run(
             target_files, test_node_ids=test_node_ids, limits=limits, diff_base=diff_base
         )

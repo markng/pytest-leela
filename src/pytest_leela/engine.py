@@ -88,9 +88,15 @@ def _clean_process_state() -> None:
 class Engine:
     """Orchestrates a full mutation testing run."""
 
-    def __init__(self, use_types: bool = True, use_coverage: bool = True) -> None:
+    def __init__(
+        self,
+        use_types: bool = True,
+        use_coverage: bool = True,
+        enabled_categories: list[str] | None = None,
+    ) -> None:
         self.use_types = use_types
         self.use_coverage = use_coverage
+        self._enabled_categories = enabled_categories
 
     def run(
         self,
@@ -130,11 +136,11 @@ class Engine:
             points = enrich_mutation_points(source, points)
 
             # Track pruned count
-            total_pruned += count_pruned(points, self.use_types)
+            total_pruned += count_pruned(points, self.use_types, enabled_categories=self._enabled_categories)
 
             # Generate mutants
             for point in points:
-                for replacement_op in mutations_for(point, self.use_types):
+                for replacement_op in mutations_for(point, self.use_types, enabled_categories=self._enabled_categories):
                     all_mutants.append(
                         Mutant(
                             point=point,

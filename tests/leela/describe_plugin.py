@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 from pytest_leela.plugin import (
+    _apply_excludes,
     _find_default_targets,
     _find_target_files,
     _is_test_file,
@@ -173,10 +174,17 @@ def describe_find_default_targets():
         assert "__init__.py" not in basenames
         assert "real.py" in basenames
 
-    def it_returns_empty_when_no_standard_dirs(tmp_path):
+    def it_falls_back_to_rootpath_when_no_standard_dirs(tmp_path):
+        """When neither src/ nor target/ exists, scan rootpath itself."""
+        (tmp_path / "app.py").write_text("x = 1\n")
+        result = _find_default_targets(tmp_path)
+        assert len(result) == 1
+        assert "app.py" in result[0]
+
+    def it_returns_empty_when_no_standard_dirs_and_no_py_files(tmp_path):
+        """Empty rootpath with no .py files returns empty list."""
         result = _find_default_targets(tmp_path)
         assert result == []
-        assert result is not None
 
     def it_returns_list_not_none_when_dir_exists(tmp_path):
         src_dir = tmp_path / "src"
@@ -219,7 +227,7 @@ def describe_LeelaPlugin():
         config = MagicMock()
         plugin = LeelaPlugin(config)
         session = MagicMock()
-        # Should not crash, just return
+        # Should not crash, just return — load_config is never reached
         result = plugin.pytest_sessionfinish(session, exitstatus=1)
         assert result is None
         # Engine should NOT have been called
@@ -237,12 +245,16 @@ def describe_LeelaPlugin():
         session.config.rootpath = Path("/tmp/fake")
 
         # When exitstatus is 0, getoption WILL be called
-        plugin.pytest_sessionfinish(session, exitstatus=0)
+        with patch("pytest_leela.plugin.load_config") as mock_load:
+            from pytest_leela.config import LeelaConfig
+            mock_load.return_value = LeelaConfig()
+            plugin.pytest_sessionfinish(session, exitstatus=0)
         config.getoption.assert_called()
 
     def it_skips_when_no_target_files_found():
         """If target_files is empty, should return early."""
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
 
         config = MagicMock()
         config.getoption.return_value = None
@@ -251,7 +263,10 @@ def describe_LeelaPlugin():
         session.config = config
         session.config.rootpath = Path("/tmp/nonexistent_root")
 
-        with patch("pytest_leela.plugin._find_default_targets", return_value=[]):
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch("pytest_leela.plugin._find_default_targets", return_value=[]),
+        ):
             # Should not crash — just returns when no target files
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
@@ -262,6 +277,7 @@ def describe_LeelaPlugin():
         return when files ARE found, skipping the engine entirely.
         """
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -282,6 +298,7 @@ def describe_LeelaPlugin():
         mock_engine.return_value.run.return_value = mock_result
 
         with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
             patch("pytest_leela.plugin._find_target_files", return_value=["/fake/target.py"]),
             patch("pytest_leela.plugin.Engine", mock_engine),
             patch("pytest_leela.plugin.format_terminal_report", return_value="report"),
@@ -299,6 +316,7 @@ def describe_LeelaPlugin():
         letting pytest-leela work with any test layout.
         """
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -322,6 +340,7 @@ def describe_LeelaPlugin():
         mock_engine.run.return_value = MagicMock()
 
         with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
             patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
@@ -339,6 +358,7 @@ def describe_LeelaPlugin():
     def it_sets_exitstatus_to_1_when_mutants_survived():
         """When result.survived is non-empty, exitstatus should be 1."""
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult, MutantResult, Mutant, MutationPoint
 
         config = MagicMock()
@@ -383,6 +403,7 @@ def describe_LeelaPlugin():
         mock_engine.run.return_value = run_result
 
         with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
             patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
@@ -395,6 +416,7 @@ def describe_LeelaPlugin():
     def it_keeps_exitstatus_0_when_all_mutants_killed():
         """When result.survived is empty, exitstatus should remain 0."""
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult, MutantResult, Mutant, MutationPoint
 
         config = MagicMock()
@@ -440,6 +462,7 @@ def describe_LeelaPlugin():
         mock_engine.run.return_value = run_result
 
         with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
             patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
@@ -452,6 +475,7 @@ def describe_LeelaPlugin():
     def it_keeps_exitstatus_0_when_no_mutants_found():
         """When total_mutants is 0, exitstatus should remain 0."""
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult
 
         config = MagicMock()
@@ -484,6 +508,7 @@ def describe_LeelaPlugin():
         mock_engine.run.return_value = run_result
 
         with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
             patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
@@ -531,6 +556,7 @@ def describe_LeelaPlugin():
     def it_calls_generate_html_report_when_flag_set():
         """generate_html_report should be called with result and path."""
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult
 
         config = MagicMock()
@@ -564,6 +590,7 @@ def describe_LeelaPlugin():
         mock_generate = MagicMock()
 
         with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
             patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
@@ -576,6 +603,7 @@ def describe_LeelaPlugin():
     def it_does_not_generate_html_report_without_flag():
         """No HTML report when --leela-html is not set."""
         from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult
 
         config = MagicMock()
@@ -609,6 +637,7 @@ def describe_LeelaPlugin():
         mock_generate = MagicMock()
 
         with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
             patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
@@ -617,3 +646,181 @@ def describe_LeelaPlugin():
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         mock_generate.assert_not_called()
+
+    def it_loads_config_and_passes_operators_to_engine():
+        """Config operators are passed through as enabled_categories to Engine."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+            "leela_html": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+
+        custom_operators = ["arithmetic", "comparison"]
+        leela_cfg = LeelaConfig(operators=custom_operators)
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.return_value = MagicMock(survived=[])
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=leela_cfg),
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Engine was constructed with enabled_categories from config
+        mock_engine_cls.assert_called_once_with(enabled_categories=custom_operators)
+
+    def it_resolves_all_keyword_in_operators():
+        """When config contains 'all', it should expand to ALL_OPERATORS."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import ALL_OPERATORS, LeelaConfig
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+            "leela_html": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+
+        leela_cfg = LeelaConfig(operators=["all"])
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.return_value = MagicMock(survived=[])
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=leela_cfg),
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Engine was constructed with ALL_OPERATORS (expanded from "all")
+        mock_engine_cls.assert_called_once_with(enabled_categories=list(ALL_OPERATORS))
+
+    def it_applies_exclude_patterns_from_config():
+        """Files matching exclude patterns should be filtered out before engine."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": [],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+            "leela_html": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+
+        leela_cfg = LeelaConfig(exclude=["migrations/*.py"])
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.return_value = MagicMock(survived=[])
+
+        # _find_default_targets returns files including one in migrations/
+        default_files = [
+            "/tmp/project/models.py",
+            "/tmp/project/migrations/0001_initial.py",
+        ]
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=leela_cfg),
+            patch("pytest_leela.plugin._find_default_targets", return_value=default_files),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Engine.run should have been called with only the non-excluded file
+        call_args = mock_engine_cls.return_value.run.call_args
+        target_files_passed = call_args[0][0]
+        assert "/tmp/project/models.py" in target_files_passed
+        assert "/tmp/project/migrations/0001_initial.py" not in target_files_passed
+
+
+def describe_apply_excludes():
+    def it_returns_all_files_when_no_excludes():
+        files = ["/root/a.py", "/root/b.py"]
+        result = _apply_excludes(files, [], Path("/root"))
+        assert result == files
+
+    def it_filters_files_matching_pattern():
+        files = [
+            "/root/app.py",
+            "/root/migrations/0001.py",
+            "/root/migrations/0002.py",
+        ]
+        result = _apply_excludes(files, ["migrations/*.py"], Path("/root"))
+        assert result == ["/root/app.py"]
+
+    def it_supports_multiple_exclude_patterns():
+        files = [
+            "/root/app.py",
+            "/root/migrations/0001.py",
+            "/root/vendor/lib.py",
+        ]
+        result = _apply_excludes(
+            files, ["migrations/*.py", "vendor/*.py"], Path("/root")
+        )
+        assert result == ["/root/app.py"]
+
+    def it_uses_relative_paths_for_matching():
+        """Patterns match against paths relative to rootpath, not absolute."""
+        files = ["/project/src/models.py"]
+        # Pattern "src/models.py" should match relative path
+        result = _apply_excludes(files, ["src/models.py"], Path("/project"))
+        assert result == []
+
+    def it_preserves_order():
+        files = ["/root/c.py", "/root/a.py", "/root/b.py"]
+        result = _apply_excludes(files, ["nonexistent*.py"], Path("/root"))
+        assert result == ["/root/c.py", "/root/a.py", "/root/b.py"]
+
+    def it_handles_wildcard_patterns():
+        files = ["/root/foo.py", "/root/bar.py", "/root/baz.txt"]
+        result = _apply_excludes(files, ["b*.py"], Path("/root"))
+        assert result == ["/root/foo.py", "/root/baz.txt"]
+
+    def it_returns_empty_when_all_excluded():
+        files = ["/root/a.py", "/root/b.py"]
+        result = _apply_excludes(files, ["*.py"], Path("/root"))
+        assert result == []
+
+    def it_handles_nested_directory_patterns():
+        files = [
+            "/root/pkg/sub/deep.py",
+            "/root/pkg/top.py",
+        ]
+        result = _apply_excludes(files, ["pkg/sub/*.py"], Path("/root"))
+        assert result == ["/root/pkg/top.py"]

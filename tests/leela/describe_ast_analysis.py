@@ -476,6 +476,79 @@ def describe_find_mutation_points():
             assert len(continues) == 1
 
 
+    def describe_leela_skip_pragma():
+        def it_skips_mutations_on_a_line_with_pragma():
+            source = (
+                "def f(x: int, y: int) -> int:\n"  # line 1
+                "    return x + y  # leela: skip\n"  # line 2 — skipped
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Both the BinOp(Add) and Return are on line 2; all should be skipped
+            assert len(points) == 0
+
+        def it_skips_entire_file_when_pragma_on_line_1():
+            source = (
+                "# leela: skip\n"  # line 1 — skip entire file
+                "def f(x: int, y: int) -> int:\n"
+                "    return x + y\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            assert points == []
+
+        def it_only_skips_the_specific_line():
+            source = (
+                "def f(x: int, y: int) -> int:\n"  # line 1
+                "    z = x + y  # leela: skip\n"  # line 2 — skipped
+                "    return z - 1\n"  # line 3 — NOT skipped
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Line 2 BinOp(Add) skipped; line 3 BinOp(Sub) + Return remain
+            assert all(p.lineno != 2 for p in points)
+            line3_points = [p for p in points if p.lineno == 3]
+            assert len(line3_points) >= 1
+
+        def it_does_not_affect_lines_without_pragma():
+            source = (
+                "def f(x: int, y: int) -> int:\n"
+                "    return x + y\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Normal code — should still find BinOp and Return
+            binops = [p for p in points if p.node_type == "BinOp"]
+            returns = [p for p in points if p.node_type == "Return"]
+            assert len(binops) >= 1
+            assert len(returns) >= 1
+
+        def it_skips_pragma_in_middle_of_file():
+            source = (
+                "def f(a: int, b: int, c: int) -> int:\n"  # line 1
+                "    x = a + b\n"  # line 2 — Add
+                "    y = x * c  # leela: skip\n"  # line 3 — skipped Mult
+                "    return y - 1\n"  # line 4 — Sub + Return
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Line 3 skipped
+            assert all(p.lineno != 3 for p in points)
+            # Line 2 and 4 still present
+            line2 = [p for p in points if p.lineno == 2]
+            line4 = [p for p in points if p.lineno == 4]
+            assert len(line2) >= 1
+            assert len(line4) >= 1
+
+        def it_handles_multiple_skip_lines():
+            source = (
+                "def f(a: int, b: int) -> int:\n"  # line 1
+                "    x = a + b  # leela: skip\n"  # line 2 — skipped
+                "    y = a - b\n"  # line 3 — NOT skipped
+                "    z = a * b  # leela: skip\n"  # line 4 — skipped
+                "    return y + z\n"  # line 5 — NOT skipped
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            assert all(p.lineno not in (2, 4) for p in points)
+            line3 = [p for p in points if p.lineno == 3]
+            assert len(line3) >= 1
+
+
 def describe_find_mutation_points_in_file():
     def it_reads_file_and_finds_points(tmp_path):
         from pytest_leela.ast_analysis import find_mutation_points_in_file
