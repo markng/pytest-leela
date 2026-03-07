@@ -181,6 +181,16 @@ def describe_find_default_targets():
         assert len(result) == 1
         assert "app.py" in result[0]
 
+    def it_excludes_dunder_and_test_files_in_fallback_path(tmp_path):
+        """Fallback rootpath scan excludes __init__.py and test files."""
+        (tmp_path / "app.py").write_text("x = 1\n")
+        (tmp_path / "__init__.py").write_text("")
+        (tmp_path / "test_app.py").write_text("def test(): pass\n")
+        (tmp_path / "conftest.py").write_text("import pytest\n")
+        result = _find_default_targets(tmp_path)
+        basenames = [os.path.basename(f) for f in result]
+        assert basenames == ["app.py"]
+
     def it_returns_empty_when_no_standard_dirs_and_no_py_files(tmp_path):
         """Empty rootpath with no .py files returns empty list."""
         result = _find_default_targets(tmp_path)
