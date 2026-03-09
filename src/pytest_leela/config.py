@@ -49,6 +49,20 @@ def load_config(rootpath: Path) -> LeelaConfig:
             f"got {type(operators).__name__}: {operators!r}"
         )
 
+    # Validate inner element types — every element must be a string (Guidelines 2:5)
+    for item in exclude:
+        if not isinstance(item, str):
+            raise ValueError(
+                f"[tool.pytest-leela] 'exclude' elements must be strings, "
+                f"got {type(item).__name__}: {item!r}"
+            )
+    for item in operators:
+        if not isinstance(item, str):
+            raise ValueError(
+                f"[tool.pytest-leela] 'operators' elements must be strings, "
+                f"got {type(item).__name__}: {item!r}"
+            )
+
     # Validate operator names before expansion
     valid_names = set(ALL_OPERATORS) | {"all"}
     unknown = [op for op in operators if op not in valid_names]

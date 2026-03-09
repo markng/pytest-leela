@@ -197,3 +197,21 @@ def describe_load_config():
             )
             with pytest.raises(ValueError, match="'operators' must be a list of strings"):
                 load_config(tmp_path)
+
+        def it_raises_when_exclude_contains_non_string_element(tmp_path: Path):
+            pyproject = tmp_path / "pyproject.toml"
+            pyproject.write_text(
+                '[tool.pytest-leela]\n'
+                'exclude = ["ok", 123]\n'
+            )
+            with pytest.raises(ValueError, match="'exclude' elements must be strings"):
+                load_config(tmp_path)
+
+        def it_raises_when_operators_contains_non_string_element(tmp_path: Path):
+            pyproject = tmp_path / "pyproject.toml"
+            pyproject.write_text(
+                '[tool.pytest-leela]\n'
+                'operators = ["arithmetic", true]\n'
+            )
+            with pytest.raises(ValueError, match="'operators' elements must be strings"):
+                load_config(tmp_path)
