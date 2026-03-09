@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 from pytest_leela.plugin import (
+    _SKIP_DIRS,
     _apply_excludes,
     _find_default_targets,
     _find_target_files,
@@ -227,6 +228,60 @@ def describe_find_default_targets():
         assert "test_app.py" not in basenames
         assert "conftest.py" not in basenames
         assert "tests.py" not in basenames
+
+    def it_skips_venv_in_fallback(tmp_path):
+        """Rootpath fallback must not recurse into .venv/."""
+        venv_dir = tmp_path / ".venv" / "lib"
+        venv_dir.mkdir(parents=True)
+        (venv_dir / "six.py").write_text("x = 1\n")
+        (tmp_path / "app.py").write_text("y = 2\n")
+        result = _find_default_targets(tmp_path)
+        basenames = [os.path.basename(f) for f in result]
+        assert "app.py" in basenames
+        assert "six.py" not in basenames
+
+    def it_skips_all_common_non_source_dirs_in_fallback(tmp_path):
+        """Every directory in _SKIP_DIRS (except glob patterns) is skipped."""
+        exact_dirs = {d for d in _SKIP_DIRS if "*" not in d}
+        for dirname in exact_dirs:
+            d = tmp_path / dirname
+            d.mkdir(exist_ok=True)
+            (d / "mod.py").write_text("x = 1\n")
+        (tmp_path / "real.py").write_text("y = 2\n")
+        result = _find_default_targets(tmp_path)
+        basenames = [os.path.basename(f) for f in result]
+        assert basenames == ["real.py"]
+
+    def it_skips_egg_info_dirs_in_fallback(tmp_path):
+        """Directories matching *.egg-info are skipped in fallback."""
+        egg_dir = tmp_path / "mypkg.egg-info"
+        egg_dir.mkdir()
+        (egg_dir / "PKG-INFO.py").write_text("x = 1\n")
+        (tmp_path / "app.py").write_text("y = 2\n")
+        result = _find_default_targets(tmp_path)
+        basenames = [os.path.basename(f) for f in result]
+        assert "app.py" in basenames
+        assert "PKG-INFO.py" not in basenames
+
+    def it_skips_nested_skip_dirs_in_fallback(tmp_path):
+        """Skip dirs nested deeper than top-level are also excluded."""
+        nested = tmp_path / "pkg" / "node_modules" / "dep"
+        nested.mkdir(parents=True)
+        (nested / "index.py").write_text("x = 1\n")
+        (tmp_path / "app.py").write_text("y = 2\n")
+        result = _find_default_targets(tmp_path)
+        basenames = [os.path.basename(f) for f in result]
+        assert "app.py" in basenames
+        assert "index.py" not in basenames
+
+    def it_does_not_skip_dirs_when_using_src_candidate(tmp_path):
+        """The skip-dirs filter only applies to the fallback path, not src/."""
+        src_dir = tmp_path / "src" / "build"
+        src_dir.mkdir(parents=True)
+        (src_dir / "builder.py").write_text("x = 1\n")
+        result = _find_default_targets(tmp_path)
+        basenames = [os.path.basename(f) for f in result]
+        assert "builder.py" in basenames
 
 
 def describe_LeelaPlugin():
@@ -678,7 +733,7 @@ def describe_LeelaPlugin():
         session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
         session.exitstatus = 0
 
-        custom_operators = ["arithmetic", "comparison"]
+        custom_operators = ("arithmetic", "comparison")
         leela_cfg = LeelaConfig(operators=custom_operators)
 
         mock_engine_cls = MagicMock()
@@ -716,7 +771,7 @@ def describe_LeelaPlugin():
         session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
         session.exitstatus = 0
 
-        leela_cfg = LeelaConfig(operators=["all"])
+        leela_cfg = LeelaConfig(operators=("all",))
 
         mock_engine_cls = MagicMock()
         mock_engine_cls.return_value.run.return_value = MagicMock(survived=[])
@@ -730,7 +785,7 @@ def describe_LeelaPlugin():
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Engine was constructed with ALL_OPERATORS (expanded from "all")
-        mock_engine_cls.assert_called_once_with(enabled_categories=list(ALL_OPERATORS))
+        mock_engine_cls.assert_called_once_with(enabled_categories=ALL_OPERATORS)
 
     def it_applies_exclude_patterns_from_config():
         """Files matching exclude patterns should be filtered out before engine."""
@@ -753,7 +808,7 @@ def describe_LeelaPlugin():
         session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
         session.exitstatus = 0
 
-        leela_cfg = LeelaConfig(exclude=["migrations/*.py"])
+        leela_cfg = LeelaConfig(exclude=("migrations/*.py",))
 
         mock_engine_cls = MagicMock()
         mock_engine_cls.return_value.run.return_value = MagicMock(survived=[])
@@ -834,3 +889,32 @@ def describe_apply_excludes():
         ]
         result = _apply_excludes(files, ["pkg/sub/*.py"], Path("/root"))
         assert result == ["/root/pkg/top.py"]
+
+    def it_normalizes_path_separators_for_matching():
+        """Paths are normalized to forward slashes before fnmatch."""
+        # Simulate what would happen with backslash separators by
+        # monkeypatching os.sep temporarily — on Unix os.sep is already '/'
+        # so we verify the .replace(os.sep, "/") call is present by
+        # checking the result is correct on all platforms.
+        files = ["/root/pkg/sub/deep.py"]
+        result = _apply_excludes(files, ["pkg/sub/*.py"], Path("/root"))
+        assert result == []
+
+    def it_normalizes_backslash_paths(monkeypatch):
+        """When os.sep is backslash, relpath uses backslashes but
+        patterns use forward slashes — normalization handles this."""
+        import pytest_leela.plugin as plugin_mod
+
+        original_relpath = os.path.relpath
+
+        def fake_relpath(path, start):
+            """Return a path with backslashes to simulate Windows."""
+            return original_relpath(path, start).replace("/", "\\")
+
+        monkeypatch.setattr(os.path, "relpath", fake_relpath)
+        # Ensure os.sep is backslash for the .replace() call
+        monkeypatch.setattr(os, "sep", "\\")
+
+        files = ["/root/migrations/0001.py"]
+        result = _apply_excludes(files, ["migrations/*.py"], Path("/root"))
+        assert result == []

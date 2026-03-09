@@ -548,6 +548,44 @@ def describe_find_mutation_points():
             line3 = [p for p in points if p.lineno == 3]
             assert len(line3) >= 1
 
+        def it_does_not_false_positive_on_pragma_in_string_literal():
+            """Pragma text inside a string should NOT trigger skip."""
+            source = (
+                "def f(x: int, y: int) -> int:\n"  # line 1
+                '    msg = "use # leela: skip to suppress"\n'  # line 2 — string, NOT a comment
+                "    return x + y\n"  # line 3
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Line 3 should still produce BinOp + Return — nothing was skipped
+            binops = [p for p in points if p.node_type == "BinOp"]
+            returns = [p for p in points if p.node_type == "Return"]
+            assert len(binops) >= 1
+            assert len(returns) >= 1
+
+        def it_does_not_false_positive_on_pragma_in_docstring():
+            """Pragma text inside a docstring should NOT trigger skip."""
+            source = (
+                "def f(x: int, y: int) -> int:\n"
+                '    """Use # leela: skip to suppress mutations."""\n'
+                "    return x + y\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+
+        def it_does_not_false_positive_on_pragma_in_multiline_string():
+            """Pragma text inside a multi-line string should NOT trigger skip."""
+            source = (
+                "def f(x: int, y: int) -> int:\n"
+                "    msg = (\n"
+                "        '# leela: skip\\n'\n"
+                "    )\n"
+                "    return x + y\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+
 
 def describe_find_mutation_points_in_file():
     def it_reads_file_and_finds_points(tmp_path):

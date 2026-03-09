@@ -16,6 +16,21 @@ from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
 
 
+_SKIP_DIRS = {
+    ".venv",
+    "venv",
+    ".tox",
+    "build",
+    "dist",
+    ".git",
+    ".hg",
+    "__pycache__",
+    "node_modules",
+    ".eggs",
+    "*.egg-info",
+}
+
+
 def _is_test_file(basename: str) -> bool:
     """Return True if the filename looks like a test file."""
     return (
@@ -101,10 +116,14 @@ def _find_default_targets(rootpath: Path) -> list[str]:
         for p in rootpath.rglob("*.py")
         if not p.name.startswith("__")
         and not _is_test_file(p.name)
+        and not any(
+            part in _SKIP_DIRS or fnmatch.fnmatch(part, "*.egg-info")
+            for part in p.relative_to(rootpath).parts
+        )
     )
 
 
-def _apply_excludes(files: list[str], excludes: list[str], rootpath: Path) -> list[str]:
+def _apply_excludes(files: list[str], excludes: tuple[str, ...] | list[str], rootpath: Path) -> list[str]:
     """Filter out files matching any of the exclude glob patterns.
 
     Each file path is made relative to *rootpath* before matching against
@@ -115,7 +134,7 @@ def _apply_excludes(files: list[str], excludes: list[str], rootpath: Path) -> li
     root = str(rootpath)
     result: list[str] = []
     for filepath in files:
-        rel = os.path.relpath(filepath, root)
+        rel = os.path.relpath(filepath, root).replace(os.sep, "/")
         if not any(fnmatch.fnmatch(rel, pat) for pat in excludes):
             result.append(filepath)
     return result
@@ -135,7 +154,7 @@ class LeelaPlugin:
         # Resolve operator categories
         enabled_categories = leela_config.operators
         if "all" in enabled_categories:
-            enabled_categories = list(ALL_OPERATORS)
+            enabled_categories = ALL_OPERATORS
 
         targets = self.config.getoption("target", default=[])
         diff_base = self.config.getoption("diff", default=None)

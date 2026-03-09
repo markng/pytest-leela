@@ -37,6 +37,16 @@ pip install pytest-leela
 pytest --leela
 ```
 
+When no `--target` is given, pytest-leela auto-discovers source files:
+
+1. Looks for a `target/` or `src/` directory (in that order) and mutates all `.py` files inside it
+2. If neither exists, falls back to the project root (skipping `.venv`, `build`, `dist`, `__pycache__`, `node_modules`, `.git`, and similar non-source directories)
+
+Test files (`test_*.py`, `*_test.py`, `conftest.py`, `tests.py`) are always excluded from mutation.
+
+Exclude patterns from `[tool.pytest-leela]` (see [Configuration](#configuration)) are applied
+after target discovery, so you can auto-discover `src/` while still excluding specific paths.
+
 **Target specific modules (pass `--target` multiple times):**
 
 ```bash
@@ -95,6 +105,78 @@ pytest --leela-benchmark
 - **HTML report** — `--leela-html` generates an interactive single-file report with source viewer, survivor navigation, and test source overlay
 - **CI exit codes** — exits non-zero when mutants survive, so CI pipelines fail on incomplete kill rates
 - **Benchmark mode** — `--leela-benchmark` measures the speedup from each optimization layer
+
+---
+
+## Configuration
+
+Configure pytest-leela in your `pyproject.toml` under `[tool.pytest-leela]`:
+
+```toml
+[tool.pytest-leela]
+exclude = [
+    "*/migrations/*",
+    "manage.py",
+    "*/conftest.py",
+]
+operators = [
+    "arithmetic",
+    "comparison",
+    "boolean",
+    "return",
+]
+```
+
+### `exclude`
+
+A list of glob patterns. Files whose path (relative to the project root) matches any pattern
+are excluded from mutation. Uses `fnmatch` matching — `*` matches within a single directory,
+`*/migrations/*` matches any `migrations` directory at any depth.
+
+Default: `[]` (nothing excluded).
+
+### `operators`
+
+A list of operator category names controlling which mutation types are applied.
+Use `"all"` as a shorthand to enable every category.
+
+Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
+
+| Category | What it mutates | Default |
+|---|---|---|
+| `arithmetic` | `+` `-` `*` `/` `//` `%` `**` | on |
+| `comparison` | `==` `!=` `<` `<=` `>` `>=` `is` `in` and negations | on |
+| `boolean` | `and` / `or` | on |
+| `unary` | unary `-` `+` `not` | on |
+| `return` | return values (`True`/`False`, `None`, literals, expressions) | on |
+| `bitwise` | `&` `\|` `^` `<<` `>>` | off |
+| `augmented_assign` | `+=` `-=` `*=` etc. | off |
+| `ternary` | `x if cond else y` branch swaps | off |
+| `control_flow` | `break` / `continue` swaps | off |
+| `exception` | `except` handler broadening, body-to-raise | off |
+
+---
+
+## Pragma Skip
+
+Add `# leela: skip` to suppress mutations on individual lines:
+
+```python
+result = x + y  # leela: skip
+```
+
+To skip an entire file, place the pragma on line 1:
+
+```python
+# leela: skip
+"""This module is excluded from mutation testing."""
+
+def legacy_code():
+    ...
+```
+
+The pragma is detected via Python's `tokenize` module, so it only matches actual comments —
+not string literals or docstrings that happen to contain the text.
 
 ---
 

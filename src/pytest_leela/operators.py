@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import AbstractSet
-
 from pytest_leela.models import MutationPoint
 
 # Untyped mutations: applied when no type info is available
@@ -253,23 +251,27 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
     },
 }
 
-DEFAULT_OPERATORS: list[str] = [
+DEFAULT_OPERATORS: tuple[str, ...] = (
     "arithmetic",
     "comparison",
     "boolean",
     "unary",
     "return",
-]
-ALL_OPERATORS: list[str] = list(OPERATOR_CATEGORIES.keys())
+)
+ALL_OPERATORS: tuple[str, ...] = tuple(OPERATOR_CATEGORIES.keys())
 
 
-def _enabled_keys(
-    enabled_categories: list[str] | None,
-) -> AbstractSet[tuple[str, str]] | None:
-    """Build the set of allowed (node_type, op) keys from category names.
+def build_allowed_keys(
+    enabled_categories: tuple[str, ...] | list[str] | None,
+) -> frozenset[tuple[str, str]] | None:
+    """Build the frozenset of allowed (node_type, op) keys from category names.
 
-    Returns None when all operators are enabled (no filtering).
-    Raises ValueError for unknown category names.
+    Returns ``None`` when all operators are enabled (no filtering).
+    Raises ``ValueError`` for unknown category names.
+
+    Call this **once** and pass the result to :func:`mutations_for` /
+    :func:`count_pruned` rather than letting them rebuild the set on
+    every invocation.
     """
     if enabled_categories is None:
         return None
@@ -282,24 +284,24 @@ def _enabled_keys(
     allowed: set[tuple[str, str]] = set()
     for cat in enabled_categories:
         allowed |= OPERATOR_CATEGORIES[cat]
-    return allowed
+    return frozenset(allowed)
 
 
 def mutations_for(
     point: MutationPoint,
     use_types: bool = True,
-    enabled_categories: list[str] | None = None,
+    allowed_keys: frozenset[tuple[str, str]] | None = None,
 ) -> list[str]:
     """Get the list of mutations applicable to a mutation point.
 
-    When *enabled_categories* is provided, only return mutations whose
-    (node_type, original_op) key belongs to one of the listed categories.
-    When ``None``, return all mutations (backwards compatible).
+    When *allowed_keys* is provided (a precomputed frozenset from
+    :func:`build_allowed_keys`), only return mutations whose
+    (node_type, original_op) key belongs to the set.
+    When ``None``, return all mutations (no filtering).
     """
-    allowed = _enabled_keys(enabled_categories)
-    if allowed is not None:
+    if allowed_keys is not None:
         key_check = (point.node_type, point.original_op)
-        if key_check not in allowed:
+        if key_check not in allowed_keys:
             return []
 
     if use_types and point.inferred_type:
@@ -315,7 +317,7 @@ def mutations_for(
 def count_pruned(
     points: list[MutationPoint],
     use_types: bool = True,
-    enabled_categories: list[str] | None = None,
+    allowed_keys: frozenset[tuple[str, str]] | None = None,
 ) -> int:
     """Count how many mutations are pruned by type awareness."""
     if not use_types:
@@ -323,7 +325,7 @@ def count_pruned(
 
     pruned = 0
     for point in points:
-        untyped = mutations_for(point, use_types=False, enabled_categories=enabled_categories)
-        typed = mutations_for(point, use_types=True, enabled_categories=enabled_categories)
+        untyped = mutations_for(point, use_types=False, allowed_keys=allowed_keys)
+        typed = mutations_for(point, use_types=True, allowed_keys=allowed_keys)
         pruned += len(untyped) - len(typed)
     return pruned

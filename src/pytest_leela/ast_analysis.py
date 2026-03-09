@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+import io
+import tokenize
 from pathlib import Path
 
 from pytest_leela.models import MutationPoint
@@ -270,11 +272,20 @@ _SKIP_PRAGMA = "# leela: skip"
 
 
 def _skipped_lines(source: str) -> set[int]:
-    """Return the set of 1-based line numbers containing ``# leela: skip``."""
+    """Return the set of 1-based line numbers containing ``# leela: skip``.
+
+    Uses the ``tokenize`` module to inspect only ``COMMENT`` tokens,
+    preventing false positives from string literals or docstrings that
+    happen to contain the pragma text.
+    """
     skipped: set[int] = set()
-    for lineno_0, line in enumerate(source.splitlines()):
-        if _SKIP_PRAGMA in line:
-            skipped.add(lineno_0 + 1)  # AST uses 1-based line numbers
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        for tok in tokens:
+            if tok.type == tokenize.COMMENT and _SKIP_PRAGMA in tok.string:
+                skipped.add(tok.start[0])  # start[0] is the 1-based line number
+    except tokenize.TokenError:
+        pass  # Malformed source — let ast.parse() raise the real error later
     return skipped
 
 

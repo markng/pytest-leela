@@ -16,7 +16,7 @@ from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.coverage_tracker import collect_coverage
 from pytest_leela.git_diff import changed_lines
 from pytest_leela.models import CoverageMap, Mutant, MutantResult, RunResult
-from pytest_leela.operators import count_pruned, mutations_for
+from pytest_leela.operators import build_allowed_keys, count_pruned, mutations_for
 from pytest_leela.resources import ResourceLimits, apply_limits, is_memory_ok
 from pytest_leela.runner import run_tests_for_mutant
 from pytest_leela.type_extractor import enrich_mutation_points
@@ -92,11 +92,12 @@ class Engine:
         self,
         use_types: bool = True,
         use_coverage: bool = True,
-        enabled_categories: list[str] | None = None,
+        enabled_categories: tuple[str, ...] | list[str] | None = None,
     ) -> None:
         self.use_types = use_types
         self.use_coverage = use_coverage
         self._enabled_categories = enabled_categories
+        self._allowed_keys = build_allowed_keys(enabled_categories)
 
     def run(
         self,
@@ -136,11 +137,11 @@ class Engine:
             points = enrich_mutation_points(source, points)
 
             # Track pruned count
-            total_pruned += count_pruned(points, self.use_types, enabled_categories=self._enabled_categories)
+            total_pruned += count_pruned(points, self.use_types, allowed_keys=self._allowed_keys)
 
             # Generate mutants
             for point in points:
-                for replacement_op in mutations_for(point, self.use_types, enabled_categories=self._enabled_categories):
+                for replacement_op in mutations_for(point, self.use_types, allowed_keys=self._allowed_keys):
                     all_mutants.append(
                         Mutant(
                             point=point,

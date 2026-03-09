@@ -11,6 +11,7 @@ import pytest
 from pytest_leela.engine import Engine, _clean_process_state, _module_name_from_path
 from pytest_leela.import_hook import MutatingFinder
 from pytest_leela.models import CoverageMap, Mutant, MutantResult, MutationPoint, RunResult
+from pytest_leela.operators import build_allowed_keys
 from pytest_leela.resources import ResourceLimits
 
 
@@ -404,8 +405,18 @@ def describe_Engine_enabled_categories():
         engine = Engine(enabled_categories=["arithmetic", "comparison"])
         assert engine._enabled_categories == ["arithmetic", "comparison"]
 
-    def it_passes_categories_through_to_mutations_for(tmp_path, monkeypatch):
-        """Verify enabled_categories is forwarded to mutations_for during run."""
+    def it_precomputes_allowed_keys_as_none_by_default():
+        engine = Engine()
+        assert engine._allowed_keys is None
+
+    def it_precomputes_allowed_keys_as_frozenset():
+        engine = Engine(enabled_categories=["arithmetic", "comparison"])
+        expected = build_allowed_keys(["arithmetic", "comparison"])
+        assert engine._allowed_keys == expected
+        assert isinstance(engine._allowed_keys, frozenset)
+
+    def it_passes_allowed_keys_through_to_mutations_for(tmp_path, monkeypatch):
+        """Verify precomputed allowed_keys is forwarded to mutations_for during run."""
         target = tmp_path / "cat_target.py"
         target.write_text("def add(a, b):\n    return a + b\n")
         test_dir = tmp_path / "cat_tests"
@@ -418,25 +429,26 @@ def describe_Engine_enabled_categories():
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        captured_categories: list = []
+        captured_keys: list = []
         original_mutations_for = __import__(
             "pytest_leela.operators", fromlist=["mutations_for"]
         ).mutations_for
 
-        def spy_mutations_for(point, use_types=True, enabled_categories=None):
-            captured_categories.append(enabled_categories)
-            return original_mutations_for(point, use_types, enabled_categories=enabled_categories)
+        def spy_mutations_for(point, use_types=True, allowed_keys=None):
+            captured_keys.append(allowed_keys)
+            return original_mutations_for(point, use_types, allowed_keys=allowed_keys)
 
         with patch("pytest_leela.engine.mutations_for", side_effect=spy_mutations_for):
             engine = Engine(use_types=False, use_coverage=False, enabled_categories=["arithmetic"])
             engine.run([str(target)], str(test_dir))
 
-        assert len(captured_categories) > 0
-        for cat in captured_categories:
-            assert cat == ["arithmetic"]
+        expected_keys = build_allowed_keys(["arithmetic"])
+        assert len(captured_keys) > 0
+        for keys in captured_keys:
+            assert keys == expected_keys
 
-    def it_passes_categories_through_to_count_pruned(tmp_path, monkeypatch):
-        """Verify enabled_categories is forwarded to count_pruned during run."""
+    def it_passes_allowed_keys_through_to_count_pruned(tmp_path, monkeypatch):
+        """Verify precomputed allowed_keys is forwarded to count_pruned during run."""
         target = tmp_path / "cat_pruned.py"
         target.write_text("def add(a, b):\n    return a + b\n")
         test_dir = tmp_path / "cat_pruned_tests"
@@ -449,22 +461,23 @@ def describe_Engine_enabled_categories():
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        captured_categories: list = []
+        captured_keys: list = []
         original_count_pruned = __import__(
             "pytest_leela.operators", fromlist=["count_pruned"]
         ).count_pruned
 
-        def spy_count_pruned(points, use_types=True, enabled_categories=None):
-            captured_categories.append(enabled_categories)
-            return original_count_pruned(points, use_types, enabled_categories=enabled_categories)
+        def spy_count_pruned(points, use_types=True, allowed_keys=None):
+            captured_keys.append(allowed_keys)
+            return original_count_pruned(points, use_types, allowed_keys=allowed_keys)
 
         with patch("pytest_leela.engine.count_pruned", side_effect=spy_count_pruned):
             engine = Engine(use_types=True, use_coverage=False, enabled_categories=["comparison"])
             engine.run([str(target)], str(test_dir))
 
-        assert len(captured_categories) > 0
-        for cat in captured_categories:
-            assert cat == ["comparison"]
+        expected_keys = build_allowed_keys(["comparison"])
+        assert len(captured_keys) > 0
+        for keys in captured_keys:
+            assert keys == expected_keys
 
     def it_filters_mutants_when_category_restricts_operators(tmp_path, monkeypatch):
         """With only 'return' enabled, BinOp mutants should be excluded."""

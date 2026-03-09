@@ -13,8 +13,8 @@ from pytest_leela.operators import ALL_OPERATORS, DEFAULT_OPERATORS
 class LeelaConfig:
     """Configuration for pytest-leela mutation testing."""
 
-    exclude: list[str] = field(default_factory=list)
-    operators: list[str] = field(default_factory=lambda: list(DEFAULT_OPERATORS))
+    exclude: tuple[str, ...] = ()
+    operators: tuple[str, ...] = field(default_factory=lambda: tuple(DEFAULT_OPERATORS))
 
 
 def load_config(rootpath: Path) -> LeelaConfig:
@@ -37,6 +37,18 @@ def load_config(rootpath: Path) -> LeelaConfig:
     exclude = leela_config.get("exclude", [])
     operators = leela_config.get("operators", list(DEFAULT_OPERATORS))
 
+    # Validate types — a bare string silently iterates characters (Guidelines 2:5)
+    if not isinstance(exclude, list):
+        raise ValueError(
+            f"[tool.pytest-leela] 'exclude' must be a list of strings in pyproject.toml, "
+            f"got {type(exclude).__name__}: {exclude!r}"
+        )
+    if not isinstance(operators, list):
+        raise ValueError(
+            f"[tool.pytest-leela] 'operators' must be a list of strings in pyproject.toml, "
+            f"got {type(operators).__name__}: {operators!r}"
+        )
+
     # Validate operator names before expansion
     valid_names = set(ALL_OPERATORS) | {"all"}
     unknown = [op for op in operators if op not in valid_names]
@@ -50,4 +62,4 @@ def load_config(rootpath: Path) -> LeelaConfig:
     if "all" in operators:
         operators = list(ALL_OPERATORS)
 
-    return LeelaConfig(exclude=exclude, operators=operators)
+    return LeelaConfig(exclude=tuple(exclude), operators=tuple(operators))
