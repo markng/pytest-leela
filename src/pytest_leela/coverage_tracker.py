@@ -63,7 +63,9 @@ class CoveragePlugin:
     def pytest_runtest_setup(self, item: pytest.Item) -> None:
         self.tracer.start()
 
-    def pytest_runtest_teardown(self, item: pytest.Item, nextitem: pytest.Item | None) -> None:
+    def pytest_runtest_teardown(
+        self, item: pytest.Item, nextitem: pytest.Item | None
+    ) -> None:
         lines = self.tracer.stop()
         test_id = item.nodeid
         for file_path, lineno in lines:
@@ -80,10 +82,14 @@ def collect_coverage(
     plugin = CoveragePlugin(set(target_files))
 
     args = [
-        "--tb=no", "-q", "--no-header",
+        "--tb=no",
+        "-q",
+        "--no-header",
         "--override-ini=addopts=",
-        "-p", "no:leela",
-        "-p", "no:leela-benchmark",
+        "-p",
+        "no:leela",
+        "-p",
+        "no:leela-benchmark",
         "--capture=sys",
     ]
 
@@ -96,7 +102,10 @@ def collect_coverage(
         args.extend(extra_args)
 
     # Run pytest with our coverage plugin (suppress noisy output)
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+    with (
+        contextlib.redirect_stdout(io.StringIO()),
+        contextlib.redirect_stderr(io.StringIO()),
+    ):
         pytest.main(args, plugins=[plugin])
 
     return plugin.coverage_map

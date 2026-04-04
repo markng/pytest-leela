@@ -110,9 +110,7 @@ def _find_enclosing_func(functions: list[_FuncInfo], lineno: int) -> _FuncInfo |
     return None
 
 
-def _infer_binop_type(
-    node: ast.BinOp, func: _FuncInfo
-) -> str | None:
+def _infer_binop_type(node: ast.BinOp, func: _FuncInfo) -> str | None:
     """Infer the type of a BinOp's operands from annotations."""
     # Check left operand
     left_type = _infer_expr_type(node.left, func)
@@ -142,9 +140,7 @@ def _infer_expr_type(node: ast.expr, func: _FuncInfo) -> str | None:
     return None
 
 
-def _infer_augassign_type(
-    node: ast.AugAssign, func: _FuncInfo
-) -> str | None:
+def _infer_augassign_type(node: ast.AugAssign, func: _FuncInfo) -> str | None:
     """Infer the type of an AugAssign from target or value annotations."""
     # Check target (e.g., x += 1 — look up x's type)
     target_type = _infer_expr_type(node.target, func)
@@ -155,9 +151,7 @@ def _infer_augassign_type(
     return value_type
 
 
-def _infer_compare_type(
-    node: ast.Compare, func: _FuncInfo
-) -> str | None:
+def _infer_compare_type(node: ast.Compare, func: _FuncInfo) -> str | None:
     """Infer type context for a Compare node."""
     left_type = _infer_expr_type(node.left, func)
     if left_type is not None:
@@ -169,7 +163,9 @@ def _infer_compare_type(
     return None
 
 
-def _find_node_at(tree: ast.AST, lineno: int, col_offset: int, node_type: str) -> ast.AST | None:
+def _find_node_at(
+    tree: ast.AST, lineno: int, col_offset: int, node_type: str
+) -> ast.AST | None:
     """Find an AST node at a specific location."""
     for node in ast.walk(tree):
         if (

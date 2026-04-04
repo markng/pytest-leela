@@ -11,12 +11,28 @@ from pytest_leela.models import MutantResult, RunResult
 def _op_display(original: str, replacement: str) -> str:
     """Create a human-readable mutation description."""
     op_symbols: dict[str, str] = {
-        "Add": "+", "Sub": "-", "Mult": "*", "Div": "/",
-        "FloorDiv": "//", "Mod": "%", "Pow": "**",
-        "Eq": "==", "NotEq": "!=", "Lt": "<", "LtE": "<=",
-        "Gt": ">", "GtE": ">=", "Is": "is", "IsNot": "is not",
-        "In": "in", "NotIn": "not in", "And": "and", "Or": "or",
-        "USub": "-", "UAdd": "+", "Not": "not",
+        "Add": "+",
+        "Sub": "-",
+        "Mult": "*",
+        "Div": "/",
+        "FloorDiv": "//",
+        "Mod": "%",
+        "Pow": "**",
+        "Eq": "==",
+        "NotEq": "!=",
+        "Lt": "<",
+        "LtE": "<=",
+        "Gt": ">",
+        "GtE": ">=",
+        "Is": "is",
+        "IsNot": "is not",
+        "In": "in",
+        "NotIn": "not in",
+        "And": "and",
+        "Or": "or",
+        "USub": "-",
+        "UAdd": "+",
+        "Not": "not",
     }
 
     orig_sym = op_symbols.get(original, original)
@@ -29,7 +45,12 @@ def _op_display(original: str, replacement: str) -> str:
         return f"return -x \u2192 return x"
     if replacement == "empty_str":
         return f'return "..." \u2192 return ""'
-    if replacement in ("True", "False", "None") and original in ("True", "False", "None", "expr"):
+    if replacement in ("True", "False", "None") and original in (
+        "True",
+        "False",
+        "None",
+        "expr",
+    ):
         return f"return {original} \u2192 return {replacement}"
     if replacement == "_remove":
         return f"{orig_sym} x \u2192 x"
@@ -55,7 +76,9 @@ def format_terminal_report(result: RunResult) -> str:
     n_files = len(result.target_files)
     file_label = "file" if n_files == 1 else "files"
     lines.append(f"Target: {n_files} {file_label}")
-    lines.append(f"Mutants: {result.total_mutants} candidates, {result.mutants_pruned} pruned by type analysis")
+    lines.append(
+        f"Mutants: {result.total_mutants} candidates, {result.mutants_pruned} pruned by type analysis"
+    )
     lines.append("")
 
     # Per-file results

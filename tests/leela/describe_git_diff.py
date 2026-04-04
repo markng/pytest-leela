@@ -118,11 +118,7 @@ def describe_parse_diff_hunks():
         assert isinstance(result, dict)
 
     def it_returns_set_of_ints_per_file():
-        diff = (
-            "+++ b/foo.py\n"
-            "@@ -0,0 +1,2 @@\n"
-            "+a\n+b\n"
-        )
+        diff = "+++ b/foo.py\n@@ -0,0 +1,2 @@\n+a\n+b\n"
         result = _parse_diff_hunks(diff)
         for key, val in result.items():
             assert isinstance(val, set)
@@ -136,7 +132,9 @@ def describe_changed_files():
         from unittest.mock import patch
         from pytest_leela.git_diff import changed_files
 
-        with patch("pytest_leela.git_diff.subprocess.run", side_effect=FileNotFoundError):
+        with patch(
+            "pytest_leela.git_diff.subprocess.run", side_effect=FileNotFoundError
+        ):
             result = changed_files("main")
         assert isinstance(result, list)
         assert result == []
@@ -162,7 +160,9 @@ def describe_changed_files():
             mock_result = MagicMock()
             mock_result.stdout = rel_name + "\n"
 
-            with patch("pytest_leela.git_diff.subprocess.run", return_value=mock_result):
+            with patch(
+                "pytest_leela.git_diff.subprocess.run", return_value=mock_result
+            ):
                 # Need to be in the same dir as the temp file for abspath to match
                 old_cwd = os.getcwd()
                 os.chdir(os.path.dirname(tmp_path))
@@ -185,7 +185,9 @@ def describe_changed_lines():
         from unittest.mock import patch
         from pytest_leela.git_diff import changed_lines
 
-        with patch("pytest_leela.git_diff.subprocess.run", side_effect=FileNotFoundError):
+        with patch(
+            "pytest_leela.git_diff.subprocess.run", side_effect=FileNotFoundError
+        ):
             result = changed_lines("main")
         assert isinstance(result, dict)
         assert result == {}

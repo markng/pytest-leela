@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+import io
+import tokenize
 from pathlib import Path
 
 from pytest_leela.models import MutationPoint
@@ -206,7 +208,9 @@ class _MutationPointCollector(ast.NodeVisitor):
             self._add_except_handler_point(node, "bare")
         self.generic_visit(node)
 
-    def _add_except_handler_point(self, node: ast.ExceptHandler, original_op: str) -> None:
+    def _add_except_handler_point(
+        self, node: ast.ExceptHandler, original_op: str
+    ) -> None:
         self.points.append(
             MutationPoint(
                 file_path=self.file_path,
@@ -266,12 +270,43 @@ def _classify_return_value(node: ast.expr) -> str:
     return "expr"
 
 
-def find_mutation_points(source: str, file_path: str, module_name: str) -> list[MutationPoint]:
+_SKIP_PRAGMA = "# leela: skip"
+
+
+def _skipped_lines(source: str) -> set[int]:
+    """Return the set of 1-based line numbers containing ``# leela: skip``.
+
+    Uses the ``tokenize`` module to inspect only ``COMMENT`` tokens,
+    preventing false positives from string literals or docstrings that
+    happen to contain the pragma text.
+    """
+    skipped: set[int] = set()
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        for tok in tokens:
+            if tok.type == tokenize.COMMENT and _SKIP_PRAGMA in tok.string:
+                skipped.add(tok.start[0])  # start[0] is the 1-based line number
+    except tokenize.TokenError:
+        pass  # Malformed source — let ast.parse() raise the real error later
+    return skipped
+
+
+def find_mutation_points(
+    source: str, file_path: str, module_name: str
+) -> list[MutationPoint]:
     """Parse source code and find all mutable AST nodes."""
+    skipped = _skipped_lines(source)
+
+    # Line 1 pragma → skip entire file
+    if 1 in skipped:
+        return []
+
     tree = ast.parse(source, filename=file_path)
     collector = _MutationPointCollector(file_path, module_name)
     collector.visit(tree)
-    return collector.points
+
+    # Filter out mutation points on skipped lines
+    return [p for p in collector.points if p.lineno not in skipped]
 
 
 def find_mutation_points_in_file(file_path: str) -> list[MutationPoint]:

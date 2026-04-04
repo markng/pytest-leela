@@ -53,6 +53,34 @@ _KEEP_PREFIXES = (
 )
 
 
+def precompute_user_modules() -> frozenset[str]:
+    """Scan sys.modules once and return CWD-local, non-KEEP_PREFIXES module names.
+
+    This precomputes the set of user modules so that the mutation loop can
+    use targeted O(K) operations instead of scanning all ~500-1000 entries
+    in sys.modules on every mutant run.
+    """
+    cwd = os.getcwd() + os.sep
+    return frozenset(
+        name
+        for name, mod in sys.modules.items()
+        if mod is not None
+        and (f := getattr(mod, "__file__", None)) is not None
+        and f.startswith(cwd)
+        and not name.startswith(_KEEP_PREFIXES)
+    )
+
+
+def _clear_user_modules_fast(known_user_modules: frozenset[str]) -> None:
+    """Remove only the precomputed set of user modules from sys.modules.
+
+    O(K) where K is the size of the known set, instead of O(N) where N is
+    the total number of modules in sys.modules.
+    """
+    for name in known_user_modules:
+        sys.modules.pop(name, None)
+
+
 def _clear_framework_caches() -> None:
     """Clear framework-specific caches that may hold references to user modules.
 
@@ -73,7 +101,8 @@ def _clear_user_modules() -> None:
     """
     cwd = os.getcwd() + os.sep
     to_remove = [
-        name for name, mod in sys.modules.items()
+        name
+        for name, mod in sys.modules.items()
         if mod is not None
         and (f := getattr(mod, "__file__", None)) is not None
         and f.startswith(cwd)
@@ -109,6 +138,7 @@ def run_tests_for_mutant(
     module_to_file: dict[str, str],
     test_ids: list[str] | None = None,
     test_dir: str | None = None,
+    known_user_modules: frozenset[str] | None = None,
 ) -> MutantResult:
     """Run tests against a single mutant, return the result."""
     start = time.monotonic()
@@ -123,7 +153,10 @@ def run_tests_for_mutant(
     # (they cache direct references to target functions via
     # ``from target.X import func``).
     clear_target_modules(module_names)
-    _clear_user_modules()
+    if known_user_modules is not None:
+        _clear_user_modules_fast(known_user_modules)
+    else:
+        _clear_user_modules()
     _clear_framework_caches()
 
     try:
@@ -131,10 +164,15 @@ def run_tests_for_mutant(
 
         # Build pytest args — disable leela plugin to prevent recursion
         args: list[str] = [
-            "--tb=no", "-q", "--no-header", "-x",
+            "--tb=no",
+            "-q",
+            "--no-header",
+            "-x",
             "--override-ini=addopts=",
-            "-p", "no:leela",
-            "-p", "no:leela-benchmark",
+            "-p",
+            "no:leela",
+            "-p",
+            "no:leela-benchmark",
             "--capture=sys",
         ]
 
@@ -158,7 +196,10 @@ def run_tests_for_mutant(
 
         # Run pytest in-process (suppress noisy output)
         try:
-            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
                 pytest.main(args, plugins=[collector])
         except Exception:
             # A mutation that crashes the test runner counts as killed
@@ -187,7 +228,9 @@ def run_tests_for_mutant(
             for key in list(sys.modules.keys()):
                 if key not in saved_modules:
                     mod = sys.modules.get(key)
-                    mod_file = getattr(mod, "__file__", None) if mod is not None else None
+                    mod_file = (
+                        getattr(mod, "__file__", None) if mod is not None else None
+                    )
                     if mod_file is not None and mod_file.startswith(cwd_prefix):
                         sys.modules.pop(key, None)
 
@@ -213,14 +256,16 @@ def run_tests_for_mutant(
         # Cleanup: remove hook and clear cached modules
         remove_hook(finder)
         clear_target_modules(module_names)
-        _clear_user_modules()
+        if known_user_modules is not None:
+            _clear_user_modules_fast(known_user_modules)
+        else:
+            _clear_user_modules()
         _clear_framework_caches()
 
         # Safety net: remove any stale MutatingFinders left on
         # sys.meta_path from crashed previous runs.
         sys.meta_path[:] = [
-            f for f in sys.meta_path
-            if not isinstance(f, MutatingFinder)
+            f for f in sys.meta_path if not isinstance(f, MutatingFinder)
         ]
 
         # Restore stdlib path modules that may have been evicted during

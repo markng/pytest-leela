@@ -38,7 +38,11 @@ def _make_result(killed: bool, mutant_id: int = 1) -> MutantResult:
 def describe_run_result():
     def describe_killed():
         def it_counts_killed_mutants():
-            results = [_make_result(True, 1), _make_result(False, 2), _make_result(True, 3)]
+            results = [
+                _make_result(True, 1),
+                _make_result(False, 2),
+                _make_result(True, 3),
+            ]
             run = RunResult(
                 target_files=["test.py"],
                 total_mutants=3,
@@ -111,7 +115,11 @@ def describe_run_result():
             assert run.mutation_score == 0.0
 
         def it_returns_100_when_all_killed():
-            results = [_make_result(True, 1), _make_result(True, 2), _make_result(True, 3)]
+            results = [
+                _make_result(True, 1),
+                _make_result(True, 2),
+                _make_result(True, 3),
+            ]
             run = RunResult(
                 target_files=["test.py"],
                 total_mutants=3,

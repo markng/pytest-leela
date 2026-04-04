@@ -219,7 +219,9 @@ def describe_enrich_mutation_points():
             points = find_mutation_points(source, "test.py", "test")
             enriched = enrich_mutation_points(source, points)
             # Filter to the Add BinOp on line 2 (not the BitOr in the annotation)
-            add_binops = [p for p in enriched if p.node_type == "BinOp" and p.original_op == "Add"]
+            add_binops = [
+                p for p in enriched if p.node_type == "BinOp" and p.original_op == "Add"
+            ]
             assert len(add_binops) == 1
             # x annotation unresolvable, but right operand 1 is int
             assert add_binops[0].inferred_type == "int"
@@ -346,7 +348,9 @@ def describe_enrich_mutation_points():
             enriched and the assertion would fail.
             """
             # 101-line function: def header (line 1) + 99 pass lines + BinOp at line 101
-            source = "def f(x: int) -> int:\n" + "    pass\n" * 99 + "    return x + 1\n"
+            source = (
+                "def f(x: int) -> int:\n" + "    pass\n" * 99 + "    return x + 1\n"
+            )
             points = find_mutation_points(source, "test.py", "test")
 
             original_parse = ast.parse
@@ -378,6 +382,7 @@ def describe_enrich_mutation_points():
         def it_returns_none_from_find_node_at_when_no_match():
             """L170: _find_node_at returns None (not some other value) when no node matches."""
             from pytest_leela.type_extractor import _find_node_at
+
             tree = ast.parse("x = 1\n")
             result = _find_node_at(tree, 999, 0, "BinOp")
             assert result is None

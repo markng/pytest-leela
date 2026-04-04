@@ -10,9 +10,12 @@ from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.import_hook import MutatingFinder
 from pytest_leela.models import Mutant, MutantResult
 from pytest_leela.runner import (
+    _KEEP_PREFIXES,
     _ResultCollector,
     _clear_framework_caches,
     _clear_user_modules,
+    _clear_user_modules_fast,
+    precompute_user_modules,
     run_tests_for_mutant,
 )
 
@@ -187,8 +190,7 @@ def describe_run_tests_for_mutant():
 
         points = find_mutation_points(source, str(target), "runner_survive")
         cmp_point = next(
-            p for p in points
-            if p.node_type == "Compare" and p.original_op == "Gt"
+            p for p in points if p.node_type == "Compare" and p.original_op == "Gt"
         )
         # Mutate > to >= (n >= 0 still passes for n=5 and n=-5)
         mutant = Mutant(point=cmp_point, replacement_op="GtE", mutant_id=0)
@@ -388,7 +390,9 @@ def describe_run_tests_for_mutant():
         # killing_tests should be a subset of test_ids_run
         assert set(result.killing_tests).issubset(set(result.test_ids_run))
 
-    def it_populates_test_ids_run_with_empty_killing_tests_on_survive(tmp_path, monkeypatch):
+    def it_populates_test_ids_run_with_empty_killing_tests_on_survive(
+        tmp_path, monkeypatch
+    ):
         source = "def is_positive(n):\n    return n > 0\n"
         target = tmp_path / "runner_ids_surv.py"
         target.write_text(source)
@@ -408,8 +412,7 @@ def describe_run_tests_for_mutant():
 
         points = find_mutation_points(source, str(target), "runner_ids_surv")
         cmp_point = next(
-            p for p in points
-            if p.node_type == "Compare" and p.original_op == "Gt"
+            p for p in points if p.node_type == "Compare" and p.original_op == "Gt"
         )
         mutant = Mutant(point=cmp_point, replacement_op="GtE", mutant_id=0)
 
@@ -530,3 +533,242 @@ def describe_clear_user_modules():
         _clear_user_modules()
 
         assert "pytest_leela._test_keep_me" in sys.modules
+
+
+def describe_precompute_user_modules():
+    def it_identifies_cwd_local_modules(monkeypatch, tmp_path):
+        """Modules with __file__ under CWD should be in the returned set."""
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_precompute_local")
+        fake_mod.__file__ = str(tmp_path / "local_mod.py")
+        monkeypatch.setitem(sys.modules, "_test_precompute_local", fake_mod)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_local" in result
+
+    def it_excludes_keep_prefixes_modules(monkeypatch, tmp_path):
+        """Modules matching _KEEP_PREFIXES should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        for prefix in _KEEP_PREFIXES:
+            mod_name = f"{prefix}_test_keep_prefix"
+            fake_mod = types.ModuleType(mod_name)
+            fake_mod.__file__ = str(tmp_path / "kept.py")
+            monkeypatch.setitem(sys.modules, mod_name, fake_mod)
+
+        result = precompute_user_modules()
+
+        for prefix in _KEEP_PREFIXES:
+            assert f"{prefix}_test_keep_prefix" not in result
+
+    def it_excludes_modules_outside_cwd(monkeypatch, tmp_path):
+        """Modules with __file__ outside CWD should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_precompute_outside")
+        fake_mod.__file__ = "/some/other/path/outside.py"
+        monkeypatch.setitem(sys.modules, "_test_precompute_outside", fake_mod)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_outside" not in result
+
+    def it_excludes_modules_with_no_file(monkeypatch, tmp_path):
+        """Modules with __file__=None should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_precompute_no_file")
+        fake_mod.__file__ = None
+        monkeypatch.setitem(sys.modules, "_test_precompute_no_file", fake_mod)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_no_file" not in result
+
+    def it_excludes_none_modules(monkeypatch, tmp_path):
+        """None entries in sys.modules should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setitem(sys.modules, "_test_precompute_none", None)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_none" not in result
+
+    def it_returns_a_frozenset(monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        result = precompute_user_modules()
+        assert isinstance(result, frozenset)
+
+
+def describe_clear_user_modules_fast():
+    def it_removes_only_known_modules(monkeypatch, tmp_path):
+        """Should pop only the modules in the known set."""
+        monkeypatch.chdir(tmp_path)
+
+        known_mod = types.ModuleType("_test_fast_known")
+        known_mod.__file__ = str(tmp_path / "known.py")
+        monkeypatch.setitem(sys.modules, "_test_fast_known", known_mod)
+
+        unknown_mod = types.ModuleType("_test_fast_unknown")
+        unknown_mod.__file__ = str(tmp_path / "unknown.py")
+        monkeypatch.setitem(sys.modules, "_test_fast_unknown", unknown_mod)
+
+        known_set = frozenset(["_test_fast_known"])
+        _clear_user_modules_fast(known_set)
+
+        assert "_test_fast_known" not in sys.modules
+        assert "_test_fast_unknown" in sys.modules
+
+    def it_handles_modules_already_removed(monkeypatch):
+        """Should not raise when a module in the known set is already gone."""
+        known_set = frozenset(["_test_fast_already_gone"])
+        # Should not raise
+        _clear_user_modules_fast(known_set)
+
+    def it_does_not_remove_modules_outside_known_set(monkeypatch, tmp_path):
+        """Modules not in the known set should be untouched."""
+        monkeypatch.chdir(tmp_path)
+
+        other_mod = types.ModuleType("_test_fast_other")
+        other_mod.__file__ = str(tmp_path / "other.py")
+        monkeypatch.setitem(sys.modules, "_test_fast_other", other_mod)
+
+        _clear_user_modules_fast(frozenset(["_test_nonexistent"]))
+
+        assert "_test_fast_other" in sys.modules
+
+
+def describe_run_tests_for_mutant_with_known_user_modules():
+    """Tests for the optimized path using known_user_modules parameter."""
+
+    def _make_mutant(tmp_path, module_name="opt_target"):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / f"{module_name}.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), module_name)
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+        return source, mutant
+
+    def it_works_with_known_user_modules_parameter(tmp_path, monkeypatch):
+        """The optimized path should produce the same result as the fallback."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path)
+
+        test_dir = tmp_path / "opt_tests"
+        test_dir.mkdir()
+        (test_dir / "test_opt_target.py").write_text(
+            "from opt_target import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
+        )
+
+        known = precompute_user_modules()
+        result = run_tests_for_mutant(
+            mutant,
+            {"opt_target": source},
+            {"opt_target": str(tmp_path / "opt_target.py")},
+            test_dir=str(test_dir),
+            known_user_modules=known,
+        )
+
+        assert isinstance(result, MutantResult)
+        assert result.killed is True
+
+    def it_cleans_up_new_cwd_modules_from_inner_run(tmp_path, monkeypatch):
+        """Optimized path should remove NEW CWD-local modules added by inner run."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_inner_target")
+
+        inner_mod_name = "pytest_leela._test_opt_inner_artifact"
+        inner_mod_file = str(tmp_path / "inner_artifact.py")
+
+        def mock_pytest_main(args, plugins=None):
+            fake = types.ModuleType(inner_mod_name)
+            fake.__file__ = inner_mod_file
+            sys.modules[inner_mod_name] = fake
+            return 0
+
+        known = precompute_user_modules()
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_inner_target": source},
+                {"opt_inner_target": str(tmp_path / "opt_inner_target.py")},
+                test_dir=str(tmp_path),
+                known_user_modules=known,
+            )
+
+        assert inner_mod_name not in sys.modules
+
+    def it_preserves_saved_modules_during_optimized_cleanup(tmp_path, monkeypatch):
+        """Optimized path should not evict modules that existed at snapshot time."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_preserve_target")
+
+        kept_mod = types.ModuleType("pytest_leela._test_opt_preserved")
+        kept_mod.__file__ = str(tmp_path / "preserved.py")
+        monkeypatch.setitem(sys.modules, "pytest_leela._test_opt_preserved", kept_mod)
+
+        known = precompute_user_modules()
+        with patch("pytest_leela.runner.pytest.main", return_value=0):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_preserve_target": source},
+                {"opt_preserve_target": str(tmp_path / "opt_preserve_target.py")},
+                test_dir=str(tmp_path),
+                known_user_modules=known,
+            )
+
+        assert "pytest_leela._test_opt_preserved" in sys.modules
+
+    def it_uses_fast_clear_instead_of_full_scan(tmp_path, monkeypatch):
+        """When known_user_modules is provided, _clear_user_modules_fast is used."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_fast_target")
+        known = frozenset(["some_module"])
+
+        with (
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+            patch("pytest_leela.runner._clear_user_modules_fast") as mock_fast,
+            patch("pytest_leela.runner._clear_user_modules") as mock_full,
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_fast_target": source},
+                {"opt_fast_target": str(tmp_path / "opt_fast_target.py")},
+                test_dir=str(tmp_path),
+                known_user_modules=known,
+            )
+
+        # Fast path called at both pre-test and finally cleanup sites
+        assert mock_fast.call_count == 2
+        mock_full.assert_not_called()
+
+    def it_falls_back_to_full_scan_without_known_user_modules(tmp_path, monkeypatch):
+        """Without known_user_modules, the original _clear_user_modules is used."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_fallback_target")
+
+        with (
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+            patch("pytest_leela.runner._clear_user_modules_fast") as mock_fast,
+            patch("pytest_leela.runner._clear_user_modules") as mock_full,
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_fallback_target": source},
+                {"opt_fallback_target": str(tmp_path / "opt_fallback_target.py")},
+                test_dir=str(tmp_path),
+            )
+
+        mock_fast.assert_not_called()
+        assert mock_full.call_count == 2

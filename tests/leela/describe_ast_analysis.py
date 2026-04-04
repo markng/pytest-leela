@@ -177,7 +177,6 @@ def describe_find_mutation_points():
         # All 11 should have distinct classifications
         assert len(classifications) == 11
 
-
     def describe_bitwise_operators():
         def it_finds_bitand():
             source = "def f(x: int, y: int) -> int:\n    return x & y\n"
@@ -213,7 +212,6 @@ def describe_find_mutation_points():
             binops = [p for p in points if p.node_type == "BinOp"]
             assert len(binops) == 1
             assert binops[0].original_op == "RShift"
-
 
     def describe_augmented_assignment():
         def it_finds_augassign_add():
@@ -300,7 +298,6 @@ def describe_find_mutation_points():
             assert len(augassigns) == 1
             assert augassigns[0].original_op == "RShift"
 
-
     def describe_ifexp():
         def it_finds_ternary_expression():
             source = "def f(x: int) -> int:\n    return x if x > 0 else -x\n"
@@ -322,15 +319,9 @@ def describe_find_mutation_points():
             ifexps = [p for p in points if p.node_type == "IfExp"]
             assert len(ifexps) == 2
 
-
     def describe_except_handler():
         def it_finds_typed_except_handler():
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    pass\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -338,12 +329,7 @@ def describe_find_mutation_points():
             assert handlers[0].lineno == 3
 
         def it_finds_bare_except_handler():
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept:\n    pass\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -384,12 +370,7 @@ def describe_find_mutation_points():
 
         def it_skips_broaden_for_except_exception():
             """except Exception: is already broadest — only body_to_raise."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except Exception:\n"
-                "    print('error')\n"
-            )
+            source = "try:\n    pass\nexcept Exception:\n    print('error')\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -397,12 +378,7 @@ def describe_find_mutation_points():
 
         def it_skips_body_to_raise_for_bare_raise_body():
             """Handler body that's already `raise` — only broaden."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    raise\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    raise\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -410,24 +386,14 @@ def describe_find_mutation_points():
 
         def it_skips_entirely_for_except_exception_with_bare_raise():
             """except Exception: raise — no mutations possible."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except Exception:\n"
-                "    raise\n"
-            )
+            source = "try:\n    pass\nexcept Exception:\n    raise\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 0
 
         def it_skips_bare_except_with_bare_raise_body():
             """Bare except with just raise — no mutations possible."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except:\n"
-                "    raise\n"
-            )
+            source = "try:\n    pass\nexcept:\n    raise\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 0
@@ -435,10 +401,7 @@ def describe_find_mutation_points():
         def it_does_not_skip_raise_with_explicit_exception():
             """raise ValueError() is NOT a bare raise — body_to_raise applies."""
             source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    raise ValueError('oops')\n"
+                "try:\n    pass\nexcept ValueError:\n    raise ValueError('oops')\n"
             )
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
@@ -474,6 +437,131 @@ def describe_find_mutation_points():
             continues = [p for p in points if p.node_type == "Continue"]
             assert len(breaks) == 1
             assert len(continues) == 1
+
+    def describe_leela_skip_pragma():
+        def it_skips_mutations_on_a_line_with_pragma():
+            source = (
+                "def f(x: int, y: int) -> int:\n"  # line 1
+                "    return x + y  # leela: skip\n"  # line 2 — skipped
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Both the BinOp(Add) and Return are on line 2; all should be skipped
+            assert len(points) == 0
+
+        def it_skips_entire_file_when_pragma_on_line_1():
+            source = (
+                "# leela: skip\n"  # line 1 — skip entire file
+                "def f(x: int, y: int) -> int:\n"
+                "    return x + y\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            assert points == []
+
+        def it_only_skips_the_specific_line():
+            source = (
+                "def f(x: int, y: int) -> int:\n"  # line 1
+                "    z = x + y  # leela: skip\n"  # line 2 — skipped
+                "    return z - 1\n"  # line 3 — NOT skipped
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Line 2 BinOp(Add) skipped; line 3 BinOp(Sub) + Return remain
+            assert all(p.lineno != 2 for p in points)
+            line3_points = [p for p in points if p.lineno == 3]
+            assert len(line3_points) >= 1
+
+        def it_does_not_affect_lines_without_pragma():
+            source = "def f(x: int, y: int) -> int:\n    return x + y\n"
+            points = find_mutation_points(source, "test.py", "test")
+            # Normal code — should still find BinOp and Return
+            binops = [p for p in points if p.node_type == "BinOp"]
+            returns = [p for p in points if p.node_type == "Return"]
+            assert len(binops) >= 1
+            assert len(returns) >= 1
+
+        def it_skips_pragma_in_middle_of_file():
+            source = (
+                "def f(a: int, b: int, c: int) -> int:\n"  # line 1
+                "    x = a + b\n"  # line 2 — Add
+                "    y = x * c  # leela: skip\n"  # line 3 — skipped Mult
+                "    return y - 1\n"  # line 4 — Sub + Return
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Line 3 skipped
+            assert all(p.lineno != 3 for p in points)
+            # Line 2 and 4 still present
+            line2 = [p for p in points if p.lineno == 2]
+            line4 = [p for p in points if p.lineno == 4]
+            assert len(line2) >= 1
+            assert len(line4) >= 1
+
+        def it_handles_multiple_skip_lines():
+            source = (
+                "def f(a: int, b: int) -> int:\n"  # line 1
+                "    x = a + b  # leela: skip\n"  # line 2 — skipped
+                "    y = a - b\n"  # line 3 — NOT skipped
+                "    z = a * b  # leela: skip\n"  # line 4 — skipped
+                "    return y + z\n"  # line 5 — NOT skipped
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            assert all(p.lineno not in (2, 4) for p in points)
+            line3 = [p for p in points if p.lineno == 3]
+            assert len(line3) >= 1
+
+        def it_does_not_false_positive_on_pragma_in_string_literal():
+            """Pragma text inside a string should NOT trigger skip."""
+            source = (
+                "def f(x: int, y: int) -> int:\n"  # line 1
+                '    msg = "use # leela: skip to suppress"\n'  # line 2 — string, NOT a comment
+                "    return x + y\n"  # line 3
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            # Line 3 should still produce BinOp + Return — nothing was skipped
+            binops = [p for p in points if p.node_type == "BinOp"]
+            returns = [p for p in points if p.node_type == "Return"]
+            assert len(binops) >= 1
+            assert len(returns) >= 1
+
+        def it_does_not_false_positive_on_pragma_in_docstring():
+            """Pragma text inside a docstring should NOT trigger skip."""
+            source = (
+                "def f(x: int, y: int) -> int:\n"
+                '    """Use # leela: skip to suppress mutations."""\n'
+                "    return x + y\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+
+        def it_does_not_false_positive_on_pragma_in_multiline_string():
+            """Pragma text inside a multi-line string should NOT trigger skip."""
+            source = (
+                "def f(x: int, y: int) -> int:\n"
+                "    msg = (\n"
+                "        '# leela: skip\\n'\n"
+                "    )\n"
+                "    return x + y\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+
+
+        def it_does_not_skip_binop_on_same_line_as_pragma_string():
+            """Kills ast_analysis.py line 287: and → or.
+
+            With the mutation, any token containing '# leela: skip'
+            triggers the skip — even string literals.  This test puts
+            a BinOp on the same line as a string containing the pragma
+            so the mutation incorrectly skips the BinOp.
+            """
+            source = (
+                "def f(a: int, b: int) -> str:\n"
+                '    return str(a + b) + "# leela: skip"\n'
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            # Both BinOps (a + b and the str concat) should be found
+            assert len(binops) >= 1
 
 
 def describe_find_mutation_points_in_file():

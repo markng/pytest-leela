@@ -123,29 +123,20 @@ def describe_check_memory_usage():
 
     def it_returns_zero_when_mem_total_is_zero():
         """When mem_total is 0, should not divide by zero."""
-        meminfo = (
-            "MemTotal:       0 kB\n"
-            "MemAvailable:   0 kB\n"
-        )
+        meminfo = "MemTotal:       0 kB\nMemAvailable:   0 kB\n"
         with patch("builtins.open", mock_open(read_data=meminfo)):
             result = check_memory_usage()
         assert result == 0.0
 
     def it_returns_non_negative_result():
         """Result should always be >= 0 (not negated)."""
-        meminfo = (
-            "MemTotal:       8000000 kB\n"
-            "MemAvailable:   4000000 kB\n"
-        )
+        meminfo = "MemTotal:       8000000 kB\nMemAvailable:   4000000 kB\n"
         with patch("builtins.open", mock_open(read_data=meminfo)):
             result = check_memory_usage()
         assert result >= 0.0
 
     def it_returns_value_less_than_or_equal_100():
-        meminfo = (
-            "MemTotal:       8000000 kB\n"
-            "MemAvailable:   0 kB\n"
-        )
+        meminfo = "MemTotal:       8000000 kB\nMemAvailable:   0 kB\n"
         with patch("builtins.open", mock_open(read_data=meminfo)):
             result = check_memory_usage()
         assert result == 100.0

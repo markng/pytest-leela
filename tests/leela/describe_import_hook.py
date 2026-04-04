@@ -46,8 +46,11 @@ def describe_MutantApplier():
         tree = ast.parse(source, mode="eval")
         # The BinOp is at line 1, col 0
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="BinOp", original_op="Add", replacement_op="Sub",
+            lineno=1,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            replacement_op="Sub",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -60,8 +63,11 @@ def describe_MutantApplier():
         source = "x > y"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="Compare", original_op="Gt", replacement_op="LtE",
+            lineno=1,
+            col_offset=0,
+            node_type="Compare",
+            original_op="Gt",
+            replacement_op="LtE",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -73,8 +79,11 @@ def describe_MutantApplier():
         source = "a and b"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="BoolOp", original_op="And", replacement_op="Or",
+            lineno=1,
+            col_offset=0,
+            node_type="BoolOp",
+            original_op="And",
+            replacement_op="Or",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -87,8 +96,11 @@ def describe_MutantApplier():
         tree = ast.parse(source)
         # Return is at line 2, col 4
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="True", replacement_op="False",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="True",
+            replacement_op="False",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -103,8 +115,11 @@ def describe_MutantApplier():
             source = "x & y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="BitAnd", replacement_op="BitOr",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="BitAnd",
+                replacement_op="BitOr",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -116,8 +131,11 @@ def describe_MutantApplier():
             source = "x & y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="BitAnd", replacement_op="BitXor",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="BitAnd",
+                replacement_op="BitXor",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -129,8 +147,11 @@ def describe_MutantApplier():
             source = "x | y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="BitOr", replacement_op="BitAnd",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="BitOr",
+                replacement_op="BitAnd",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -142,8 +163,11 @@ def describe_MutantApplier():
             source = "x | y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="BitOr", replacement_op="BitXor",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="BitOr",
+                replacement_op="BitXor",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -155,8 +179,11 @@ def describe_MutantApplier():
             source = "x ^ y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="BitXor", replacement_op="BitAnd",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="BitXor",
+                replacement_op="BitAnd",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -168,8 +195,11 @@ def describe_MutantApplier():
             source = "x ^ y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="BitXor", replacement_op="BitOr",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="BitXor",
+                replacement_op="BitOr",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -181,8 +211,11 @@ def describe_MutantApplier():
             source = "x << y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="LShift", replacement_op="RShift",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="LShift",
+                replacement_op="RShift",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -194,8 +227,11 @@ def describe_MutantApplier():
             source = "x >> y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="RShift", replacement_op="LShift",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="RShift",
+                replacement_op="LShift",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -208,8 +244,11 @@ def describe_MutantApplier():
             source = "x += y\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="AugAssign", original_op="Add", replacement_op="Sub",
+                lineno=1,
+                col_offset=0,
+                node_type="AugAssign",
+                original_op="Add",
+                replacement_op="Sub",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -221,8 +260,11 @@ def describe_MutantApplier():
             source = "x -= y\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="AugAssign", original_op="Sub", replacement_op="Add",
+                lineno=1,
+                col_offset=0,
+                node_type="AugAssign",
+                original_op="Sub",
+                replacement_op="Add",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -234,8 +276,11 @@ def describe_MutantApplier():
             source = "x *= y\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="AugAssign", original_op="Mult", replacement_op="FloorDiv",
+                lineno=1,
+                col_offset=0,
+                node_type="AugAssign",
+                original_op="Mult",
+                replacement_op="FloorDiv",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -247,8 +292,11 @@ def describe_MutantApplier():
             source = "x &= y\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="AugAssign", original_op="BitAnd", replacement_op="BitOr",
+                lineno=1,
+                col_offset=0,
+                node_type="AugAssign",
+                original_op="BitAnd",
+                replacement_op="BitOr",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -260,8 +308,11 @@ def describe_MutantApplier():
             source = "x <<= y\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="AugAssign", original_op="LShift", replacement_op="RShift",
+                lineno=1,
+                col_offset=0,
+                node_type="AugAssign",
+                original_op="LShift",
+                replacement_op="RShift",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -273,8 +324,11 @@ def describe_MutantApplier():
             source = "x + y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="AugAssign", original_op="Add", replacement_op="Sub",
+                lineno=1,
+                col_offset=0,
+                node_type="AugAssign",
+                original_op="Add",
+                replacement_op="Sub",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -285,8 +339,11 @@ def describe_MutantApplier():
             source = "x += y\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="Add", replacement_op="Sub",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="Add",
+                replacement_op="Sub",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -298,8 +355,11 @@ def describe_MutantApplier():
             source = "x if cond else y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="IfExp", original_op="ternary", replacement_op="swap_branches",
+                lineno=1,
+                col_offset=0,
+                node_type="IfExp",
+                original_op="ternary",
+                replacement_op="swap_branches",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -314,8 +374,11 @@ def describe_MutantApplier():
             source = "x if cond else y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="IfExp", original_op="ternary", replacement_op="always_true",
+                lineno=1,
+                col_offset=0,
+                node_type="IfExp",
+                original_op="ternary",
+                replacement_op="always_true",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -329,8 +392,11 @@ def describe_MutantApplier():
             source = "x if cond else y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="IfExp", original_op="ternary", replacement_op="always_false",
+                lineno=1,
+                col_offset=0,
+                node_type="IfExp",
+                original_op="ternary",
+                replacement_op="always_false",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -344,8 +410,11 @@ def describe_MutantApplier():
             source = "x + y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="IfExp", original_op="ternary", replacement_op="swap_branches",
+                lineno=1,
+                col_offset=0,
+                node_type="IfExp",
+                original_op="ternary",
+                replacement_op="swap_branches",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -355,8 +424,11 @@ def describe_MutantApplier():
             source = "x if cond else y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BinOp", original_op="Add", replacement_op="Sub",
+                lineno=1,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="Add",
+                replacement_op="Sub",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -370,8 +442,11 @@ def describe_MutantApplier():
             # Position matches the IfExp, but node_type says BoolOp
             # replacement_op swap_branches would apply if guard fails
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="BoolOp", original_op="And", replacement_op="swap_branches",
+                lineno=1,
+                col_offset=0,
+                node_type="BoolOp",
+                original_op="And",
+                replacement_op="swap_branches",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -386,8 +461,11 @@ def describe_MutantApplier():
             source = "for i in range(10):\n    break\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=2, col_offset=4,
-                node_type="Break", original_op="break", replacement_op="continue",
+                lineno=2,
+                col_offset=4,
+                node_type="Break",
+                original_op="break",
+                replacement_op="continue",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -399,8 +477,11 @@ def describe_MutantApplier():
             source = "for i in range(10):\n    continue\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=2, col_offset=4,
-                node_type="Continue", original_op="continue", replacement_op="break",
+                lineno=2,
+                col_offset=4,
+                node_type="Continue",
+                original_op="continue",
+                replacement_op="break",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -412,8 +493,11 @@ def describe_MutantApplier():
             source = "for i in range(10):\n    continue\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=2, col_offset=4,
-                node_type="Break", original_op="break", replacement_op="continue",
+                lineno=2,
+                col_offset=4,
+                node_type="Break",
+                original_op="break",
+                replacement_op="continue",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -424,8 +508,11 @@ def describe_MutantApplier():
             source = "for i in range(10):\n    break\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=2, col_offset=4,
-                node_type="Continue", original_op="continue", replacement_op="break",
+                lineno=2,
+                col_offset=4,
+                node_type="Continue",
+                original_op="continue",
+                replacement_op="break",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -437,8 +524,11 @@ def describe_MutantApplier():
             source = "for i in range(10):\n    break\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=2, col_offset=4,
-                node_type="BinOp", original_op="Add", replacement_op="continue",
+                lineno=2,
+                col_offset=4,
+                node_type="BinOp",
+                original_op="Add",
+                replacement_op="continue",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -450,8 +540,11 @@ def describe_MutantApplier():
             source = "for i in range(10):\n    continue\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=2, col_offset=4,
-                node_type="BinOp", original_op="Add", replacement_op="break",
+                lineno=2,
+                col_offset=4,
+                node_type="BinOp",
+                original_op="Add",
+                replacement_op="break",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -460,17 +553,15 @@ def describe_MutantApplier():
 
     def describe_except_handler():
         def it_broadens_typed_except_to_exception():
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    pass\n"
             tree = ast.parse(source)
             # ExceptHandler is at line 3, col 0
             mutant = _make_mutant(
-                lineno=3, col_offset=0,
-                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+                lineno=3,
+                col_offset=0,
+                node_type="ExceptHandler",
+                original_op="typed",
+                replacement_op="broaden",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -481,16 +572,14 @@ def describe_MutantApplier():
             assert handler.type.id == "Exception"
 
         def it_replaces_body_with_raise():
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    print('error')\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    print('error')\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=3, col_offset=0,
-                node_type="ExceptHandler", original_op="typed", replacement_op="body_to_raise",
+                lineno=3,
+                col_offset=0,
+                node_type="ExceptHandler",
+                original_op="typed",
+                replacement_op="body_to_raise",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -501,16 +590,14 @@ def describe_MutantApplier():
             assert isinstance(handler.body[0], ast.Raise)
 
         def it_replaces_bare_except_body_with_raise():
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except:\n"
-                "    print('error')\n"
-            )
+            source = "try:\n    pass\nexcept:\n    print('error')\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=3, col_offset=0,
-                node_type="ExceptHandler", original_op="bare", replacement_op="body_to_raise",
+                lineno=3,
+                col_offset=0,
+                node_type="ExceptHandler",
+                original_op="bare",
+                replacement_op="body_to_raise",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -522,16 +609,14 @@ def describe_MutantApplier():
 
         def it_does_not_broaden_bare_except():
             """Bare except has no type to broaden — broaden should not apply."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept:\n    pass\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=3, col_offset=0,
-                node_type="ExceptHandler", original_op="bare", replacement_op="broaden",
+                lineno=3,
+                col_offset=0,
+                node_type="ExceptHandler",
+                original_op="bare",
+                replacement_op="broaden",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -542,8 +627,11 @@ def describe_MutantApplier():
             source = "x + y"
             tree = ast.parse(source, mode="eval")
             mutant = _make_mutant(
-                lineno=1, col_offset=0,
-                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+                lineno=1,
+                col_offset=0,
+                node_type="ExceptHandler",
+                original_op="typed",
+                replacement_op="broaden",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -552,17 +640,15 @@ def describe_MutantApplier():
 
         def it_does_not_apply_non_except_mutant_to_except_handler():
             """Kills and→or on visit_ExceptHandler guard: _matches True but wrong node_type."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    pass\n"
             tree = ast.parse(source)
             # Position matches the ExceptHandler, but node_type says BinOp
             mutant = _make_mutant(
-                lineno=3, col_offset=0,
-                node_type="BinOp", original_op="Add", replacement_op="broaden",
+                lineno=3,
+                col_offset=0,
+                node_type="BinOp",
+                original_op="Add",
+                replacement_op="broaden",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -574,16 +660,14 @@ def describe_MutantApplier():
 
         def it_preserves_exception_name_binding():
             """Broadening should preserve 'as e' binding."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError as e:\n"
-                "    print(e)\n"
-            )
+            source = "try:\n    pass\nexcept ValueError as e:\n    print(e)\n"
             tree = ast.parse(source)
             mutant = _make_mutant(
-                lineno=3, col_offset=0,
-                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+                lineno=3,
+                col_offset=0,
+                node_type="ExceptHandler",
+                original_op="typed",
+                replacement_op="broaden",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -596,18 +680,16 @@ def describe_MutantApplier():
 
         def it_copies_location_from_original_type_not_handler():
             """Broaden should copy location from the original exception type node."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    pass\n"
             tree = ast.parse(source)
             handler = tree.body[0].handlers[0]
             original_type_col = handler.type.col_offset
             mutant = _make_mutant(
-                lineno=3, col_offset=0,
-                node_type="ExceptHandler", original_op="typed", replacement_op="broaden",
+                lineno=3,
+                col_offset=0,
+                node_type="ExceptHandler",
+                original_op="typed",
+                replacement_op="broaden",
             )
             applier = MutantApplier(mutant)
             new_tree = applier.visit(tree)
@@ -621,8 +703,11 @@ def describe_MutantApplier():
         source = "x + y"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=99, col_offset=0,
-            node_type="BinOp", original_op="Add", replacement_op="Sub",
+            lineno=99,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            replacement_op="Sub",
         )
         applier = MutantApplier(mutant)
         applier.visit(tree)
@@ -633,8 +718,11 @@ def describe_apply_mutation():
     def it_returns_modified_tree_and_applied_flag():
         source = "x + y"
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="BinOp", original_op="Add", replacement_op="Sub",
+            lineno=1,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            replacement_op="Sub",
         )
         tree, applied = apply_mutation(source, mutant)
         assert applied is True
@@ -643,7 +731,9 @@ def describe_apply_mutation():
 def describe_install_and_remove_hook():
     def it_installs_and_removes_hook():
         source = "x = 1\n"
-        point = _make_point(lineno=1, col_offset=0, node_type="BinOp", original_op="Add")
+        point = _make_point(
+            lineno=1, col_offset=0, node_type="BinOp", original_op="Add"
+        )
         mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
 
         target_modules = {"__test_dummy_module__": source}
@@ -656,7 +746,9 @@ def describe_install_and_remove_hook():
 
     def it_survives_double_removal():
         source = "x = 1\n"
-        point = _make_point(lineno=1, col_offset=0, node_type="BinOp", original_op="Add")
+        point = _make_point(
+            lineno=1, col_offset=0, node_type="BinOp", original_op="Add"
+        )
         mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
 
         target_modules = {"__test_dummy_module2__": source}
@@ -674,7 +766,9 @@ def describe_install_and_remove_hook():
         import pytest
 
         source = "x = 1\n"
-        point = _make_point(lineno=1, col_offset=0, node_type="BinOp", original_op="Add")
+        point = _make_point(
+            lineno=1, col_offset=0, node_type="BinOp", original_op="Add"
+        )
         mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
 
         target_modules = {"__test_dummy_module3__": source}
@@ -704,8 +798,11 @@ def describe_UnaryOp_mutation():
         source = "not x"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="UnaryOp", original_op="Not", replacement_op="_remove",
+            lineno=1,
+            col_offset=0,
+            node_type="UnaryOp",
+            original_op="Not",
+            replacement_op="_remove",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -722,8 +819,11 @@ def describe_Return_mutations():
         source = "def f():\n    return value\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="value", replacement_op="negate",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="value",
+            replacement_op="negate",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -740,8 +840,11 @@ def describe_Return_mutations():
         source = "def f():\n    return 42\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="42", replacement_op="empty_str",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="42",
+            replacement_op="empty_str",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -756,8 +859,11 @@ def describe_Return_mutations():
         source = "def f():\n    return value\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="expr", replacement_op="negate_expr",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="expr",
+            replacement_op="negate_expr",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -772,8 +878,11 @@ def describe_Return_mutations():
         source = "def f():\n    return -x\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="negation", replacement_op="remove_negation",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="negation",
+            replacement_op="remove_negation",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -791,8 +900,11 @@ def describe_Return_mutations():
         source = "def f():\n    return None\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="None", replacement_op="expr",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="None",
+            replacement_op="expr",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -810,8 +922,11 @@ def describe_Return_mutations():
         source = "def f():\n    return 42\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="int_literal", replacement_op="expr",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="int_literal",
+            replacement_op="expr",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -829,8 +944,11 @@ def describe_Return_mutations():
         source = "def f():\n    return\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="None", replacement_op="expr",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="None",
+            replacement_op="expr",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -847,8 +965,11 @@ def describe_Return_mutations():
         source = "def f():\n    return None\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="None", replacement_op="False",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="None",
+            replacement_op="False",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -863,8 +984,11 @@ def describe_Return_mutations():
         source = "def f():\n    return None\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="None", replacement_op="negate_expr",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="None",
+            replacement_op="negate_expr",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -880,8 +1004,11 @@ def describe_Return_mutations():
         source = "def f():\n    return x\n"
         tree = ast.parse(source)
         mutant = _make_mutant(
-            lineno=2, col_offset=4,
-            node_type="Return", original_op="expr", replacement_op="remove_negation",
+            lineno=2,
+            col_offset=4,
+            node_type="Return",
+            original_op="expr",
+            replacement_op="remove_negation",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -903,8 +1030,11 @@ def describe_node_type_discrimination():
         tree = ast.parse(source, mode="eval")
         # Mutant says "Compare" but node is BinOp
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="Compare", original_op="Gt", replacement_op="LtE",
+            lineno=1,
+            col_offset=0,
+            node_type="Compare",
+            original_op="Gt",
+            replacement_op="LtE",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -917,8 +1047,11 @@ def describe_node_type_discrimination():
         source = "x > y\n"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="BoolOp", original_op="And", replacement_op="Or",
+            lineno=1,
+            col_offset=0,
+            node_type="BoolOp",
+            original_op="And",
+            replacement_op="Or",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -930,8 +1063,11 @@ def describe_node_type_discrimination():
         source = "a and b\n"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="UnaryOp", original_op="Not", replacement_op="_remove",
+            lineno=1,
+            col_offset=0,
+            node_type="UnaryOp",
+            original_op="Not",
+            replacement_op="_remove",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -954,8 +1090,11 @@ def describe_node_type_discrimination():
         # replacement_op "Or" IS in _OP_CLASSES — so if the guard fails,
         # the mutation would be applied
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="BinOp", original_op="And", replacement_op="Or",
+            lineno=1,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="And",
+            replacement_op="Or",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -970,8 +1109,11 @@ def describe_node_type_discrimination():
         # Target the BinOp inside the return (line 2, col 11)
         binop_node = tree.body[0].body[0].value  # The x + y BinOp
         mutant = _make_mutant(
-            lineno=2, col_offset=binop_node.col_offset,
-            node_type="Return", original_op="expr", replacement_op="None",
+            lineno=2,
+            col_offset=binop_node.col_offset,
+            node_type="Return",
+            original_op="expr",
+            replacement_op="None",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -984,8 +1126,11 @@ def describe_node_type_discrimination():
         source = "-x\n"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="BinOp", original_op="Add", replacement_op="Sub",
+            lineno=1,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            replacement_op="Sub",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -998,8 +1143,11 @@ def describe_node_type_discrimination():
         tree = ast.parse(source, mode="exec")
         # Mutant targets line 1
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="Compare", original_op="Gt", replacement_op="LtE",
+            lineno=1,
+            col_offset=0,
+            node_type="Compare",
+            original_op="Gt",
+            replacement_op="LtE",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)
@@ -1014,8 +1162,11 @@ def describe_node_type_discrimination():
         source = "-x\n"
         tree = ast.parse(source, mode="eval")
         mutant = _make_mutant(
-            lineno=1, col_offset=0,
-            node_type="UnaryOp", original_op="USub", replacement_op="TotallyFake",
+            lineno=1,
+            col_offset=0,
+            node_type="UnaryOp",
+            original_op="USub",
+            replacement_op="TotallyFake",
         )
         applier = MutantApplier(mutant)
         new_tree = applier.visit(tree)

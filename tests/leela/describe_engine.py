@@ -10,7 +10,14 @@ import pytest
 
 from pytest_leela.engine import Engine, _clean_process_state, _module_name_from_path
 from pytest_leela.import_hook import MutatingFinder
-from pytest_leela.models import CoverageMap, Mutant, MutantResult, MutationPoint, RunResult
+from pytest_leela.models import (
+    CoverageMap,
+    Mutant,
+    MutantResult,
+    MutationPoint,
+    RunResult,
+)
+from pytest_leela.operators import build_allowed_keys
 from pytest_leela.resources import ResourceLimits
 
 
@@ -62,9 +69,7 @@ def describe_clean_process_state():
 
             _clean_process_state()
 
-            remaining = [
-                f for f in sys.meta_path if not isinstance(f, MutatingFinder)
-            ]
+            remaining = [f for f in sys.meta_path if not isinstance(f, MutatingFinder)]
             assert remaining == original_non_mutating
         finally:
             sys.meta_path[:] = original_meta_path
@@ -182,9 +187,7 @@ def describe_Engine_run():
         test_dir = tmp_path / "eng_t2_tests"
         test_dir.mkdir()
         (test_dir / "test_noop.py").write_text(
-            "from eng_t2 import noop\n\n"
-            "def test_noop():\n"
-            "    assert noop() == 1\n"
+            "from eng_t2 import noop\n\ndef test_noop():\n    assert noop() == 1\n"
         )
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
@@ -219,9 +222,7 @@ def describe_Engine_run():
         test_dir = tmp_path / "t_pruned_tests"
         test_dir.mkdir()
         (test_dir / "test_pruned.py").write_text(
-            "from t_pruned import add\n"
-            "def test_add():\n"
-            "    assert add(1, 2) == 3\n"
+            "from t_pruned import add\ndef test_add():\n    assert add(1, 2) == 3\n"
         )
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
@@ -242,11 +243,7 @@ def describe_Engine_run():
         """
         target = tmp_path / "t_diff.py"
         target.write_text(
-            "def add(a, b):\n"
-            "    return a + b\n"
-            "\n"
-            "def sub(a, b):\n"
-            "    return a - b\n"
+            "def add(a, b):\n    return a + b\n\ndef sub(a, b):\n    return a - b\n"
         )
         abs_target = os.path.abspath(str(target))
         test_dir = tmp_path / "t_diff_tests"
@@ -271,9 +268,7 @@ def describe_Engine_run():
         # With diff_base: only line 2 changed
         with patch("pytest_leela.engine.changed_lines") as mock_cl:
             mock_cl.return_value = {abs_target: {2}}
-            result_diff = engine.run(
-                [str(target)], str(test_dir), diff_base="main"
-            )
+            result_diff = engine.run([str(target)], str(test_dir), diff_base="main")
 
         # Fewer mutants tested (only line 2), and all on line 2
         assert 0 < result_diff.mutants_tested < result_all.mutants_tested
@@ -290,9 +285,7 @@ def describe_Engine_run():
         test_dir = tmp_path / "t_mem_tests"
         test_dir.mkdir()
         (test_dir / "test_mem.py").write_text(
-            "from t_mem import add\n"
-            "def test_add():\n"
-            "    assert add(1, 2) == 3\n"
+            "from t_mem import add\ndef test_add():\n    assert add(1, 2) == 3\n"
         )
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
@@ -300,8 +293,10 @@ def describe_Engine_run():
         limits = ResourceLimits(max_memory_percent=90)
 
         # is_memory_ok returns False → engine should break immediately
-        with patch("pytest_leela.engine.is_memory_ok", return_value=False), \
-             patch("pytest_leela.engine.apply_limits"):
+        with (
+            patch("pytest_leela.engine.is_memory_ok", return_value=False),
+            patch("pytest_leela.engine.apply_limits"),
+        ):
             engine = Engine(use_types=False, use_coverage=False)
             result = engine.run([str(target)], str(test_dir), limits=limits)
 
@@ -318,10 +313,7 @@ def describe_Engine_run():
         target.write_text("x = 1\n")
         test_dir = tmp_path / "t_time_tests"
         test_dir.mkdir()
-        (test_dir / "test_time.py").write_text(
-            "def test_pass():\n"
-            "    pass\n"
-        )
+        (test_dir / "test_time.py").write_text("def test_pass():\n    pass\n")
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
@@ -335,16 +327,13 @@ def describe_Engine_run():
         # 1000.5 - 1000.0 = 0.5 (not 2000.5 from + or 1000500.0 from *)
         assert result.wall_time_seconds == pytest.approx(0.5)
 
-
     def it_populates_coverage_map_in_run_result(tmp_path, monkeypatch):
         target = tmp_path / "eng_cov.py"
         target.write_text("def add(a, b):\n    return a + b\n")
         test_dir = tmp_path / "eng_cov_tests"
         test_dir.mkdir()
         (test_dir / "test_eng_cov.py").write_text(
-            "from eng_cov import add\n\n"
-            "def test_add():\n"
-            "    assert add(1, 2) == 3\n"
+            "from eng_cov import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
         )
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
@@ -361,9 +350,7 @@ def describe_Engine_run():
         test_dir = tmp_path / "eng_nocov_tests"
         test_dir.mkdir()
         (test_dir / "test_eng_nocov.py").write_text(
-            "from eng_nocov import add\n\n"
-            "def test_add():\n"
-            "    assert add(1, 2) == 3\n"
+            "from eng_nocov import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
         )
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
@@ -380,9 +367,7 @@ def describe_Engine_run():
         test_dir = tmp_path / "eng_src_tests"
         test_dir.mkdir()
         (test_dir / "test_eng_src.py").write_text(
-            "from eng_src import add\n\n"
-            "def test_add():\n"
-            "    assert add(1, 2) == 3\n"
+            "from eng_src import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
         )
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
@@ -395,11 +380,225 @@ def describe_Engine_run():
         assert result.target_sources[abs_target] == source
 
 
+def describe_Engine_enabled_categories():
+    def it_stores_enabled_categories_as_none_by_default():
+        engine = Engine()
+        assert engine._enabled_categories is None
+
+    def it_stores_enabled_categories_when_provided():
+        engine = Engine(enabled_categories=["arithmetic", "comparison"])
+        assert engine._enabled_categories == ["arithmetic", "comparison"]
+
+    def it_precomputes_allowed_keys_as_none_by_default():
+        engine = Engine()
+        assert engine._allowed_keys is None
+
+    def it_precomputes_allowed_keys_as_frozenset():
+        engine = Engine(enabled_categories=["arithmetic", "comparison"])
+        expected = build_allowed_keys(["arithmetic", "comparison"])
+        assert engine._allowed_keys == expected
+        assert isinstance(engine._allowed_keys, frozenset)
+
+    def it_passes_allowed_keys_through_to_mutations_for(tmp_path, monkeypatch):
+        """Verify precomputed allowed_keys is forwarded to mutations_for during run."""
+        target = tmp_path / "cat_target.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat.py").write_text(
+            "from cat_target import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        captured_keys: list = []
+        original_mutations_for = __import__(
+            "pytest_leela.operators", fromlist=["mutations_for"]
+        ).mutations_for
+
+        def spy_mutations_for(point, use_types=True, allowed_keys=None):
+            captured_keys.append(allowed_keys)
+            return original_mutations_for(point, use_types, allowed_keys=allowed_keys)
+
+        with patch("pytest_leela.engine.mutations_for", side_effect=spy_mutations_for):
+            engine = Engine(
+                use_types=False, use_coverage=False, enabled_categories=["arithmetic"]
+            )
+            engine.run([str(target)], str(test_dir))
+
+        expected_keys = build_allowed_keys(["arithmetic"])
+        assert len(captured_keys) > 0
+        for keys in captured_keys:
+            assert keys == expected_keys
+
+    def it_passes_allowed_keys_through_to_count_pruned(tmp_path, monkeypatch):
+        """Verify precomputed allowed_keys is forwarded to count_pruned during run."""
+        target = tmp_path / "cat_pruned.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_pruned_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat_pruned.py").write_text(
+            "from cat_pruned import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        captured_keys: list = []
+        original_count_pruned = __import__(
+            "pytest_leela.operators", fromlist=["count_pruned"]
+        ).count_pruned
+
+        def spy_count_pruned(points, use_types=True, allowed_keys=None):
+            captured_keys.append(allowed_keys)
+            return original_count_pruned(points, use_types, allowed_keys=allowed_keys)
+
+        with patch("pytest_leela.engine.count_pruned", side_effect=spy_count_pruned):
+            engine = Engine(
+                use_types=True, use_coverage=False, enabled_categories=["comparison"]
+            )
+            engine.run([str(target)], str(test_dir))
+
+        expected_keys = build_allowed_keys(["comparison"])
+        assert len(captured_keys) > 0
+        for keys in captured_keys:
+            assert keys == expected_keys
+
+    def it_filters_mutants_when_category_restricts_operators(tmp_path, monkeypatch):
+        """With only 'return' enabled, BinOp mutants should be excluded."""
+        target = tmp_path / "cat_filter.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_filter_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat_filter.py").write_text(
+            "from cat_filter import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        # With all categories (None) — should get both BinOp and Return mutants
+        engine_all = Engine(
+            use_types=False, use_coverage=False, enabled_categories=None
+        )
+        result_all = engine_all.run([str(target)], str(test_dir))
+
+        # With only 'return' — should get only Return mutants
+        engine_return = Engine(
+            use_types=False, use_coverage=False, enabled_categories=["return"]
+        )
+        result_return = engine_return.run([str(target)], str(test_dir))
+
+        assert result_all.mutants_tested > result_return.mutants_tested
+        for r in result_return.results:
+            assert r.mutant.point.node_type == "Return"
+
+    def it_is_backwards_compatible_with_none_categories(tmp_path, monkeypatch):
+        """None categories = all operators, same as no filtering."""
+        target = tmp_path / "cat_compat.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        test_dir = tmp_path / "cat_compat_tests"
+        test_dir.mkdir()
+        (test_dir / "test_cat_compat.py").write_text(
+            "from cat_compat import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        engine_default = Engine(use_types=False, use_coverage=False)
+        result_default = engine_default.run([str(target)], str(test_dir))
+
+        engine_none = Engine(
+            use_types=False, use_coverage=False, enabled_categories=None
+        )
+        result_none = engine_none.run([str(target)], str(test_dir))
+
+        assert result_default.mutants_tested == result_none.mutants_tested
+        assert result_default.total_mutants == result_none.total_mutants
+
+
+def describe_Engine_run_pre_coverage_map():
+    """Tests for the pre_coverage_map parameter of Engine.run."""
+
+    def it_uses_pre_coverage_map_when_provided(tmp_path, monkeypatch):
+        """When pre_coverage_map is provided, collect_coverage should NOT be called."""
+        target = tmp_path / "precov_target.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        abs_target = os.path.abspath(str(target))
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        pre_cov = CoverageMap()
+        for lineno in range(1, 5):
+            pre_cov.add(abs_target, lineno, "tests/test_precov.py::test_add")
+
+        with patch("pytest_leela.engine.collect_coverage") as mock_collect:
+            engine = Engine(use_types=False, use_coverage=True)
+            result = engine.run(
+                [str(target)],
+                test_node_ids=["tests/test_precov.py::test_add"],
+                pre_coverage_map=pre_cov,
+            )
+
+        # collect_coverage should NOT have been called
+        mock_collect.assert_not_called()
+        # The coverage_map in the result should be our pre-built one
+        assert result.coverage_map is pre_cov
+
+    def it_falls_back_to_collect_coverage_when_no_pre_coverage_map(
+        tmp_path, monkeypatch
+    ):
+        """When pre_coverage_map is None and use_coverage=True, collect_coverage is called."""
+        target = tmp_path / "fallback_cov.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        fake_cov = CoverageMap()
+
+        with patch(
+            "pytest_leela.engine.collect_coverage", return_value=fake_cov
+        ) as mock_collect:
+            engine = Engine(use_types=False, use_coverage=True)
+            result = engine.run(
+                [str(target)],
+                test_node_ids=["tests/test_fallback.py::test_add"],
+                pre_coverage_map=None,
+            )
+
+        mock_collect.assert_called_once()
+        assert result.coverage_map is fake_cov
+
+    def it_skips_coverage_entirely_when_use_coverage_false_and_no_pre_map(
+        tmp_path, monkeypatch
+    ):
+        """With use_coverage=False and no pre_coverage_map, coverage_map should be None."""
+        target = tmp_path / "nocov_target.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        with patch("pytest_leela.engine.collect_coverage") as mock_collect:
+            engine = Engine(use_types=False, use_coverage=False)
+            result = engine.run(
+                [str(target)],
+                test_node_ids=["tests/test_nocov.py::test_add"],
+                pre_coverage_map=None,
+            )
+
+        mock_collect.assert_not_called()
+        assert result.coverage_map is None
+
+
 def _make_fake_runner(captured_test_ids: list) -> callable:
     """Factory for a fake ``run_tests_for_mutant`` that records test_ids."""
 
-    def fake_run(mutant, target_sources, module_to_file,
-                 test_ids=None, test_dir=None):
+    def fake_run(
+        mutant,
+        target_sources,
+        module_to_file,
+        test_ids=None,
+        test_dir=None,
+        **kwargs,
+    ):
         captured_test_ids.append(test_ids)
         return MutantResult(
             mutant=mutant,
@@ -445,12 +644,17 @@ def describe_Engine_run_test_id_fallback():
         ]
         captured: list[list[str] | None] = []
 
-        with patch("pytest_leela.engine.collect_coverage", return_value=cov_map), \
-             patch("pytest_leela.engine.run_tests_for_mutant",
-                   side_effect=_make_fake_runner(captured)):
+        with (
+            patch("pytest_leela.engine.collect_coverage", return_value=cov_map),
+            patch(
+                "pytest_leela.engine.run_tests_for_mutant",
+                side_effect=_make_fake_runner(captured),
+            ),
+        ):
             engine = Engine(use_types=False, use_coverage=True)
             result = engine.run(
-                [str(target)], test_node_ids=session_tests,
+                [str(target)],
+                test_node_ids=session_tests,
             )
 
         assert result.mutants_tested > 0
@@ -458,9 +662,7 @@ def describe_Engine_run_test_id_fallback():
             # Coverage found tests → use those, not the session fallback
             assert test_ids == ["tests/test_specific.py::test_mapped"]
 
-    def it_falls_back_to_session_tests_when_no_coverage_match(
-        tmp_path, monkeypatch
-    ):
+    def it_falls_back_to_session_tests_when_no_coverage_match(tmp_path, monkeypatch):
         """Kills `is → is not` and `is not → is` on line 183.
 
         When coverage returns no match for a mutant line but
@@ -488,12 +690,17 @@ def describe_Engine_run_test_id_fallback():
         ]
         captured: list[list[str] | None] = []
 
-        with patch("pytest_leela.engine.collect_coverage", return_value=cov_map), \
-             patch("pytest_leela.engine.run_tests_for_mutant",
-                   side_effect=_make_fake_runner(captured)):
+        with (
+            patch("pytest_leela.engine.collect_coverage", return_value=cov_map),
+            patch(
+                "pytest_leela.engine.run_tests_for_mutant",
+                side_effect=_make_fake_runner(captured),
+            ),
+        ):
             engine = Engine(use_types=False, use_coverage=True)
             result = engine.run(
-                [str(target)], test_node_ids=session_tests,
+                [str(target)],
+                test_node_ids=session_tests,
             )
 
         assert result.mutants_tested > 0
@@ -523,9 +730,13 @@ def describe_Engine_run_test_id_fallback():
 
         captured: list[list[str] | None] = []
 
-        with patch("pytest_leela.engine.collect_coverage", return_value=cov_map), \
-             patch("pytest_leela.engine.run_tests_for_mutant",
-                   side_effect=_make_fake_runner(captured)):
+        with (
+            patch("pytest_leela.engine.collect_coverage", return_value=cov_map),
+            patch(
+                "pytest_leela.engine.run_tests_for_mutant",
+                side_effect=_make_fake_runner(captured),
+            ),
+        ):
             engine = Engine(use_types=False, use_coverage=True)
             # No session tests available
             result = engine.run([str(target)], test_node_ids=None)

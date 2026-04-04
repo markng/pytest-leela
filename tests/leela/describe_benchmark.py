@@ -3,7 +3,11 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from pytest_leela.benchmark import BenchmarkPlugin, _BenchmarkRow, _format_benchmark_report
+from pytest_leela.benchmark import (
+    BenchmarkPlugin,
+    _BenchmarkRow,
+    _format_benchmark_report,
+)
 
 
 def _row(
@@ -213,9 +217,7 @@ def describe_BenchmarkPlugin():
             session.config = config
             session.config.rootpath = Path("/tmp/fake")
 
-            with patch(
-                "pytest_leela.benchmark._find_default_targets", return_value=[]
-            ):
+            with patch("pytest_leela.benchmark._find_default_targets", return_value=[]):
                 plugin.pytest_sessionfinish(session, exitstatus=0)
             config.getoption.assert_called()
 
