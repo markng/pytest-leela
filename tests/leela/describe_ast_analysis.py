@@ -177,7 +177,6 @@ def describe_find_mutation_points():
         # All 11 should have distinct classifications
         assert len(classifications) == 11
 
-
     def describe_bitwise_operators():
         def it_finds_bitand():
             source = "def f(x: int, y: int) -> int:\n    return x & y\n"
@@ -213,7 +212,6 @@ def describe_find_mutation_points():
             binops = [p for p in points if p.node_type == "BinOp"]
             assert len(binops) == 1
             assert binops[0].original_op == "RShift"
-
 
     def describe_augmented_assignment():
         def it_finds_augassign_add():
@@ -300,7 +298,6 @@ def describe_find_mutation_points():
             assert len(augassigns) == 1
             assert augassigns[0].original_op == "RShift"
 
-
     def describe_ifexp():
         def it_finds_ternary_expression():
             source = "def f(x: int) -> int:\n    return x if x > 0 else -x\n"
@@ -322,15 +319,9 @@ def describe_find_mutation_points():
             ifexps = [p for p in points if p.node_type == "IfExp"]
             assert len(ifexps) == 2
 
-
     def describe_except_handler():
         def it_finds_typed_except_handler():
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    pass\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -338,12 +329,7 @@ def describe_find_mutation_points():
             assert handlers[0].lineno == 3
 
         def it_finds_bare_except_handler():
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except:\n"
-                "    pass\n"
-            )
+            source = "try:\n    pass\nexcept:\n    pass\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -384,12 +370,7 @@ def describe_find_mutation_points():
 
         def it_skips_broaden_for_except_exception():
             """except Exception: is already broadest — only body_to_raise."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except Exception:\n"
-                "    print('error')\n"
-            )
+            source = "try:\n    pass\nexcept Exception:\n    print('error')\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -397,12 +378,7 @@ def describe_find_mutation_points():
 
         def it_skips_body_to_raise_for_bare_raise_body():
             """Handler body that's already `raise` — only broaden."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    raise\n"
-            )
+            source = "try:\n    pass\nexcept ValueError:\n    raise\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 1
@@ -410,24 +386,14 @@ def describe_find_mutation_points():
 
         def it_skips_entirely_for_except_exception_with_bare_raise():
             """except Exception: raise — no mutations possible."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except Exception:\n"
-                "    raise\n"
-            )
+            source = "try:\n    pass\nexcept Exception:\n    raise\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 0
 
         def it_skips_bare_except_with_bare_raise_body():
             """Bare except with just raise — no mutations possible."""
-            source = (
-                "try:\n"
-                "    pass\n"
-                "except:\n"
-                "    raise\n"
-            )
+            source = "try:\n    pass\nexcept:\n    raise\n"
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
             assert len(handlers) == 0
@@ -435,10 +401,7 @@ def describe_find_mutation_points():
         def it_does_not_skip_raise_with_explicit_exception():
             """raise ValueError() is NOT a bare raise — body_to_raise applies."""
             source = (
-                "try:\n"
-                "    pass\n"
-                "except ValueError:\n"
-                "    raise ValueError('oops')\n"
+                "try:\n    pass\nexcept ValueError:\n    raise ValueError('oops')\n"
             )
             points = find_mutation_points(source, "test.py", "test")
             handlers = [p for p in points if p.node_type == "ExceptHandler"]
@@ -475,7 +438,6 @@ def describe_find_mutation_points():
             assert len(breaks) == 1
             assert len(continues) == 1
 
-
     def describe_leela_skip_pragma():
         def it_skips_mutations_on_a_line_with_pragma():
             source = (
@@ -508,10 +470,7 @@ def describe_find_mutation_points():
             assert len(line3_points) >= 1
 
         def it_does_not_affect_lines_without_pragma():
-            source = (
-                "def f(x: int, y: int) -> int:\n"
-                "    return x + y\n"
-            )
+            source = "def f(x: int, y: int) -> int:\n    return x + y\n"
             points = find_mutation_points(source, "test.py", "test")
             # Normal code — should still find BinOp and Return
             binops = [p for p in points if p.node_type == "BinOp"]

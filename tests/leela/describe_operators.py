@@ -64,7 +64,9 @@ def describe_mutations_for():
         assert muts == ["Or"]
 
     def it_mutates_return_true():
-        point = _make_point(node_type="Return", original_op="True", inferred_type="bool")
+        point = _make_point(
+            node_type="Return", original_op="True", inferred_type="bool"
+        )
         muts = mutations_for(point, use_types=True)
         assert "False" in muts
 
@@ -75,7 +77,9 @@ def describe_mutations_for():
 
     def it_skips_negate_for_zero_int_literal_typed():
         """Typed variant: return 0 should also produce no mutations."""
-        point = _make_point(node_type="Return", original_op="zero_int_literal", inferred_type="int")
+        point = _make_point(
+            node_type="Return", original_op="zero_int_literal", inferred_type="int"
+        )
         assert mutations_for(point, use_types=True) == []
 
     def it_skips_negate_for_zero_float_literal():
@@ -85,7 +89,9 @@ def describe_mutations_for():
 
     def it_skips_negate_for_zero_float_literal_typed():
         """Typed variant: return 0.0 should also produce no mutations."""
-        point = _make_point(node_type="Return", original_op="zero_float_literal", inferred_type="float")
+        point = _make_point(
+            node_type="Return", original_op="zero_float_literal", inferred_type="float"
+        )
         assert mutations_for(point, use_types=True) == []
 
     def it_still_negates_nonzero_int_literal():
@@ -128,47 +134,67 @@ def describe_mutations_for():
             assert muts == ["LShift"]
 
         def it_keeps_all_mutations_for_int_bitand():
-            point = _make_point(node_type="BinOp", original_op="BitAnd", inferred_type="int")
+            point = _make_point(
+                node_type="BinOp", original_op="BitAnd", inferred_type="int"
+            )
             muts = mutations_for(point, use_types=True)
             assert "BitOr" in muts
             assert "BitXor" in muts
 
         def it_keeps_all_mutations_for_int_bitor():
-            point = _make_point(node_type="BinOp", original_op="BitOr", inferred_type="int")
+            point = _make_point(
+                node_type="BinOp", original_op="BitOr", inferred_type="int"
+            )
             muts = mutations_for(point, use_types=True)
             assert "BitAnd" in muts
             assert "BitXor" in muts
 
         def it_keeps_all_mutations_for_int_bitxor():
-            point = _make_point(node_type="BinOp", original_op="BitXor", inferred_type="int")
+            point = _make_point(
+                node_type="BinOp", original_op="BitXor", inferred_type="int"
+            )
             muts = mutations_for(point, use_types=True)
             assert "BitAnd" in muts
             assert "BitOr" in muts
 
         def it_keeps_shift_mutations_for_int():
-            point_l = _make_point(node_type="BinOp", original_op="LShift", inferred_type="int")
-            point_r = _make_point(node_type="BinOp", original_op="RShift", inferred_type="int")
+            point_l = _make_point(
+                node_type="BinOp", original_op="LShift", inferred_type="int"
+            )
+            point_r = _make_point(
+                node_type="BinOp", original_op="RShift", inferred_type="int"
+            )
             assert mutations_for(point_l, use_types=True) == ["RShift"]
             assert mutations_for(point_r, use_types=True) == ["LShift"]
 
         def it_prunes_bool_bitand_to_single_mutation():
-            point = _make_point(node_type="BinOp", original_op="BitAnd", inferred_type="bool")
+            point = _make_point(
+                node_type="BinOp", original_op="BitAnd", inferred_type="bool"
+            )
             muts = mutations_for(point, use_types=True)
             assert muts == ["BitOr"]
 
         def it_prunes_bool_bitor_to_single_mutation():
-            point = _make_point(node_type="BinOp", original_op="BitOr", inferred_type="bool")
+            point = _make_point(
+                node_type="BinOp", original_op="BitOr", inferred_type="bool"
+            )
             muts = mutations_for(point, use_types=True)
             assert muts == ["BitAnd"]
 
         def it_keeps_both_mutations_for_bool_bitxor():
-            point = _make_point(node_type="BinOp", original_op="BitXor", inferred_type="bool")
+            point = _make_point(
+                node_type="BinOp", original_op="BitXor", inferred_type="bool"
+            )
             muts = mutations_for(point, use_types=True)
             assert muts == ["BitAnd", "BitOr"]
 
         def it_falls_through_to_untyped_for_bool_shifts():
-            point_l = _make_point(node_type="BinOp", original_op="LShift", inferred_type="bool")
-            point_r = _make_point(node_type="BinOp", original_op="RShift", inferred_type="bool")
+            point_l = _make_point(
+                node_type="BinOp", original_op="LShift", inferred_type="bool"
+            )
+            point_r = _make_point(
+                node_type="BinOp", original_op="RShift", inferred_type="bool"
+            )
             assert mutations_for(point_l, use_types=True) == ["RShift"]
             assert mutations_for(point_r, use_types=True) == ["LShift"]
 
@@ -208,35 +234,47 @@ def describe_mutations_for():
             assert muts == ["RShift"]
 
         def it_expands_augassign_add_for_int():
-            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="int")
+            point = _make_point(
+                node_type="AugAssign", original_op="Add", inferred_type="int"
+            )
             muts = mutations_for(point, use_types=True)
             assert "Sub" in muts
             assert "Mult" in muts
             assert "FloorDiv" in muts
 
         def it_prunes_augassign_add_for_str():
-            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="str")
+            point = _make_point(
+                node_type="AugAssign", original_op="Add", inferred_type="str"
+            )
             muts = mutations_for(point, use_types=True)
             assert muts == []
 
         def it_expands_augassign_add_for_float():
-            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="float")
+            point = _make_point(
+                node_type="AugAssign", original_op="Add", inferred_type="float"
+            )
             muts = mutations_for(point, use_types=True)
             assert "Sub" in muts
             assert "Div" in muts
 
         def it_prunes_augassign_bitand_for_bool():
-            point = _make_point(node_type="AugAssign", original_op="BitAnd", inferred_type="bool")
+            point = _make_point(
+                node_type="AugAssign", original_op="BitAnd", inferred_type="bool"
+            )
             muts = mutations_for(point, use_types=True)
             assert muts == ["BitOr"]
 
         def it_keeps_augassign_bitxor_mutations_for_bool():
-            point = _make_point(node_type="AugAssign", original_op="BitXor", inferred_type="bool")
+            point = _make_point(
+                node_type="AugAssign", original_op="BitXor", inferred_type="bool"
+            )
             muts = mutations_for(point, use_types=True)
             assert muts == ["BitAnd", "BitOr"]
 
         def it_falls_through_for_augassign_unknown_type():
-            point = _make_point(node_type="AugAssign", original_op="Add", inferred_type="complex")
+            point = _make_point(
+                node_type="AugAssign", original_op="Add", inferred_type="complex"
+            )
             muts = mutations_for(point, use_types=True)
             assert "Sub" in muts
             assert "Mult" in muts
@@ -269,7 +307,9 @@ def describe_mutations_for():
             assert muts == ["body_to_raise"]
 
         def it_returns_only_broaden_for_typed_raise_body():
-            point = _make_point(node_type="ExceptHandler", original_op="typed_raise_body")
+            point = _make_point(
+                node_type="ExceptHandler", original_op="typed_raise_body"
+            )
             muts = mutations_for(point, use_types=False)
             assert muts == ["broaden"]
 
@@ -298,7 +338,9 @@ def describe_mutations_for():
 
     def it_falls_through_to_untyped_for_unknown_typed_key():
         # A type that doesn't have a typed rule should fall through to untyped
-        point = _make_point(node_type="BinOp", original_op="Add", inferred_type="complex")
+        point = _make_point(
+            node_type="BinOp", original_op="Add", inferred_type="complex"
+        )
         muts = mutations_for(point, use_types=True)
         # Falls through to untyped: ["Sub", "Mult"]
         assert "Sub" in muts
@@ -365,7 +407,9 @@ def describe_count_pruned():
     def describe_with_allowed_keys():
         def it_passes_allowed_keys_through_to_mutations_for():
             """count_pruned respects allowed_keys filtering."""
-            point = _make_point(node_type="BinOp", original_op="Add", inferred_type="str")
+            point = _make_point(
+                node_type="BinOp", original_op="Add", inferred_type="str"
+            )
             keys = build_allowed_keys(("arithmetic",))
             # With arithmetic enabled, str Add still gets pruned (typed=[], untyped=2)
             pruned = count_pruned([point], use_types=True, allowed_keys=keys)
@@ -373,7 +417,9 @@ def describe_count_pruned():
 
         def it_returns_zero_for_filtered_out_category():
             """Points not in allowed_keys produce 0 pruned (both typed and untyped are 0)."""
-            point = _make_point(node_type="BinOp", original_op="Add", inferred_type="str")
+            point = _make_point(
+                node_type="BinOp", original_op="Add", inferred_type="str"
+            )
             keys = build_allowed_keys(("comparison",))
             pruned = count_pruned([point], use_types=True, allowed_keys=keys)
             assert pruned == 0
@@ -395,7 +441,9 @@ def describe_operator_categories():
             all_categorised |= keys
         for key in TYPED_MUTATIONS:
             prefix = (key[0], key[1])
-            assert prefix in all_categorised, f"TYPED key prefix {prefix} (from {key}) not in any category"
+            assert prefix in all_categorised, (
+                f"TYPED key prefix {prefix} (from {key}) not in any category"
+            )
 
     def it_assigns_each_key_to_exactly_one_category():
         """No key appears in more than one category."""
@@ -414,7 +462,13 @@ def describe_operator_categories():
 
     def it_has_correct_default_operators():
         """DEFAULT_OPERATORS contains the expected v0.1.0 categories."""
-        assert DEFAULT_OPERATORS == ("arithmetic", "comparison", "boolean", "unary", "return")
+        assert DEFAULT_OPERATORS == (
+            "arithmetic",
+            "comparison",
+            "boolean",
+            "unary",
+            "return",
+        )
 
     def it_has_all_operators_matching_category_keys():
         """ALL_OPERATORS contains every category name."""
@@ -548,7 +602,10 @@ def describe_mutations_for_with_allowed_keys():
         point_arith = _make_point(node_type="BinOp", original_op="Add")
         point_cmp = _make_point(node_type="Compare", original_op="Lt")
         keys = build_allowed_keys(("arithmetic", "comparison"))
-        assert mutations_for(point_arith, use_types=False, allowed_keys=keys) == ["Sub", "Mult"]
+        assert mutations_for(point_arith, use_types=False, allowed_keys=keys) == [
+            "Sub",
+            "Mult",
+        ]
         assert "LtE" in mutations_for(point_cmp, use_types=False, allowed_keys=keys)
 
     def it_respects_type_awareness_within_category():

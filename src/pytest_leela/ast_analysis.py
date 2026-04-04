@@ -208,7 +208,9 @@ class _MutationPointCollector(ast.NodeVisitor):
             self._add_except_handler_point(node, "bare")
         self.generic_visit(node)
 
-    def _add_except_handler_point(self, node: ast.ExceptHandler, original_op: str) -> None:
+    def _add_except_handler_point(
+        self, node: ast.ExceptHandler, original_op: str
+    ) -> None:
         self.points.append(
             MutationPoint(
                 file_path=self.file_path,
@@ -289,7 +291,9 @@ def _skipped_lines(source: str) -> set[int]:
     return skipped
 
 
-def find_mutation_points(source: str, file_path: str, module_name: str) -> list[MutationPoint]:
+def find_mutation_points(
+    source: str, file_path: str, module_name: str
+) -> list[MutationPoint]:
     """Parse source code and find all mutable AST nodes."""
     skipped = _skipped_lines(source)
 

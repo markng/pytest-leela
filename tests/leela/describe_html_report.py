@@ -92,36 +92,30 @@ def describe_format_test_name():
         assert "tests/test_views.py" not in result
 
     def it_strips_test_and_describe_prefixes():
-        assert _format_test_name(
-            "tests/test_views.py::TestHomeView::test_get"
-        ) == "TestHomeView > get"
-        assert _format_test_name(
-            "tests/describe_foo.py::describe_bar::it_does_thing"
-        ) == "bar > does thing"
+        assert (
+            _format_test_name("tests/test_views.py::TestHomeView::test_get")
+            == "TestHomeView > get"
+        )
+        assert (
+            _format_test_name("tests/describe_foo.py::describe_bar::it_does_thing")
+            == "bar > does thing"
+        )
 
     def it_replaces_underscores_with_spaces():
-        result = _format_test_name(
-            "tests/test_x.py::test_handles_multiple_args"
-        )
+        result = _format_test_name("tests/test_x.py::test_handles_multiple_args")
         assert result == "handles multiple args"
 
     def it_joins_parts_with_angle_bracket():
-        result = _format_test_name(
-            "tests/test_views.py::TestHomeView::test_get"
-        )
+        result = _format_test_name("tests/test_views.py::TestHomeView::test_get")
         assert " > " in result
         assert result == "TestHomeView > get"
 
     def it_handles_parametrized_tests():
-        result = _format_test_name(
-            "tests/test_x.py::TestClass::test_method[param1]"
-        )
+        result = _format_test_name("tests/test_x.py::TestClass::test_method[param1]")
         assert result == "TestClass > method[param1]"
 
     def it_preserves_multiple_parametrize_brackets():
-        result = _format_test_name(
-            "tests/test_x.py::test_thing[a-b]"
-        )
+        result = _format_test_name("tests/test_x.py::test_thing[a-b]")
         assert result == "thing[a-b]"
 
     def it_returns_simple_name_for_single_test():
@@ -145,7 +139,9 @@ def describe_format_test_name():
         assert result == "login > with valid creds > returns 200"
 
     def it_strips_context_prefix():
-        result = _format_test_name("tests/describe_auth.py::describe_login::context_with_valid_creds::it_returns_200")
+        result = _format_test_name(
+            "tests/describe_auth.py::describe_login::context_with_valid_creds::it_returns_200"
+        )
         assert result == "login > with valid creds > returns 200"
 
     def it_strips_it_prefix_from_top_level_test():
@@ -256,7 +252,8 @@ def describe_build_report_data():
             {"display": "add", "id": "tests/test_app.py::test_add"},
         ]
         assert mutant_data["killing_test"] == {
-            "display": "add", "id": "tests/test_app.py::test_add",
+            "display": "add",
+            "id": "tests/test_app.py::test_add",
         }
 
     def it_handles_empty_results():
@@ -280,8 +277,12 @@ def describe_build_report_data():
 
     def it_uses_relative_file_paths():
         results = [
-            _make_mutant_result(True, mutant_id=1, file_path="/home/user/project/src/app.py"),
-            _make_mutant_result(False, mutant_id=2, file_path="/home/user/project/src/views.py"),
+            _make_mutant_result(
+                True, mutant_id=1, file_path="/home/user/project/src/app.py"
+            ),
+            _make_mutant_result(
+                False, mutant_id=2, file_path="/home/user/project/src/views.py"
+            ),
         ]
         run = _make_run_result(
             results=results,
@@ -353,10 +354,16 @@ def describe_build_report_data():
 
     def it_builds_survived_index_sorted_across_files():
         r1 = _make_mutant_result(
-            False, mutant_id=1, file_path="/src/b.py", lineno=5,
+            False,
+            mutant_id=1,
+            file_path="/src/b.py",
+            lineno=5,
         )
         r2 = _make_mutant_result(
-            False, mutant_id=2, file_path="/src/a.py", lineno=10,
+            False,
+            mutant_id=2,
+            file_path="/src/a.py",
+            lineno=10,
         )
         run = _make_run_result(
             results=[r1, r2],
@@ -432,9 +439,7 @@ def describe_extract_test_sources():
     def it_extracts_method_from_test_class(tmp_path):
         test_file = tmp_path / "test_class.py"
         test_file.write_text(
-            "class TestMath:\n"
-            "    def test_add(self):\n"
-            "        assert 1 + 1 == 2\n"
+            "class TestMath:\n    def test_add(self):\n        assert 1 + 1 == 2\n"
         )
 
         node_id = f"{test_file}::TestMath::test_add"
@@ -505,7 +510,9 @@ def describe_extract_test_sources():
         )
         mr2 = MutantResult(
             mutant=Mutant(
-                point=_make_point(lineno=20), replacement_op="Mult", mutant_id=2,
+                point=_make_point(lineno=20),
+                replacement_op="Mult",
+                mutant_id=2,
             ),
             killed=True,
             tests_run=1,
@@ -717,10 +724,10 @@ def describe_build_html_viewer():
         assert "<title>Leela Mutation Report</title>" in html
 
     def it_wraps_data_in_script_tags():
-        html = _build_html_viewer('{}')
+        html = _build_html_viewer("{}")
         # Verify script tag opens before data and closes after the IIFE
-        assert '<script>\nwindow.LEELA_DATA' in html
-        assert '</script>\n</body>' in html
+        assert "<script>\nwindow.LEELA_DATA" in html
+        assert "</script>\n</body>" in html
 
     def it_contains_required_dom_structure():
         html = _build_html_viewer("{}")

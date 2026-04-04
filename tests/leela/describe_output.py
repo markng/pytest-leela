@@ -5,7 +5,12 @@ import json
 import pytest
 
 from pytest_leela.models import Mutant, MutantResult, MutationPoint, RunResult
-from pytest_leela.output import _op_display, _pct, format_json_report, format_terminal_report
+from pytest_leela.output import (
+    _op_display,
+    _pct,
+    format_json_report,
+    format_terminal_report,
+)
 
 
 def _make_point(

@@ -46,7 +46,7 @@ def _format_test_name(test_id: str) -> str:
         # Strip common prefixes
         for prefix in ("test_", "describe_", "it_", "context_"):
             if part.startswith(prefix):
-                part = part[len(prefix):]
+                part = part[len(prefix) :]
                 break
 
         # Replace underscores with spaces
@@ -249,12 +249,14 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
     for rel in sorted(files.keys()):
         for midx, m in enumerate(files[rel]["mutants"]):
             if not m["killed"]:
-                survived_index.append({
-                    "file": rel,
-                    "lineno": m["lineno"],
-                    "mutant_idx": midx,
-                    "description": m["description"],
-                })
+                survived_index.append(
+                    {
+                        "file": rel,
+                        "lineno": m["lineno"],
+                        "mutant_idx": midx,
+                        "description": m["description"],
+                    }
+                )
     survived_index.sort(key=lambda x: (x["file"], x["lineno"]))
 
     return {

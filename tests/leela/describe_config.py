@@ -46,7 +46,7 @@ def describe_load_config():
     def it_loads_valid_config_from_pyproject_toml(tmp_path: Path):
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
-            '[tool.pytest-leela]\n'
+            "[tool.pytest-leela]\n"
             'exclude = ["tests/*", "migrations/*"]\n'
             'operators = ["arithmetic", "comparison"]\n'
         )
@@ -57,9 +57,7 @@ def describe_load_config():
     def it_returns_tuples_from_pyproject_toml(tmp_path: Path):
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
-            '[tool.pytest-leela]\n'
-            'exclude = ["a"]\n'
-            'operators = ["arithmetic"]\n'
+            '[tool.pytest-leela]\nexclude = ["a"]\noperators = ["arithmetic"]\n'
         )
         config = load_config(tmp_path)
         assert isinstance(config.exclude, tuple)
@@ -80,9 +78,7 @@ def describe_load_config():
 
         def it_returns_defaults_when_no_pytest_leela_section(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                "[tool.pytest]\ntestpaths = ['tests']\n"
-            )
+            pyproject.write_text("[tool.pytest]\ntestpaths = ['tests']\n")
             config = load_config(tmp_path)
             assert config.exclude == ()
             assert config.operators == DEFAULT_OPERATORS
@@ -90,10 +86,7 @@ def describe_load_config():
     def describe_partial_config():
         def it_uses_default_operators_when_only_exclude_specified(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'exclude = ["vendor/*"]\n'
-            )
+            pyproject.write_text('[tool.pytest-leela]\nexclude = ["vendor/*"]\n')
             config = load_config(tmp_path)
             assert config.exclude == ("vendor/*",)
             assert config.operators == DEFAULT_OPERATORS
@@ -101,8 +94,7 @@ def describe_load_config():
         def it_uses_empty_exclude_when_only_operators_specified(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
             pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'operators = ["boolean", "return"]\n'
+                '[tool.pytest-leela]\noperators = ["boolean", "return"]\n'
             )
             config = load_config(tmp_path)
             assert config.exclude == ()
@@ -111,18 +103,14 @@ def describe_load_config():
     def describe_all_operators_expansion():
         def it_expands_all_to_full_operator_list(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'operators = ["all"]\n'
-            )
+            pyproject.write_text('[tool.pytest-leela]\noperators = ["all"]\n')
             config = load_config(tmp_path)
             assert config.operators == ALL_OPERATORS
 
         def it_expands_all_even_when_mixed_with_other_operators(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
             pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'operators = ["arithmetic", "all"]\n'
+                '[tool.pytest-leela]\noperators = ["arithmetic", "all"]\n'
             )
             config = load_config(tmp_path)
             assert config.operators == ALL_OPERATORS
@@ -137,8 +125,7 @@ def describe_load_config():
     def it_raises_on_unknown_operator_category(tmp_path: Path):
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text(
-            '[tool.pytest-leela]\n'
-            'operators = ["arithmetic", "nonexistent_category"]\n'
+            '[tool.pytest-leela]\noperators = ["arithmetic", "nonexistent_category"]\n'
         )
         with pytest.raises(ValueError, match="Unknown operator categories"):
             load_config(tmp_path)
@@ -146,72 +133,56 @@ def describe_load_config():
     def describe_type_validation():
         def it_raises_when_exclude_is_a_string(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'exclude = "tests/*"\n'
-            )
+            pyproject.write_text('[tool.pytest-leela]\nexclude = "tests/*"\n')
             with pytest.raises(ValueError, match="'exclude' must be a list of strings"):
                 load_config(tmp_path)
 
         def it_raises_when_operators_is_a_string(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'operators = "arithmetic"\n'
-            )
-            with pytest.raises(ValueError, match="'operators' must be a list of strings"):
+            pyproject.write_text('[tool.pytest-leela]\noperators = "arithmetic"\n')
+            with pytest.raises(
+                ValueError, match="'operators' must be a list of strings"
+            ):
                 load_config(tmp_path)
 
         def it_includes_actual_type_in_exclude_error(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'exclude = "tests/*"\n'
-            )
+            pyproject.write_text('[tool.pytest-leela]\nexclude = "tests/*"\n')
             with pytest.raises(ValueError, match="got str"):
                 load_config(tmp_path)
 
         def it_includes_actual_type_in_operators_error(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'operators = "arithmetic"\n'
-            )
+            pyproject.write_text('[tool.pytest-leela]\noperators = "arithmetic"\n')
             with pytest.raises(ValueError, match="got str"):
                 load_config(tmp_path)
 
         def it_raises_when_exclude_is_an_integer(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'exclude = 42\n'
-            )
+            pyproject.write_text("[tool.pytest-leela]\nexclude = 42\n")
             with pytest.raises(ValueError, match="'exclude' must be a list of strings"):
                 load_config(tmp_path)
 
         def it_raises_when_operators_is_a_boolean(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'operators = true\n'
-            )
-            with pytest.raises(ValueError, match="'operators' must be a list of strings"):
+            pyproject.write_text("[tool.pytest-leela]\noperators = true\n")
+            with pytest.raises(
+                ValueError, match="'operators' must be a list of strings"
+            ):
                 load_config(tmp_path)
 
         def it_raises_when_exclude_contains_non_string_element(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
-            pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'exclude = ["ok", 123]\n'
-            )
+            pyproject.write_text('[tool.pytest-leela]\nexclude = ["ok", 123]\n')
             with pytest.raises(ValueError, match="'exclude' elements must be strings"):
                 load_config(tmp_path)
 
         def it_raises_when_operators_contains_non_string_element(tmp_path: Path):
             pyproject = tmp_path / "pyproject.toml"
             pyproject.write_text(
-                '[tool.pytest-leela]\n'
-                'operators = ["arithmetic", true]\n'
+                '[tool.pytest-leela]\noperators = ["arithmetic", true]\n'
             )
-            with pytest.raises(ValueError, match="'operators' elements must be strings"):
+            with pytest.raises(
+                ValueError, match="'operators' elements must be strings"
+            ):
                 load_config(tmp_path)

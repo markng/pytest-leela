@@ -83,9 +83,7 @@ def _format_benchmark_report(rows: list[_BenchmarkRow]) -> str:
     lines.append("leela benchmark")
     lines.append("=" * 70)
     lines.append("")
-    lines.append(
-        f"  {'Configuration':<30s} {'Time':>8s} {'Tested':>8s} {'Pruned':>8s}"
-    )
+    lines.append(f"  {'Configuration':<30s} {'Time':>8s} {'Tested':>8s} {'Pruned':>8s}")
     lines.append("  " + "-" * 56)
 
     baseline = rows[0].wall_time if rows else 1.0
