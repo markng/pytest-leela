@@ -546,6 +546,24 @@ def describe_find_mutation_points():
             assert len(binops) >= 1
 
 
+        def it_does_not_skip_binop_on_same_line_as_pragma_string():
+            """Kills ast_analysis.py line 287: and → or.
+
+            With the mutation, any token containing '# leela: skip'
+            triggers the skip — even string literals.  This test puts
+            a BinOp on the same line as a string containing the pragma
+            so the mutation incorrectly skips the BinOp.
+            """
+            source = (
+                "def f(a: int, b: int) -> str:\n"
+                '    return str(a + b) + "# leela: skip"\n'
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            binops = [p for p in points if p.node_type == "BinOp"]
+            # Both BinOps (a + b and the str concat) should be found
+            assert len(binops) >= 1
+
+
 def describe_find_mutation_points_in_file():
     def it_reads_file_and_finds_points(tmp_path):
         from pytest_leela.ast_analysis import find_mutation_points_in_file
