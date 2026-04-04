@@ -312,6 +312,7 @@ def describe_LeelaPlugin():
         # When exitstatus is 0, getoption WILL be called
         with patch("pytest_leela.plugin.load_config") as mock_load:
             from pytest_leela.config import LeelaConfig
+
             mock_load.return_value = LeelaConfig()
             plugin.pytest_sessionfinish(session, exitstatus=0)
         config.getoption.assert_called()
@@ -364,7 +365,10 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/target.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files",
+                return_value=["/fake/target.py"],
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine),
             patch("pytest_leela.plugin.format_terminal_report", return_value="report"),
         ):
@@ -406,7 +410,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
@@ -452,7 +458,11 @@ def describe_LeelaPlugin():
         )
         mutant = Mutant(point=point, replacement_op="Sub", mutant_id=1)
         survived_result = MutantResult(
-            mutant=mutant, killed=False, tests_run=5, killing_test=None, time_seconds=0.1
+            mutant=mutant,
+            killed=False,
+            tests_run=5,
+            killing_test=None,
+            time_seconds=0.1,
         )
         run_result = RunResult(
             target_files=["/fake/mod.py"],
@@ -469,7 +479,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
@@ -511,7 +523,11 @@ def describe_LeelaPlugin():
         )
         mutant = Mutant(point=point, replacement_op="Sub", mutant_id=1)
         killed_result = MutantResult(
-            mutant=mutant, killed=True, tests_run=5, killing_test="test_a.py::test_one", time_seconds=0.1
+            mutant=mutant,
+            killed=True,
+            tests_run=5,
+            killing_test="test_a.py::test_one",
+            time_seconds=0.1,
         )
         run_result = RunResult(
             target_files=["/fake/mod.py"],
@@ -528,7 +544,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
@@ -574,7 +592,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
@@ -582,6 +602,210 @@ def describe_LeelaPlugin():
 
         # Verify exitstatus remained 0
         assert session.exitstatus == 0
+
+    def it_installs_coverage_plugin_during_sessionstart_when_targets_exist():
+        """pytest_sessionstart should register a CoveragePlugin when targets resolve."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+        from pytest_leela.coverage_tracker import CoveragePlugin
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch(
+                "pytest_leela.plugin._find_target_files",
+                return_value=["/fake/mod.py"],
+            ),
+        ):
+            plugin.pytest_sessionstart(session)
+
+        # CoveragePlugin should have been registered
+        session.config.pluginmanager.register.assert_called_once()
+        registered_args = session.config.pluginmanager.register.call_args
+        assert isinstance(registered_args[0][0], CoveragePlugin)
+        assert registered_args[0][1] == "leela-coverage"
+        assert plugin._coverage_plugin is not None
+
+    def it_does_not_install_coverage_plugin_when_no_targets():
+        """pytest_sessionstart should skip CoveragePlugin when no targets resolve."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": [],
+            "diff": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/empty_project")
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch("pytest_leela.plugin._find_default_targets", return_value=[]),
+        ):
+            plugin.pytest_sessionstart(session)
+
+        session.config.pluginmanager.register.assert_not_called()
+        assert plugin._coverage_plugin is None
+
+    def it_resolve_target_files_uses_explicit_targets():
+        """_resolve_target_files should use --target when provided."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch(
+                "pytest_leela.plugin._find_target_files",
+                return_value=["/fake/mod.py"],
+            ),
+        ):
+            result = plugin._resolve_target_files(session)
+
+        assert result == ["/fake/mod.py"]
+
+    def it_resolve_target_files_uses_diff_base_when_no_targets():
+        """_resolve_target_files should use --diff when --target is not given."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": [],
+            "diff": "main",
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch(
+                "pytest_leela.plugin.changed_files",
+                return_value=["/fake/changed.py"],
+            ),
+        ):
+            result = plugin._resolve_target_files(session)
+
+        assert result == ["/fake/changed.py"]
+
+    def it_passes_pre_coverage_map_to_engine():
+        """When CoveragePlugin collected coverage, it should be passed to engine."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+        from pytest_leela.models import CoverageMap
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+            "leela_html": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+
+        # Simulate sessionstart having installed a CoveragePlugin
+        from pytest_leela.coverage_tracker import CoveragePlugin as CovPlugin
+
+        cov_plugin = MagicMock(spec=CovPlugin)
+        fake_coverage = CoverageMap()
+        fake_coverage.add("/fake/mod.py", 1, "test_a")
+        cov_plugin.coverage_map = fake_coverage
+        plugin._coverage_plugin = cov_plugin
+
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+
+        mock_engine_cls = MagicMock()
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = MagicMock(survived=[])
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch(
+                "pytest_leela.plugin._find_target_files",
+                return_value=["/fake/mod.py"],
+            ),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        # Verify pre_coverage_map was passed to engine.run
+        call_kwargs = mock_engine.run.call_args.kwargs
+        assert "pre_coverage_map" in call_kwargs
+        assert call_kwargs["pre_coverage_map"] is fake_coverage
+
+    def it_passes_none_pre_coverage_map_when_no_coverage_plugin():
+        """When no CoveragePlugin was installed, pre_coverage_map should be None."""
+        from pytest_leela.plugin import LeelaPlugin
+        from pytest_leela.config import LeelaConfig
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+            "leela_html": None,
+        }.get(key, default)
+
+        plugin = LeelaPlugin(config)
+        assert plugin._coverage_plugin is None
+
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+
+        mock_engine_cls = MagicMock()
+        mock_engine = mock_engine_cls.return_value
+        mock_engine.run.return_value = MagicMock(survived=[])
+
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch(
+                "pytest_leela.plugin._find_target_files",
+                return_value=["/fake/mod.py"],
+            ),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+
+        call_kwargs = mock_engine.run.call_args.kwargs
+        assert "pre_coverage_map" in call_kwargs
+        assert call_kwargs["pre_coverage_map"] is None
 
     def it_registers_leela_html_option():
         """--leela-html should be registered as a plugin option."""
@@ -593,7 +817,8 @@ def describe_LeelaPlugin():
 
         # Collect all addoption calls and find the --leela-html one
         leela_html_calls = [
-            c for c in group.addoption.call_args_list
+            c
+            for c in group.addoption.call_args_list
             if c.args and c.args[0] == "--leela-html"
         ]
         assert len(leela_html_calls) == 1
@@ -656,7 +881,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
             patch("pytest_leela.html_report.generate_html_report", mock_generate),
@@ -703,7 +930,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
             patch("pytest_leela.html_report.generate_html_report", mock_generate),
@@ -741,7 +970,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=leela_cfg),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
@@ -778,7 +1009,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=leela_cfg),
-            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
@@ -821,7 +1054,9 @@ def describe_LeelaPlugin():
 
         with (
             patch("pytest_leela.plugin.load_config", return_value=leela_cfg),
-            patch("pytest_leela.plugin._find_default_targets", return_value=default_files),
+            patch(
+                "pytest_leela.plugin._find_default_targets", return_value=default_files
+            ),
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):

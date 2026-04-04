@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from pytest_leela.config import ALL_OPERATORS, load_config
+from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import Engine
 from pytest_leela.git_diff import changed_files
 from pytest_leela.output import format_terminal_report
@@ -51,16 +52,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--diff", default=None, help="Only mutate files changed since this git ref"
     )
     group.addoption(
-        "--target", action="append", default=[], help="File/directory to mutate (repeatable)"
+        "--target",
+        action="append",
+        default=[],
+        help="File/directory to mutate (repeatable)",
     )
+    group.addoption("--max-cores", type=int, default=None, help="Max CPU cores")
+    group.addoption("--max-memory", type=int, default=None, help="Max memory percent")
     group.addoption(
-        "--max-cores", type=int, default=None, help="Max CPU cores"
-    )
-    group.addoption(
-        "--max-memory", type=int, default=None, help="Max memory percent"
-    )
-    group.addoption(
-        "--leela-html", default=None, metavar="PATH",
+        "--leela-html",
+        default=None,
+        metavar="PATH",
         help="Generate interactive HTML mutation report at PATH",
     )
     group.addoption(
@@ -72,7 +74,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    if config.getoption("leela", default=False) or config.getoption("leela_html", default=None):
+    if config.getoption("leela", default=False) or config.getoption(
+        "leela_html", default=None
+    ):
         config.pluginmanager.register(LeelaPlugin(config), "leela-plugin")
     elif config.getoption("leela_benchmark", default=False):
         from pytest_leela.benchmark import BenchmarkPlugin
@@ -107,8 +111,7 @@ def _find_default_targets(rootpath: Path) -> list[str]:
             return sorted(
                 os.path.abspath(str(p))
                 for p in candidate_dir.rglob("*.py")
-                if not p.name.startswith("__")
-                and not _is_test_file(p.name)
+                if not p.name.startswith("__") and not _is_test_file(p.name)
             )
     # Fallback: scan rootpath itself for a flat-layout project
     return sorted(
@@ -123,7 +126,9 @@ def _find_default_targets(rootpath: Path) -> list[str]:
     )
 
 
-def _apply_excludes(files: list[str], excludes: tuple[str, ...] | list[str], rootpath: Path) -> list[str]:
+def _apply_excludes(
+    files: list[str], excludes: tuple[str, ...] | list[str], rootpath: Path
+) -> list[str]:
     """Filter out files matching any of the exclude glob patterns.
 
     Each file path is made relative to *rootpath* before matching against
@@ -143,6 +148,41 @@ def _apply_excludes(files: list[str], excludes: tuple[str, ...] | list[str], roo
 class LeelaPlugin:
     def __init__(self, config: pytest.Config) -> None:
         self.config = config
+        self._coverage_plugin: CoveragePlugin | None = None
+
+    def pytest_sessionstart(self, session: pytest.Session) -> None:
+        """Resolve target files early and install coverage tracing.
+
+        By tracing coverage during the normal test run (instead of
+        re-running all tests in Engine.run), we eliminate one full test
+        suite execution from the mutation testing pipeline.
+        """
+        target_files = self._resolve_target_files(session)
+        if target_files:
+            self._coverage_plugin = CoveragePlugin(set(target_files))
+            session.config.pluginmanager.register(
+                self._coverage_plugin, "leela-coverage"
+            )
+
+    def _resolve_target_files(self, session: pytest.Session) -> list[str]:
+        """Resolve target files from config options."""
+        rootpath = session.config.rootpath
+        leela_config = load_config(rootpath)
+
+        targets = self.config.getoption("target", default=[])
+        diff_base = self.config.getoption("diff", default=None)
+
+        if targets:
+            target_files: list[str] = []
+            for t in targets:
+                target_files.extend(_find_target_files(t))
+            target_files = sorted(set(target_files))
+        elif diff_base:
+            target_files = changed_files(diff_base)
+        else:
+            target_files = _find_default_targets(rootpath)
+
+        return _apply_excludes(target_files, leela_config.exclude, rootpath)
 
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
@@ -156,25 +196,18 @@ class LeelaPlugin:
         if "all" in enabled_categories:
             enabled_categories = ALL_OPERATORS
 
-        targets = self.config.getoption("target", default=[])
         diff_base = self.config.getoption("diff", default=None)
 
-        # Determine target files
-        if targets:
-            target_files: list[str] = []
-            for t in targets:
-                target_files.extend(_find_target_files(t))
-            target_files = sorted(set(target_files))
-        elif diff_base:
-            target_files = changed_files(diff_base)
-        else:
-            target_files = _find_default_targets(rootpath)
-
-        # Apply exclude patterns from config
-        target_files = _apply_excludes(target_files, leela_config.exclude, rootpath)
-
+        # Reuse target files resolved during pytest_sessionstart
+        target_files = self._resolve_target_files(session)
         if not target_files:
             return
+
+        # Retrieve coverage map collected during the normal test run
+        # (avoids re-running the entire test suite).
+        pre_coverage_map = None
+        if self._coverage_plugin is not None:
+            pre_coverage_map = self._coverage_plugin.coverage_map
 
         # Collect test node IDs from the session instead of hardcoding a
         # ``tests/`` directory.  This lets pytest-leela work with any test
@@ -188,7 +221,11 @@ class LeelaPlugin:
 
         engine = Engine(enabled_categories=enabled_categories)
         result = engine.run(
-            target_files, test_node_ids=test_node_ids, limits=limits, diff_base=diff_base
+            target_files,
+            test_node_ids=test_node_ids,
+            limits=limits,
+            diff_base=diff_base,
+            pre_coverage_map=pre_coverage_map,
         )
 
         report = format_terminal_report(result)
@@ -206,6 +243,7 @@ class LeelaPlugin:
         html_path = self.config.getoption("leela_html", default=None)
         if html_path is not None:
             from pytest_leela.html_report import generate_html_report
+
             generate_html_report(result, html_path)
 
         if result.survived:
