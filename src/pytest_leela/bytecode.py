@@ -18,7 +18,7 @@ import types
 from pytest_leela.models import Mutant
 
 # Minimum Python version for bytecode mutation.
-_MIN_VERSION = (3, 12)
+_MIN_VERSION = (3, 14)
 
 # ---------------------------------------------------------------------------
 # Opcode constants
