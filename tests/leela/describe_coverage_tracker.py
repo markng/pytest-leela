@@ -14,8 +14,8 @@ def describe_LineTracer():
         """start() activates tracing and records line executions for target files."""
         # Create a temp file path that we'll use as the "target"
         # We need a real function whose co_filename matches our target
-        import tempfile
         import os
+        import tempfile
 
         source = "def traced_func():\n    x = 1\n    y = 2\n    return x + y\n"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:

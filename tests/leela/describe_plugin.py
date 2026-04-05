@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from pytest_leela.plugin import (
     _SKIP_DIRS,
@@ -319,8 +319,8 @@ def describe_LeelaPlugin():
 
     def it_skips_when_no_target_files_found():
         """If target_files is empty, should return early."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.return_value = None
@@ -342,8 +342,8 @@ def describe_LeelaPlugin():
         The `not target_files` → `target_files` mutation would cause early
         return when files ARE found, skipping the engine entirely.
         """
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -384,8 +384,8 @@ def describe_LeelaPlugin():
         This replaced the old hardcoded ``rootpath / 'tests'`` approach,
         letting pytest-leela work with any test layout.
         """
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -428,9 +428,9 @@ def describe_LeelaPlugin():
 
     def it_sets_exitstatus_to_1_when_mutants_survived():
         """When result.survived is non-empty, exitstatus should be 1."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
-        from pytest_leela.models import RunResult, MutantResult, Mutant, MutationPoint
+        from pytest_leela.models import Mutant, MutantResult, MutationPoint, RunResult
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -492,9 +492,9 @@ def describe_LeelaPlugin():
 
     def it_keeps_exitstatus_0_when_all_mutants_killed():
         """When result.survived is empty, exitstatus should remain 0."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
-        from pytest_leela.models import RunResult, MutantResult, Mutant, MutationPoint
+        from pytest_leela.models import Mutant, MutantResult, MutationPoint, RunResult
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -557,9 +557,9 @@ def describe_LeelaPlugin():
 
     def it_keeps_exitstatus_0_when_no_mutants_found():
         """When total_mutants is 0, exitstatus should remain 0."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -605,9 +605,9 @@ def describe_LeelaPlugin():
 
     def it_installs_coverage_plugin_during_sessionstart_when_targets_exist():
         """pytest_sessionstart should register a CoveragePlugin when targets resolve."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
         from pytest_leela.coverage_tracker import CoveragePlugin
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -638,8 +638,8 @@ def describe_LeelaPlugin():
 
     def it_does_not_install_coverage_plugin_when_no_targets():
         """pytest_sessionstart should skip CoveragePlugin when no targets resolve."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -663,8 +663,8 @@ def describe_LeelaPlugin():
 
     def it_resolve_target_files_uses_explicit_targets():
         """_resolve_target_files should use --target when provided."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -690,8 +690,8 @@ def describe_LeelaPlugin():
 
     def it_resolve_target_files_uses_diff_base_when_no_targets():
         """_resolve_target_files should use --diff when --target is not given."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -717,9 +717,9 @@ def describe_LeelaPlugin():
 
     def it_passes_pre_coverage_map_to_engine():
         """When CoveragePlugin collected coverage, it should be passed to engine."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
         from pytest_leela.models import CoverageMap
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -768,8 +768,8 @@ def describe_LeelaPlugin():
 
     def it_passes_none_pre_coverage_map_when_no_coverage_plugin():
         """When no CoveragePlugin was installed, pre_coverage_map should be None."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -845,9 +845,9 @@ def describe_LeelaPlugin():
 
     def it_calls_generate_html_report_when_flag_set():
         """generate_html_report should be called with result and path."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -894,9 +894,9 @@ def describe_LeelaPlugin():
 
     def it_does_not_generate_html_report_without_flag():
         """No HTML report when --leela-html is not set."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
         from pytest_leela.models import RunResult
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -943,8 +943,8 @@ def describe_LeelaPlugin():
 
     def it_loads_config_and_passes_operators_to_engine():
         """Config operators are passed through as enabled_categories to Engine."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -983,8 +983,8 @@ def describe_LeelaPlugin():
 
     def it_resolves_all_keyword_in_operators():
         """When config contains 'all', it should expand to ALL_OPERATORS."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import ALL_OPERATORS, LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -1022,8 +1022,8 @@ def describe_LeelaPlugin():
 
     def it_applies_exclude_patterns_from_config():
         """Files matching exclude patterns should be filtered out before engine."""
-        from pytest_leela.plugin import LeelaPlugin
         from pytest_leela.config import LeelaConfig
+        from pytest_leela.plugin import LeelaPlugin
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -1138,7 +1138,6 @@ def describe_apply_excludes():
     def it_normalizes_backslash_paths(monkeypatch):
         """When os.sep is backslash, relpath uses backslashes but
         patterns use forward slashes — normalization handles this."""
-        import pytest_leela.plugin as plugin_mod
 
         original_relpath = os.path.relpath
 

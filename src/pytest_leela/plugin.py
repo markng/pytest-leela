@@ -16,7 +16,6 @@ from pytest_leela.git_diff import changed_files
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
 
-
 _SKIP_DIRS = {
     ".venv",
     "venv",
