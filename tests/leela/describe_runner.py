@@ -5,15 +5,16 @@ import types
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.import_hook import MutatingFinder
 from pytest_leela.models import Mutant, MutantResult
 from pytest_leela.runner import (
     _KEEP_PREFIXES,
+    _ResultCollector,
     _clear_framework_caches,
     _clear_user_modules,
     _clear_user_modules_fast,
-    _ResultCollector,
     precompute_user_modules,
     run_tests_for_mutant,
 )
