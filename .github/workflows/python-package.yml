@@ -38,4 +38,12 @@ jobs:
         pytest
     - name: Mutation testing (self-check)
       run: |
-        pytest --leela --target src/pytest_leela/
+        # Exclude bytecode.py on Python < 3.14 (bytecode mutation is 3.14+ only,
+        # so bytecode.py has no test coverage on 3.13 and all mutants survive)
+        python -c "
+        import sys
+        targets = [f for f in __import__('glob').glob('src/pytest_leela/*.py')
+                   if not f.endswith('__init__.py')
+                   and not (sys.version_info < (3, 14) and f.endswith('bytecode.py'))]
+        print(' '.join(f'--target {t}' for t in sorted(targets)))
+        " | xargs pytest --leela
