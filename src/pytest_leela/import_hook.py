@@ -199,15 +199,37 @@ def apply_mutation(source: str, mutant: Mutant) -> tuple[str, bool]:
 class MutatingLoader(importlib.abc.Loader):
     """Loader that applies a mutation to source before executing."""
 
-    def __init__(self, source: str, mutant: Mutant, filename: str) -> None:
+    def __init__(
+        self,
+        source: str,
+        mutant: Mutant,
+        filename: str,
+        cached_code: types.CodeType | None = None,
+    ) -> None:
         self.source = source
         self.mutant = mutant
         self.filename = filename
+        self.cached_code = cached_code
 
     def create_module(self, spec: importlib.machinery.ModuleSpec) -> None:
         return None
 
     def exec_module(self, module: types.ModuleType) -> None:
+        # Try bytecode path first when a cached code object is available
+        if self.cached_code is not None:
+            from pytest_leela.bytecode import (
+                is_bytecode_eligible,
+                is_supported,
+                mutate_code,
+            )
+
+            if is_supported() and is_bytecode_eligible(self.mutant):
+                mutated = mutate_code(self.cached_code, self.mutant)
+                if mutated is not None:
+                    exec(mutated, module.__dict__)
+                    return
+
+        # Fall back to AST pipeline
         tree = ast.parse(self.source, filename=self.filename)
         applier = MutantApplier(self.mutant)
         tree = applier.visit(tree)
@@ -223,10 +245,12 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         self,
         target_modules: dict[str, str],
         mutant: Mutant,
+        target_codes: dict[str, types.CodeType] | None = None,
     ) -> None:
         # target_modules: {module_name: source_code}
         self.target_modules = target_modules
         self.mutant = mutant
+        self.target_codes = target_codes or {}
         self._module_to_file: dict[str, str] = {}
         for mod_name in target_modules:
             self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
@@ -246,6 +270,7 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
                 self.target_modules[fullname],
                 self.mutant,
                 filename,
+                cached_code=self.target_codes.get(fullname),
             )
             return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
         return None
@@ -255,9 +280,10 @@ def install_hook(
     target_modules: dict[str, str],
     mutant: Mutant,
     module_to_file: dict[str, str] | None = None,
+    target_codes: dict[str, types.CodeType] | None = None,
 ) -> MutatingFinder:
     """Install a mutating import hook. Returns the finder for later removal."""
-    finder = MutatingFinder(target_modules, mutant)
+    finder = MutatingFinder(target_modules, mutant, target_codes=target_codes)
     if module_to_file:
         finder.set_file_paths(module_to_file)
     sys.meta_path.insert(0, finder)
