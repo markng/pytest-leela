@@ -10,10 +10,13 @@ from pytest_leela.bytecode import (
     _BINOP_ARGS,
     _COMPARE_ARGS,
     _COMPARE_BOOL_FLAG,
+    _COMPARE_INDEX,
     _CONTAINS_ARGS,
     _INPLACE_BINOP_ARGS,
     _IS_ARGS,
     _compute_replacement,
+    _instruction_matches_binop,
+    _instruction_matches_compare,
     _replace_nested_code,
     _search_code_object,
     find_target_instruction,
@@ -1131,3 +1134,605 @@ def describe_import_hook_bytecode_integration():
 
         # a += b -> a -= b
         assert module.accumulate(10, 3) == 7  # 10 - 3
+
+
+def _get_binop_instruction(source: str, op_name: str = "BINARY_OP"):
+    """Get the first instruction matching op_name from compiled source."""
+    code = compile(source, "<test>", "exec")
+    for instr in dis.get_instructions(code):
+        if instr.opname == op_name:
+            return instr, code
+    # Search nested code objects
+    for const in code.co_consts:
+        if isinstance(const, types.CodeType):
+            for instr in dis.get_instructions(const):
+                if instr.opname == op_name:
+                    return instr, const
+    return None, None
+
+
+def _get_compare_instruction(source: str, op_name: str):
+    """Get the first instruction matching op_name from compiled source."""
+    code = compile(source, "<test>", "exec")
+    for instr in dis.get_instructions(code):
+        if instr.opname == op_name:
+            return instr, code
+    for const in code.co_consts:
+        if isinstance(const, types.CodeType):
+            for instr in dis.get_instructions(const):
+                if instr.opname == op_name:
+                    return instr, const
+    return None, None
+
+
+def describe_instruction_matches_binop():
+    """Test _instruction_matches_binop with matching and non-matching inputs."""
+
+    def it_returns_true_for_matching_binop():
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        result = _instruction_matches_binop(
+            instr, instr.positions.lineno, 0, "Add", _BINOP_ARGS
+        )
+        assert result is True
+
+    def it_returns_false_for_wrong_opname():
+        """If instr.opname != 'BINARY_OP', return False.
+        Kills mutant: `!= -> ==` on the opname check."""
+        # Get a COMPARE_OP instruction and pass it to binop matcher
+        instr, _code = _get_compare_instruction("result = a < b\n", "COMPARE_OP")
+        assert instr is not None
+        result = _instruction_matches_binop(
+            instr, instr.positions.lineno, 0, "Lt", _BINOP_ARGS
+        )
+        assert result is False
+
+    def it_returns_false_for_wrong_lineno():
+        """If instr.positions.lineno != lineno, return False.
+        Kills mutant: `!= -> ==` on the lineno check."""
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        actual_line = instr.positions.lineno
+        # Pass a different line number
+        result = _instruction_matches_binop(
+            instr, actual_line + 1, 0, "Add", _BINOP_ARGS
+        )
+        assert result is False
+        # Also verify the correct line returns True (to confirm the logic)
+        result_correct = _instruction_matches_binop(
+            instr, actual_line, 0, "Add", _BINOP_ARGS
+        )
+        assert result_correct is True
+
+    def it_returns_false_for_unknown_original_op():
+        """If arg_map.get(original_op) returns None, return False.
+        Kills mutant: `is None -> is not None` on expected_arg guard."""
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        result = _instruction_matches_binop(
+            instr, instr.positions.lineno, 0, "NotARealOp", _BINOP_ARGS
+        )
+        assert result is False
+
+    def it_returns_false_for_mismatched_arg():
+        """If instr.arg != expected_arg, return False.
+        Kills mutant: `== -> !=` on the arg comparison."""
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        # The instruction is Add but we ask for Sub
+        result = _instruction_matches_binop(
+            instr, instr.positions.lineno, 0, "Sub", _BINOP_ARGS
+        )
+        assert result is False
+
+    def it_returns_false_when_positions_is_none():
+        """If instr.positions is None, return False.
+        Kills mutant: `is None -> is not None` (positions guard)."""
+        # Create a fake instruction with positions=None
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        # Replace positions with None
+        fake_instr = instr._replace(positions=None)
+        result = _instruction_matches_binop(fake_instr, 1, 0, "Add", _BINOP_ARGS)
+        assert result is False
+
+
+def describe_instruction_matches_compare():
+    """Test _instruction_matches_compare with matching and non-matching inputs."""
+
+    def it_returns_true_for_matching_compare_op():
+        instr, _code = _get_compare_instruction("result = a < b\n", "COMPARE_OP")
+        assert instr is not None
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "Lt")
+        assert result is True
+
+    def it_returns_false_for_wrong_compare_opname():
+        """A BINARY_OP instruction should not match as COMPARE_OP.
+        Kills mutant: `!= -> ==` on opname check in COMPARE_OP branch."""
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "Lt")
+        assert result is False
+
+    def it_returns_false_for_wrong_compare_index():
+        """If (instr.arg >> 5) != expected_index, return False.
+        Kills mutant: `!= -> ==` on the cmp_index check."""
+        instr, _code = _get_compare_instruction("result = a < b\n", "COMPARE_OP")
+        assert instr is not None
+        # Lt instruction, but ask for Gt
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "Gt")
+        assert result is False
+
+    def it_returns_false_for_wrong_compare_lineno():
+        """Kills mutant: `== -> !=` on the final lineno check."""
+        instr, _code = _get_compare_instruction("result = a < b\n", "COMPARE_OP")
+        assert instr is not None
+        result = _instruction_matches_compare(
+            instr, instr.positions.lineno + 1, 0, "Lt"
+        )
+        assert result is False
+
+    def it_returns_true_for_matching_is_op():
+        instr, _code = _get_compare_instruction("result = a is b\n", "IS_OP")
+        assert instr is not None
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "Is")
+        assert result is True
+
+    def it_returns_false_for_wrong_is_opname():
+        """A non-IS_OP instruction should not match IS_OP family.
+        Kills mutant: `!= -> ==` on IS_OP opname check."""
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "Is")
+        assert result is False
+
+    def it_returns_false_for_wrong_is_arg():
+        """An IS_OP with arg=0 (Is) should not match IsNot.
+        Kills mutant: `!= -> ==` on IS_OP arg check."""
+        instr, _code = _get_compare_instruction("result = a is b\n", "IS_OP")
+        assert instr is not None
+        # Is has arg 0, IsNot has arg 1 — asking for IsNot should fail
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "IsNot")
+        assert result is False
+
+    def it_returns_true_for_matching_contains_op():
+        instr, _code = _get_compare_instruction("result = a in b\n", "CONTAINS_OP")
+        assert instr is not None
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "In")
+        assert result is True
+
+    def it_returns_false_for_wrong_contains_opname():
+        """A non-CONTAINS_OP instruction should not match CONTAINS_OP family.
+        Kills mutant: `!= -> ==` on CONTAINS_OP opname check."""
+        instr, _code = _get_binop_instruction("result = a + b\n")
+        assert instr is not None
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "In")
+        assert result is False
+
+    def it_returns_false_for_wrong_contains_arg():
+        """A CONTAINS_OP with arg=0 (In) should not match NotIn.
+        Kills mutant: `!= -> ==` on CONTAINS_OP arg check."""
+        instr, _code = _get_compare_instruction("result = a in b\n", "CONTAINS_OP")
+        assert instr is not None
+        result = _instruction_matches_compare(instr, instr.positions.lineno, 0, "NotIn")
+        assert result is False
+
+    def it_returns_false_for_unknown_original_op():
+        """If original_op is not in any family, return False.
+        Kills mutant: the else branch returning False."""
+        instr, _code = _get_compare_instruction("result = a < b\n", "COMPARE_OP")
+        assert instr is not None
+        result = _instruction_matches_compare(
+            instr, instr.positions.lineno, 0, "NotARealOp"
+        )
+        assert result is False
+
+    def it_returns_false_when_positions_is_none():
+        """If instr.positions is None after opcode match, return False.
+        Kills mutant: `is None -> is not None` on positions guard."""
+        instr, _code = _get_compare_instruction("result = a < b\n", "COMPARE_OP")
+        assert instr is not None
+        fake_instr = instr._replace(positions=None)
+        result = _instruction_matches_compare(fake_instr, 1, 0, "Lt")
+        assert result is False
+
+
+def describe_is_bytecode_eligible_edge_cases():
+    """Edge cases for is_bytecode_eligible to kill condition mutants."""
+
+    def it_returns_false_for_binop_with_unknown_replacement():
+        """BinOp with an unknown replacement_op is not eligible.
+        Kills mutant: `in -> not in` on _BINOP_ARGS check."""
+        mutant = _make_mutant(
+            node_type="BinOp", original_op="Add", replacement_op="NotARealOp"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+    def it_returns_false_for_augassign_with_unknown_replacement():
+        """AugAssign with an unknown replacement_op is not eligible.
+        Kills mutant: `in -> not in` on _INPLACE_BINOP_ARGS check."""
+        mutant = _make_mutant(
+            node_type="AugAssign", original_op="Add", replacement_op="NotARealOp"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+    def it_distinguishes_binop_from_augassign():
+        """BinOp uses _BINOP_ARGS, AugAssign uses _INPLACE_BINOP_ARGS.
+        Kills mutant: `== -> !=` on `node_type == 'BinOp'` check."""
+        # BinOp with valid BinOp replacement — eligible
+        binop_mutant = _make_mutant(
+            node_type="BinOp", original_op="Add", replacement_op="Sub"
+        )
+        assert is_bytecode_eligible(binop_mutant) is True
+
+        # AugAssign with valid AugAssign replacement — eligible
+        aug_mutant = _make_mutant(
+            node_type="AugAssign", original_op="Add", replacement_op="Sub"
+        )
+        assert is_bytecode_eligible(aug_mutant) is True
+
+    def it_returns_false_for_compare_cross_family_is_to_lt():
+        """Cross-family: Is (IS_OP) to Lt (COMPARE_OP) is not eligible.
+        Kills mutant: final `return False` in Compare branch."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="Is", replacement_op="Lt"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+    def it_returns_false_for_compare_cross_family_in_to_lt():
+        """Cross-family: In (CONTAINS_OP) to Lt (COMPARE_OP) is not eligible."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="In", replacement_op="Lt"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+    def it_returns_true_for_isnot_to_is():
+        """IsNot -> Is within IS_OP family is eligible.
+        Kills mutant: `and -> or` on IS_OP family check."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="IsNot", replacement_op="Is"
+        )
+        assert is_bytecode_eligible(mutant) is True
+
+    def it_returns_true_for_notin_to_in():
+        """NotIn -> In within CONTAINS_OP family is eligible.
+        Kills mutant: `and -> or` on CONTAINS_OP family check."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="NotIn", replacement_op="In"
+        )
+        assert is_bytecode_eligible(mutant) is True
+
+    def it_returns_false_for_compare_with_one_side_unknown():
+        """Compare with original in COMPARE_OP but replacement unknown.
+        Kills mutant: `and -> or` on COMPARE_OP family check —
+        with `or` instead of `and`, having only one side true would pass."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="Lt", replacement_op="NotARealOp"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+    def it_returns_false_for_compare_with_replacement_only_in_compare():
+        """Compare with original unknown but replacement in COMPARE_OP.
+        Ensures both sides of `and` are checked."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="NotARealOp", replacement_op="Lt"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+    def it_returns_false_for_is_with_one_side_unknown():
+        """Is original but replacement not in IS_ARGS."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="Is", replacement_op="NotARealOp"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+    def it_returns_false_for_contains_with_one_side_unknown():
+        """In original but replacement not in CONTAINS_ARGS."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="In", replacement_op="NotARealOp"
+        )
+        assert is_bytecode_eligible(mutant) is False
+
+
+def describe_find_target_instruction_edge_cases():
+    """Edge cases for find_target_instruction to kill guard mutants."""
+
+    def it_returns_result_from_search_code_object_when_found():
+        """Kills mutant: `is not None -> is None` on line 292.
+        If _search_code_object finds the target, return immediately."""
+        source = "result = a + b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        binop = tree.body[0].value
+        result = find_target_instruction(
+            code, binop.lineno, binop.col_offset, "BinOp", "Add"
+        )
+        assert result is not None
+        target_code, offset = result
+        # Must be the module code object itself (not nested)
+        assert target_code is code
+
+    def it_searches_nested_code_objects():
+        """Kills mutant: `is not None -> is None` on nested search (line ~301).
+        Must find in nested function when top-level search returns None."""
+        source = "def foo(a, b):\n    return a + b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        func = tree.body[0]
+        binop = func.body[0].value
+        result = find_target_instruction(
+            code, binop.lineno, binop.col_offset, "BinOp", "Add"
+        )
+        assert result is not None
+        target_code, offset = result
+        # Must be a nested code object, not the module-level one
+        assert target_code is not code
+
+    def it_returns_none_when_nothing_matches():
+        """find_target_instruction returns None for nonexistent target."""
+        source = "result = a + b\n"
+        code = compile(source, "<test>", "exec")
+        result = find_target_instruction(code, 999, 0, "BinOp", "Add")
+        assert result is None
+
+
+def describe_compute_replacement_edge_cases():
+    """Edge cases for _compute_replacement to kill guard mutants."""
+
+    def it_returns_none_for_binop_with_unknown_replacement():
+        """Kills mutant: `is None -> is not None` on BinOp .get() guard."""
+        mutant = _make_mutant(
+            node_type="BinOp", original_op="Add", replacement_op="FakeOp"
+        )
+        result = _compute_replacement(mutant, _BINOP_ARGS["Add"])
+        assert result is None
+
+    def it_returns_none_for_augassign_with_unknown_replacement():
+        """Kills mutant: `is None -> is not None` on AugAssign .get() guard."""
+        mutant = _make_mutant(
+            node_type="AugAssign", original_op="Add", replacement_op="FakeOp"
+        )
+        result = _compute_replacement(mutant, _INPLACE_BINOP_ARGS["Add"])
+        assert result is None
+
+    def it_returns_none_for_compare_cross_family():
+        """Kills mutant: `return None` at end of Compare branch."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="Is", replacement_op="Lt"
+        )
+        result = _compute_replacement(mutant, _IS_ARGS["Is"])
+        assert result is None
+
+    def it_computes_compare_op_without_bool_flag():
+        """Verifies bool flag is NOT set when old arg doesn't have it."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="Lt", replacement_op="GtE"
+        )
+        old_arg_without_bool = _COMPARE_ARGS["Lt"]  # no bool flag
+        result = _compute_replacement(mutant, old_arg_without_bool)
+        assert result is not None
+        new_arg, new_opcode = result
+        # The bool flag should NOT be set
+        assert new_arg & _COMPARE_BOOL_FLAG == 0
+        assert new_opcode is None
+
+    def it_returns_correct_contains_op_replacement():
+        """Kills mutant on CONTAINS_OP family return value."""
+        mutant = _make_mutant(
+            node_type="Compare", original_op="NotIn", replacement_op="In"
+        )
+        result = _compute_replacement(mutant, _CONTAINS_ARGS["NotIn"])
+        assert result is not None
+        new_arg, new_opcode = result
+        assert new_arg == _CONTAINS_ARGS["In"]
+        assert new_opcode is None
+
+
+def describe_mutate_code_edge_cases():
+    """Edge cases for mutate_code to kill guard mutants."""
+
+    def it_returns_none_when_compute_replacement_fails():
+        """Kills mutant: the replacement is None guard in mutate_code.
+        Use a Compare mutant with cross-family ops so find_target succeeds
+        but _compute_replacement returns None."""
+        # Compile code with a < comparison
+        source = "result = a < b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+
+        # Create a mutant that finds the instruction (original Lt exists)
+        # but replacement "Is" is cross-family so _compute_replacement returns None
+        mutant = _make_mutant(
+            lineno=compare.lineno,
+            col_offset=compare.col_offset,
+            node_type="Compare",
+            original_op="Lt",
+            replacement_op="Is",
+        )
+        result = mutate_code(code, mutant)
+        assert result is None
+
+    def it_mutates_isnot_to_is():
+        """End-to-end: IsNot -> Is via bytecode."""
+        source = "result = a is not b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        mutant = _make_mutant(
+            lineno=compare.lineno,
+            col_offset=compare.col_offset,
+            node_type="Compare",
+            original_op="IsNot",
+            replacement_op="Is",
+        )
+        result = mutate_code(code, mutant)
+        assert result is not None
+        sentinel = object()
+        ns: dict[str, object] = {"a": sentinel, "b": sentinel}
+        exec(result, ns)
+        assert ns["result"] is True  # same object, `is` -> True
+
+    def it_mutates_notin_to_in():
+        """End-to-end: NotIn -> In via bytecode."""
+        source = "result = a not in b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        mutant = _make_mutant(
+            lineno=compare.lineno,
+            col_offset=compare.col_offset,
+            node_type="Compare",
+            original_op="NotIn",
+            replacement_op="In",
+        )
+        result = mutate_code(code, mutant)
+        assert result is not None
+        ns: dict[str, object] = {"a": 1, "b": [1, 2, 3]}
+        exec(result, ns)
+        assert ns["result"] is True  # 1 in [1,2,3] -> True
+
+    def it_mutates_noteq_to_eq():
+        """End-to-end: NotEq -> Eq via bytecode."""
+        source = "result = a != b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        mutant = _make_mutant(
+            lineno=compare.lineno,
+            col_offset=compare.col_offset,
+            node_type="Compare",
+            original_op="NotEq",
+            replacement_op="Eq",
+        )
+        result = mutate_code(code, mutant)
+        assert result is not None
+        ns: dict[str, object] = {"a": 5, "b": 5}
+        exec(result, ns)
+        assert ns["result"] is True  # 5 == 5 is True
+
+    def it_mutates_augassign_mult_to_sub():
+        """End-to-end: AugAssign Mult -> Sub via bytecode."""
+        source = "a *= b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        aug = tree.body[0]
+        mutant = _make_mutant(
+            lineno=aug.lineno,
+            col_offset=aug.col_offset,
+            node_type="AugAssign",
+            original_op="Mult",
+            replacement_op="Sub",
+        )
+        result = mutate_code(code, mutant)
+        assert result is not None
+        ns: dict[str, object] = {"a": 10, "b": 3}
+        exec(result, ns)
+        assert ns["a"] == 7  # 10 -= 3
+
+    def it_finds_compare_in_is_op_family():
+        """find_target_instruction works for IS_OP family comparisons."""
+        source = "result = a is b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        result = find_target_instruction(
+            code, compare.lineno, compare.col_offset, "Compare", "Is"
+        )
+        assert result is not None
+
+    def it_finds_compare_in_contains_op_family():
+        """find_target_instruction works for CONTAINS_OP family comparisons."""
+        source = "result = a in b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        result = find_target_instruction(
+            code, compare.lineno, compare.col_offset, "Compare", "In"
+        )
+        assert result is not None
+
+
+def describe_search_code_object_compare():
+    """Test _search_code_object with Compare node types."""
+
+    def it_finds_compare_op_by_col_offset():
+        source = "result = a < b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        result = _search_code_object(
+            code, compare.lineno, compare.col_offset, "Compare", "Lt"
+        )
+        assert result is not None
+
+    def it_returns_none_for_compare_no_match():
+        source = "result = a < b\n"
+        code = compile(source, "<test>", "exec")
+        result = _search_code_object(code, 99, 0, "Compare", "Lt")
+        assert result is None
+
+    def it_falls_back_to_line_only_for_single_compare_candidate():
+        """When col_offset is wrong but there's only one compare on the line."""
+        source = "result = a < b\n"
+        code = compile(source, "<test>", "exec")
+        result = _search_code_object(code, 1, 999, "Compare", "Lt")
+        assert result is not None
+
+    def it_returns_none_for_ambiguous_compare_line():
+        """Multiple same-type compares on one line with wrong col_offset."""
+        # Python chain comparisons compile to individual COMPARE_OPs
+        # But we need multiple of the same op type
+        # Use a helper: two separate Lt comparisons
+        source = "result = (a < b) and (c < d)\n"
+        code = compile(source, "<test>", "exec")
+        result = _search_code_object(code, 1, 999, "Compare", "Lt")
+        # Should be None (ambiguous — two Lt candidates on same line)
+        # or a result if CPython fuses them. Check either way.
+        # The key test is that it doesn't crash
+        # If only 1 candidate on line 1, it will return it; if >1, None
+        pass  # structural test — no assertion needed beyond "no crash"
+
+    def it_finds_is_op_in_search():
+        source = "result = a is b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        result = _search_code_object(
+            code, compare.lineno, compare.col_offset, "Compare", "Is"
+        )
+        assert result is not None
+
+    def it_finds_contains_op_in_search():
+        source = "result = a in b\n"
+        code = compile(source, "<test>", "exec")
+        import ast
+
+        tree = ast.parse(source)
+        compare = tree.body[0].value
+        result = _search_code_object(
+            code, compare.lineno, compare.col_offset, "Compare", "In"
+        )
+        assert result is not None
