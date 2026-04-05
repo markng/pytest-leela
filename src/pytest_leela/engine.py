@@ -182,6 +182,7 @@ class Engine:
         # This turns O(N) scans of sys.modules into O(K) targeted pops
         # inside each run_tests_for_mutant call (K << N).
         known_user_modules = precompute_user_modules()
+        test_times = coverage_map.test_times if coverage_map is not None else None
 
         # 9. Run each mutant
         results: list[MutantResult] = []
@@ -210,6 +211,7 @@ class Engine:
                 test_ids=test_ids,
                 test_dir=test_dir,
                 known_user_modules=known_user_modules,
+                test_times=test_times,
             )
             results.append(result)
 

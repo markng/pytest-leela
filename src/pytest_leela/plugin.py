@@ -208,6 +208,7 @@ class LeelaPlugin:
         pre_coverage_map = None
         if self._coverage_plugin is not None:
             pre_coverage_map = self._coverage_plugin.coverage_map
+            pre_coverage_map.test_times = self._coverage_plugin.test_times
 
         # Collect test node IDs from the session instead of hardcoding a
         # ``tests/`` directory.  This lets pytest-leela work with any test

@@ -7,6 +7,7 @@ import io
 import os
 import sys
 import threading
+import time
 from typing import Any
 
 import pytest
@@ -59,8 +60,11 @@ class CoveragePlugin:
         self.target_files = {os.path.abspath(f) for f in target_files}
         self.tracer = _LineTracer(self.target_files)
         self.coverage_map = CoverageMap()
+        self.test_times: dict[str, float] = {}
+        self._test_start: float = 0.0
 
     def pytest_runtest_setup(self, item: pytest.Item) -> None:
+        self._test_start = time.monotonic()
         self.tracer.start()
 
     def pytest_runtest_teardown(
@@ -68,6 +72,7 @@ class CoveragePlugin:
     ) -> None:
         lines = self.tracer.stop()
         test_id = item.nodeid
+        self.test_times[test_id] = time.monotonic() - self._test_start
         for file_path, lineno in lines:
             self.coverage_map.add(file_path, lineno, test_id)
 
@@ -108,4 +113,5 @@ def collect_coverage(
     ):
         pytest.main(args, plugins=[plugin])
 
+    plugin.coverage_map.test_times = plugin.test_times
     return plugin.coverage_map

@@ -45,6 +45,7 @@ class CoverageMap:
     """Maps source lines to the tests that execute them."""
 
     line_to_tests: dict[tuple[str, int], set[str]] = field(default_factory=dict)
+    test_times: dict[str, float] = field(default_factory=dict)
 
     def tests_for(self, file_path: str, lineno: int) -> set[str]:
         return self.line_to_tests.get((file_path, lineno), set())

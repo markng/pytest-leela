@@ -739,6 +739,7 @@ def describe_LeelaPlugin():
         fake_coverage = CoverageMap()
         fake_coverage.add("/fake/mod.py", 1, "test_a")
         cov_plugin.coverage_map = fake_coverage
+        cov_plugin.test_times = {"test_a": 0.01}
         plugin._coverage_plugin = cov_plugin
 
         session = MagicMock()
