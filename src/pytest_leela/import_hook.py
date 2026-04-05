@@ -12,6 +12,23 @@ from typing import Any, Callable
 
 from pytest_leela.models import Mutant
 
+# Pre-cache bytecode functions at import time.  Doing the import inside
+# exec_module() is fragile: during self-mutation the import machinery
+# would load a MUTATED version of bytecode.py, causing all mutations
+# to silently fail (0% kill rate).  Capturing references at module load
+# avoids the problem entirely — same pattern as _django_clear_url_caches
+# in runner.py.
+try:
+    from pytest_leela.bytecode import (
+        is_bytecode_eligible as _bc_is_eligible,
+        is_supported as _bc_is_supported,
+        mutate_code as _bc_mutate_code,
+    )
+except ImportError:
+    _bc_is_eligible = None
+    _bc_is_supported = None
+    _bc_mutate_code = None
+
 # AST operator classes by name
 _OP_CLASSES: dict[str, type] = {
     "Add": ast.Add,
@@ -215,19 +232,19 @@ class MutatingLoader(importlib.abc.Loader):
         return None
 
     def exec_module(self, module: types.ModuleType) -> None:
-        # Try bytecode path first when a cached code object is available
-        if self.cached_code is not None:
-            from pytest_leela.bytecode import (
-                is_bytecode_eligible,
-                is_supported,
-                mutate_code,
-            )
-
-            if is_supported() and is_bytecode_eligible(self.mutant):
-                mutated = mutate_code(self.cached_code, self.mutant)
-                if mutated is not None:
-                    exec(mutated, module.__dict__)
-                    return
+        # Try bytecode path first when a cached code object is available.
+        # Uses pre-cached references to avoid loading a mutated bytecode.py
+        # during self-mutation.
+        if (
+            self.cached_code is not None
+            and _bc_is_supported is not None
+            and _bc_is_supported()
+            and _bc_is_eligible(self.mutant)
+        ):
+            mutated = _bc_mutate_code(self.cached_code, self.mutant)
+            if mutated is not None:
+                exec(mutated, module.__dict__)
+                return
 
         # Fall back to AST pipeline
         tree = ast.parse(self.source, filename=self.filename)
