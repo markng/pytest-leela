@@ -6,6 +6,14 @@ import dis
 import sys
 import types
 
+import pytest
+
+# Skip all bytecode tests on Python < 3.14 where bytecode mutation is disabled
+pytestmark = pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="Bytecode mutation requires Python 3.14+",
+)
+
 from pytest_leela.bytecode import (
     _BINOP_ARGS,
     _COMPARE_ARGS,
