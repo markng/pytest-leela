@@ -306,6 +306,60 @@ def describe_CoverageMap():
         assert cov.tests_for("foo.py", 10) == {"test_b"}
 
 
+def describe_CoveragePlugin():
+    def it_records_test_times_as_positive_durations():
+        """Kills line 75: ``- → +`` and ``- → *``.
+
+        The elapsed time is computed as ``time.monotonic() - self._test_start``.
+        If mutated to ``+``, the value would be ~2x a monotonic timestamp (huge).
+        If mutated to ``*``, the value would be the product of two timestamps (enormous).
+        A correct subtraction yields a small positive duration.
+        """
+        from unittest.mock import MagicMock, patch
+
+        from pytest_leela.coverage_tracker import CoveragePlugin
+
+        plugin = CoveragePlugin(set())
+
+        # Simulate pytest_runtest_setup — sets _test_start via time.monotonic()
+        fake_item = MagicMock()
+        fake_item.nodeid = "tests/test_example.py::test_one"
+
+        # Control monotonic: setup reads 1000.0, teardown reads 1000.05
+        with patch(
+            "pytest_leela.coverage_tracker.time.monotonic",
+            side_effect=[1000.0, 1000.05],
+        ):
+            plugin.pytest_runtest_setup(fake_item)
+            plugin.pytest_runtest_teardown(fake_item, nextitem=None)
+
+        recorded = plugin.test_times["tests/test_example.py::test_one"]
+        # Correct: 1000.05 - 1000.0 = 0.05
+        # Mutant +: 1000.05 + 1000.0 = 2000.05 (fails)
+        # Mutant *: 1000.05 * 1000.0 = 1000050.0 (fails)
+        assert 0.0 < recorded < 1.0, f"Expected small duration, got {recorded}"
+
+    def it_records_exact_elapsed_from_monotonic_difference():
+        """Verify the exact value is the difference of two monotonic calls."""
+        from unittest.mock import MagicMock, patch
+
+        from pytest_leela.coverage_tracker import CoveragePlugin
+
+        plugin = CoveragePlugin(set())
+        fake_item = MagicMock()
+        fake_item.nodeid = "test::exact"
+
+        with patch(
+            "pytest_leela.coverage_tracker.time.monotonic", side_effect=[500.0, 503.25]
+        ):
+            plugin.pytest_runtest_setup(fake_item)
+            plugin.pytest_runtest_teardown(fake_item, nextitem=None)
+
+        import pytest
+
+        assert plugin.test_times["test::exact"] == pytest.approx(3.25)
+
+
 def describe_collect_coverage():
     def it_returns_a_coverage_map():
         """collect_coverage returns a CoverageMap, not None.
