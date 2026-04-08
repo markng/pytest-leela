@@ -88,19 +88,9 @@ def compute_discount(price, discount_pct):
     return result
 
 
-def bounded_increment(value, step, maximum):
-    """Increment a value but clamp to maximum.
-
-    Note: the ``current > maximum`` guard is semantically equivalent to
-    ``current >= maximum`` because the clamp sets current to maximum in
-    both cases.  This is a known equivalent mutant.
-    """
-    current = 0
-    current += value
-    current += step
-    if current > maximum:
-        current = maximum
-    return current
+def bounded_increment(current, maximum, step):
+    """Increment *current* by *step*, clamped to *maximum*."""
+    return min(current + step, maximum)
 
 
 def sum_range(start, end):

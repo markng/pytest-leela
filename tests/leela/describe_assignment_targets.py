@@ -147,19 +147,19 @@ def describe_compute_discount():
 
 def describe_bounded_increment():
     def it_increments_within_bounds():
-        result = bounded_increment(5, 3, 100)
-        assert result == 8  # 0 + 5 + 3
+        result = bounded_increment(5, 100, 3)
+        assert result == 8
 
     def it_clamps_to_maximum():
-        result = bounded_increment(50, 60, 100)
+        result = bounded_increment(50, 100, 60)
         assert result == 100
 
     def it_returns_maximum_when_exceeded():
-        result = bounded_increment(90, 20, 100)
+        result = bounded_increment(90, 100, 20)
         assert result == 100
 
     def it_returns_exact_maximum():
-        result = bounded_increment(50, 50, 100)
+        result = bounded_increment(50, 100, 50)
         assert result == 100
 
 

@@ -132,17 +132,20 @@ def describe_compute_discount():
 
 
 def describe_bounded_increment():
-    def it_adds_value_and_step():
-        assert bounded_increment(5, 3, 100) == 8
+    def it_adds_current_and_step():
+        assert bounded_increment(5, 100, 3) == 8
 
     def it_clamps_to_maximum():
-        assert bounded_increment(90, 20, 100) == 100
+        assert bounded_increment(90, 100, 20) == 100
 
     def it_handles_zero_step():
-        assert bounded_increment(42, 0, 100) == 42
+        assert bounded_increment(42, 100, 0) == 42
 
     def it_clamps_exactly_at_maximum():
-        assert bounded_increment(50, 50, 100) == 100
+        assert bounded_increment(50, 100, 50) == 100
+
+    def it_clamps_when_result_exceeds_maximum_by_one():
+        assert bounded_increment(99, 100, 2) == 100
 
 
 def describe_sum_range():

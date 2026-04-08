@@ -136,6 +136,30 @@ def _find_enclosing_func(functions: list[_FuncInfo], lineno: int) -> _FuncInfo |
     return best
 
 
+def _type_of_value_node(node: ast.expr) -> str | None:
+    """Infer the type of a Constant or Call node without any name resolution.
+
+    Handles the branches that do not depend on FuncInfo, env, or param_types:
+      - Literal constants (bool, int, float, str)
+      - Known built-in calls (len)
+
+    Returns None for anything else so callers can continue with their own logic.
+    """
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, bool):
+            return "bool"
+        if isinstance(node.value, int):
+            return "int"
+        if isinstance(node.value, float):
+            return "float"
+        if isinstance(node.value, str):
+            return "str"
+    if isinstance(node, ast.Call):
+        if isinstance(node.func, ast.Name) and node.func.id == "len":
+            return "int"
+    return None
+
+
 def _infer_expr_type(
     node: ast.expr,
     func: _FuncInfo,
@@ -158,19 +182,7 @@ def _infer_expr_type(
         if name in func.param_types:
             return func.param_types[name]
         return None
-    if isinstance(node, ast.Constant):
-        if isinstance(node.value, bool):
-            return "bool"
-        if isinstance(node.value, int):
-            return "int"
-        if isinstance(node.value, float):
-            return "float"
-        if isinstance(node.value, str):
-            return "str"
-    if isinstance(node, ast.Call):
-        if isinstance(node.func, ast.Name) and node.func.id == "len":
-            return "int"
-    return None
+    return _type_of_value_node(node)
 
 
 def _infer_assigned_value_type(
@@ -182,8 +194,9 @@ def _infer_assigned_value_type(
 
     This is a lightweight variant of _infer_expr_type used while building the
     assignment environment.  We can't call _infer_expr_type directly here because
-    _FuncInfo is not yet fully constructed; instead we replicate the Name / Constant
-    / Call logic against the in-progress env and param_types.
+    _FuncInfo is not yet fully constructed; instead we replicate the Name logic
+    against the in-progress env and param_types, then delegate Constant/Call
+    inference to the shared _type_of_value_node helper.
     """
     if isinstance(value, ast.Name):
         name = value.id
@@ -192,18 +205,9 @@ def _infer_assigned_value_type(
         if name in param_types:
             return param_types[name]
         return None
-    if isinstance(value, ast.Constant):
-        if isinstance(value.value, bool):
-            return "bool"
-        if isinstance(value.value, int):
-            return "int"
-        if isinstance(value.value, float):
-            return "float"
-        if isinstance(value.value, str):
-            return "str"
-    if isinstance(value, ast.Call):
-        if isinstance(value.func, ast.Name) and value.func.id == "len":
-            return "int"
+    constant_or_call = _type_of_value_node(value)
+    if constant_or_call is not None:
+        return constant_or_call
     # BinOp: propagate type from left operand if resolvable, else right.
     # If the left operand is a known variable (in env or param_types) whose type
     # is None (conflicted or unannotated), we do NOT fall through to the right —
