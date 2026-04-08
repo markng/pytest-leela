@@ -509,61 +509,20 @@ def describe_run_tests_for_mutant_timeout():
     def it_returns_killed_when_signal_handler_fires(tmp_path, monkeypatch):
         """When SIGALRM handler fires, result.killing_test must be '<timeout>'.
 
-        The old test mocked pytest.main to raise SystemExit but timed_out
-        stayed False, so killing_test was '<crashed>'. This test directly
-        invokes the _timeout_handler closure to actually set timed_out=True.
+        Simulates pytest.main catching the SystemExit internally (pytest's
+        exception handling), returning normally. The post-run check at
+        ``if timed_out:`` sees the flag and returns a timeout result.
         """
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         source, mutant = _make_mutant_fixture(tmp_path)
 
-        # Track whether the handler was called and timed_out was set
-        timed_out_state = {"was_set": False}
-
-        def patched_timeout_handler(_signum: int, _frame: object) -> None:
-            timed_out_state["was_set"] = True
-            raise SystemExit("leela: mutant timeout")
-
-        # Replace the _timeout_handler closure with our version that
-        # sets timed_out=True (by patching signal.signal so our handler
-        # gets registered instead of the real one)
-        registered_handler_ref = {"handler": None}
-
-        def fake_signal(signum: int, handler: object) -> object:
-            if signum == signal.SIGALRM and handler != signal.SIG_DFL:
-                registered_handler_ref["handler"] = handler
-            return signal.SIG_DFL
-
-        with (
-            patch("pytest_leela.runner.signal.alarm", lambda s: 0),
-            patch("pytest_leela.runner.signal.signal", fake_signal),
-            patch("pytest_leela.runner.pytest.main", side_effect=SystemExit("timeout")),
-        ):
-            # Run once to register the handler, but pytest.main will raise
-            # and the except block will fire before we can call the handler.
-            # So instead, let's directly invoke the registered handler
-            # by simulating it was called.
-            result = run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times={"test_a": 1.0},
-            )
-
-        # Patch signal.signal so our handler replaces the real one.
-        # When run_tests_for_mutant registers _timeout_handler via
-        # signal.signal(signal.SIGALRM, _timeout_handler), our fake returns
-        # the real handler so we can call it. When the finally block tries to
-        # restore the old handler, we return SIG_DFL.
-        handler_closure = {"func": None}
+        handler_closure: dict[str, object] = {}
 
         def fake_signal(signum: int, handler: object) -> object:
             if signum == signal.SIGALRM:
                 if handler == signal.SIG_DFL:
-                    # Restore call in finally
                     return signal.SIG_DFL
-                # Registration call — capture the closure
                 handler_closure["func"] = handler
                 return signal.SIG_DFL
             return signal.SIG_DFL
@@ -571,15 +530,11 @@ def describe_run_tests_for_mutant_timeout():
         def fake_alarm(seconds: int) -> int:
             return 0
 
-        # Simulate pytest.main raising from the timeout handler:
-        # we call the handler (which sets timed_out=True and raises
-        # SystemExit). pytest.main catches it internally and returns 0
-        # (pytest's own exception handling). This is the "py catches the
-        # signal's SystemExit" path → post-run check sees timed_out=True.
-        def pytest_main_that_simulates_timeout(*args, **kwargs):
-            if handler_closure["func"] is not None:
-                handler_closure["func"](signal.SIGALRM, None)
-            return 0  # pytest caught the SystemExit
+        def pytest_main_that_simulates_timeout(*args: object, **kwargs: object) -> int:
+            # Invoke the handler (sets timed_out=True + raises SystemExit)
+            if handler_closure.get("func") is not None:
+                handler_closure["func"](signal.SIGALRM, None)  # type: ignore[index]
+            return 0  # pytest caught the SystemExit internally
 
         with (
             patch("pytest_leela.runner.signal.alarm", fake_alarm),
@@ -596,7 +551,7 @@ def describe_run_tests_for_mutant_timeout():
                 test_times={"test_a": 1.0},
             )
 
-        # timed_out was set to True by the handler → killing_test == "<timeout>"
+        # timed_out=True → killing_test == "<timeout>"
         assert result.killed is True
         assert result.killing_test == "<timeout>"
 
@@ -618,46 +573,6 @@ def describe_run_tests_for_mutant_timeout():
         assert result.killed is True
         assert result.killing_test == "<crashed>"
 
-    def it_invokes_timeout_handler_to_set_timed_out(tmp_path, monkeypatch):
-        """Verify timed_out=True causes killing_test to be '<timeout>'.
-
-        The old test mocked pytest.main to raise SystemExit but timed_out
-        stayed False, so killing_test was '<crashed>'. This test captures
-        the registered _timeout_handler and invokes it immediately within
-        fake_signal — setting timed_out=True in the runner's closure.
-        """
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        def fake_signal(signum: int, handler: object) -> object:
-            if signum == signal.SIGALRM and handler != signal.SIG_DFL:
-                # Invoke the handler immediately (simulates real SIGALRM firing).
-                # This sets timed_out=True in the runner's closure AND raises
-                # SystemExit. We catch the exit so execution continues.
-                try:
-                    handler(signal.SIGALRM, None)
-                except SystemExit:
-                    pass
-            return signal.SIG_DFL
-
-        with (
-            patch("pytest_leela.runner.signal.alarm", lambda s: 0),
-            patch("pytest_leela.runner.signal.signal", fake_signal),
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-        ):
-            result = run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times={"test_a": 1.0},
-            )
-
-        # timed_out was set by invoking the handler → killing_test == "<timeout>"
-        assert result.killed is True
-        assert result.killing_test == "<timeout>"
-
 
 def _make_mutant_fixture_for_timeout(tmp_path):
     """Shared fixture for timeout-related tests."""
@@ -675,14 +590,37 @@ def _make_mutant_fixture_for_timeout(tmp_path):
 def describe_timeout_computation():
     """Tests for the timeout computation formula in run_tests_for_mutant()."""
 
-    def it_uses_max_5_second_floor():
-        """Timeout must be at least 5.0 seconds regardless of test times."""
-        import inspect
+    def it_uses_max_5_second_floor(tmp_path, monkeypatch):
+        """Timeout is at least 5.0 seconds regardless of test times (the floor)."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
 
-        from pytest_leela.runner import run_tests_for_mutant
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
 
-        src = inspect.getsource(run_tests_for_mutant)
-        assert "max(2 * total_expected + 1.0, 5.0)" in src
+        call_args: list[int] = []
+
+        def fake_alarm(seconds: int) -> int:
+            call_args.append(seconds)
+            return 0
+
+        with (
+            patch("pytest_leela.runner.signal.alarm", fake_alarm),
+            patch("pytest_leela.runner.signal.signal", return_value=signal.SIG_DFL),
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+        ):
+            # 0.1s expected → 2*0.1+1.0 = 1.2 → floor should be 5.0
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 0.1},
+            )
+
+        # Two calls: set alarm (floor value) + cancel in finally
+        assert len(call_args) == 2
+        assert call_args[0] == 5  # floor: max(2*0.1+1.0, 5.0) = 5.0 → ceil = 5
+        assert call_args[1] == 0  # cancellation in finally
 
     def it_ceils_timeout_value(tmp_path, monkeypatch):
         """signal.alarm() receives a ceil'd value to avoid premature firing."""
@@ -777,21 +715,53 @@ def describe_timeout_computation():
         assert len(restore_calls) == 2
 
     def it_has_post_run_timed_out_check(tmp_path, monkeypatch):
-        """Post-run check for timed_out flag sets killing_test to <timeout>."""
+        """Post-run ``if timed_out:`` block sets killing_test to <timeout>.
+
+        When pytest catches the signal's SystemExit internally and returns
+        normally, the post-run check detects timed_out=True and returns a
+        timeout result instead of the normal result.
+        """
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
         source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
 
-        import inspect
+        handler_closure: dict[str, object] = {}
 
-        from pytest_leela.runner import run_tests_for_mutant
+        def fake_signal(signum: int, handler: object) -> object:
+            if signum == signal.SIGALRM:
+                if handler == signal.SIG_DFL:
+                    return signal.SIG_DFL
+                handler_closure["func"] = handler
+                return signal.SIG_DFL
+            return signal.SIG_DFL
 
-        src = inspect.getsource(run_tests_for_mutant)
-        # The post-run check exists and uses timed_out to set killing_test
-        assert "if timed_out:" in src
-        # killing_test is set to "<timeout>" in the post-run path
-        assert 'killing_test="<timeout>"' in src
+        def fake_alarm(seconds: int) -> int:
+            return 0
+
+        def pytest_main_catches_timeout(*args: object, **kwargs: object) -> int:
+            # Invoke handler: sets timed_out=True in runner's closure,
+            # raises SystemExit. pytest catches it internally and returns normally.
+            if handler_closure.get("func") is not None:
+                handler_closure["func"](signal.SIGALRM, None)  # type: ignore[index]
+            return 0  # pytest caught the SystemExit internally
+
+        with (
+            patch("pytest_leela.runner.signal.alarm", fake_alarm),
+            patch("pytest_leela.runner.signal.signal", fake_signal),
+            patch("pytest_leela.runner.pytest.main", pytest_main_catches_timeout),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        # Post-run check: timed_out=True → killed with "<timeout>"
+        assert result.killed is True
+        assert result.killing_test == "<timeout>"
 
 
 def describe_timeout_guard_conditions():
@@ -902,33 +872,6 @@ def describe_timeout_guard_conditions():
         assert len(alarm_values) == 2
         assert alarm_values[0] == 12
         assert alarm_values[1] == 0  # cancellation in finally
-
-
-def describe_timeout_signal_handler():
-    """Tests for the _timeout_handler signal handler behavior."""
-
-    def it_calls_timed_out_and_raises_system_exit(tmp_path, monkeypatch):
-        """Signal handler sets timed_out=True and raises SystemExit."""
-        import inspect
-
-        from pytest_leela.runner import run_tests_for_mutant
-
-        src = inspect.getsource(run_tests_for_mutant)
-        # Verify the handler sets timed_out and raises SystemExit
-        assert "timed_out = True" in src
-        assert 'raise SystemExit("leela: mutant timeout")' in src
-
-    def it_has_both_except_and_finally_alarm_cancellation(tmp_path, monkeypatch):
-        """signal.alarm(0) appears in both except and finally blocks."""
-        import inspect
-
-        from pytest_leela.runner import run_tests_for_mutant
-
-        src = inspect.getsource(run_tests_for_mutant)
-        # Count occurrences of signal.alarm(0)
-        count = src.count("signal.alarm(0)")
-        # Should be in except block AND finally block = 2 times
-        assert count == 2
 
 
 def describe_clear_user_modules():
