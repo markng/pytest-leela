@@ -557,7 +557,6 @@ def describe_run_tests_for_mutant_timeout():
         # the real handler so we can call it. When the finally block tries to
         # restore the old handler, we return SIG_DFL.
         handler_closure = {"func": None}
-        saved_old_handler = {"handler": signal.SIG_DFL}
 
         def fake_signal(signum: int, handler: object) -> object:
             if signum == signal.SIGALRM:
