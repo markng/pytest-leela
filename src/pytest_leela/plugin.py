@@ -12,7 +12,7 @@ import pytest
 from pytest_leela.config import ALL_OPERATORS, load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import Engine
-from pytest_leela.git_diff import changed_files
+from pytest_leela.git_diff import _is_test_file, changed_files
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
 
@@ -30,17 +30,6 @@ _SKIP_DIRS = {
     ".eggs",
     "*.egg-info",
 }
-
-
-def _is_test_file(basename: str) -> bool:
-    """Return True if the filename looks like a test file."""
-    return (
-        basename.startswith("test_")
-        or basename.startswith("tests_")
-        or basename.endswith("_test.py")
-        or basename == "conftest.py"
-        or basename == "tests.py"
-    )
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

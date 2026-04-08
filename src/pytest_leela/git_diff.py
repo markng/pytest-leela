@@ -7,6 +7,17 @@ import re
 import subprocess
 
 
+def _is_test_file(basename: str) -> bool:
+    """Return True if the filename looks like a test file."""
+    return (
+        basename.startswith("test_")
+        or basename.startswith("tests_")
+        or basename.endswith("_test.py")
+        or basename == "conftest.py"
+        or basename == "tests.py"
+    )
+
+
 def changed_files(base: str = "main") -> list[str]:
     """Get list of Python files changed since the base ref."""
     try:
@@ -33,7 +44,9 @@ def changed_files(base: str = "main") -> list[str]:
         line = line.strip()
         if line.endswith(".py"):
             abs_path = os.path.abspath(line)
-            if os.path.exists(abs_path):
+            if os.path.exists(abs_path) and not _is_test_file(
+                os.path.basename(abs_path)
+            ):
                 files.append(abs_path)
     return files
 
