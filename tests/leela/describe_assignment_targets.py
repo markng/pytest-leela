@@ -181,13 +181,15 @@ def describe_sum_range():
 
 
 def describe_build_report_line():
-    def it_builds_label_with_separator():
+    def it_builds_label_with_percentage():
+        # 5 * 100 // 10 = 50
         result = build_report_line("items", 5, 10)
-        assert result == "items: %"
+        assert result == "items: 50%"
 
     def it_works_with_different_labels():
+        # 8 * 100 // 10 = 80
         result = build_report_line("score", 8, 10)
-        assert result == "score: %"
+        assert result == "score: 80%"
 
 
 def describe_score_attempt():

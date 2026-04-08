@@ -89,7 +89,12 @@ def compute_discount(price, discount_pct):
 
 
 def bounded_increment(value, step, maximum):
-    """Increment a value but clamp to maximum."""
+    """Increment a value but clamp to maximum.
+
+    Note: the ``current > maximum`` guard is semantically equivalent to
+    ``current >= maximum`` because the clamp sets current to maximum in
+    both cases.  This is a known equivalent mutant.
+    """
     current = 0
     current += value
     current += step
@@ -111,12 +116,12 @@ def sum_range(start, end):
 
 
 def build_report_line(label, count, total):
-    """Format a report line mixing string and int locals."""
+    """Format a report line with label, percentage count/total, and a % sign."""
     sep = ": "
     pct_label = "%"
     ratio = count * 100
     pct = ratio // total
-    line = label + sep + pct_label
+    line = label + sep + str(pct) + pct_label
     return line
 
 

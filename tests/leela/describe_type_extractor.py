@@ -379,6 +379,28 @@ def describe_enrich_mutation_points():
             assert len(binops) >= 1
             assert binops[0].inferred_type is None
 
+        def it_uses_innermost_function_for_nested_definitions():
+            """_find_enclosing_func returns the innermost function for nested defs.
+
+            The inner function's parameter annotation (x: int) must be used, not
+            the outer function's (which has no parameters).  If the first-match
+            heuristic were used, outer would be returned and x would be unannotated.
+            """
+            source = (
+                "def outer():\n"
+                "    def inner(x: int):\n"
+                "        return x + 1\n"
+                "    return 0\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            enriched, _ = enrich_mutation_points(source, points)
+            # BinOp x + 1 is in inner's body; must get type from inner's annotation
+            inner_binops = [
+                p for p in enriched if p.node_type == "BinOp" and p.lineno == 3
+            ]
+            assert len(inner_binops) == 1
+            assert inner_binops[0].inferred_type == "int"
+
         def it_returns_none_from_find_node_at_when_no_match():
             """L170: _find_node_at returns None (not some other value) when no node matches."""
             from pytest_leela.type_extractor import _find_node_at
@@ -534,6 +556,20 @@ def describe_enrich_mutation_points():
             assert len(augassigns) == 1
             assert augassigns[0].inferred_type == "str"
 
+        def it_does_not_fall_through_to_value_when_target_is_conflicted():
+            """x += 1 where x is conflicted (env[x]=None) should give None, not int.
+
+            The target x has a known-but-unknown type in the env.  We must not
+            fall through to infer from the value (1 → int), which would silently
+            produce an incorrect type.
+            """
+            source = 'def f():\n    x = 1\n    x = "hello"\n    x += 1\n'
+            points = find_mutation_points(source, "test.py", "test")
+            enriched, _ = enrich_mutation_points(source, points)
+            augassigns = [p for p in enriched if p.node_type == "AugAssign"]
+            assert len(augassigns) == 1
+            assert augassigns[0].inferred_type is None
+
     # --- Group 6: Assignment-based forward propagation ---
 
     def describe_assignment_dataflow():
@@ -585,14 +621,34 @@ def describe_enrich_mutation_points():
             assert binops[0].inferred_type == "int"
 
         def it_resolves_unknown_when_conflicting_assignments():
-            """If x is assigned int then str, type should be unknown (None)."""
+            """If x is assigned int then str, x has unknown type and x + 1 is also unknown.
+
+            x is in the env with type None (conflicted).  When enriching the BinOp
+            x + 1, the left operand (x) is a known variable whose type is None, so
+            we do NOT fall through to infer from the right operand (1 → int).
+            Propagating the literal's type would silently ignore the conflict.
+            """
             source = 'def f():\n    x = 1\n    x = "hello"\n    return x + 1\n'
             points = find_mutation_points(source, "test.py", "test")
             enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
-            # Conflicting assignments → unknown; falls back to int from literal '1'
-            # on the right side of the binop
+            # Conflicting assignments → x type is unknown (None); BinOp type is also None.
+            assert binops[0].inferred_type is None
+
+        def it_infers_from_right_when_left_is_genuinely_unresolvable():
+            """When the left operand is not in env or params, fall through to right.
+
+            x is not in env and not annotated (unannotated param), so x + 1 should
+            resolve to int from the literal.  This contrasts with the conflicted-env
+            case where we must NOT fall through.
+            """
+            source = "def f(x):\n    return x + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched, _ = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            # x has no annotation, not in env → left is unresolvable → fall through to 1 → int
             assert binops[0].inferred_type == "int"
 
         def it_resolves_compare_from_assigned_variable():
@@ -648,6 +704,23 @@ def describe_enrich_mutation_points():
             assert len(binops) >= 1
             # env wins: x = 5 is int, overrides param annotation float
             assert binops[0].inferred_type == "int"
+
+        def it_does_not_propagate_type_through_conflicted_env_variable():
+            """z = x + 5 where x is conflicted (env[x]=None) should give z=None.
+
+            If the left operand of the RHS BinOp is a variable with a known but
+            conflicted (None) type in env, we must NOT fall through to infer from
+            the right operand.  Doing so would silently assign an incorrect type
+            to z.
+            """
+            source = 'def f():\n    x = 1\n    x = "hello"\n    z = x + 5\n    return z + 1\n'
+            points = find_mutation_points(source, "test.py", "test")
+            enriched, _ = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            # z = x + 5: x is conflicted → z is unknown → z + 1 BinOp has no type
+            return_binop = [b for b in binops if b.lineno == 5]
+            assert len(return_binop) == 1
+            assert return_binop[0].inferred_type is None
 
 
 def describe_enrichment_stats():

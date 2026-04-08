@@ -122,6 +122,14 @@ def describe_compute_discount():
     def it_handles_fifty_percent_discount():
         assert compute_discount(200, 50) == 100
 
+    def it_uses_floor_division_not_true_division():
+        """Distinguishes // from /: result must be an int, not a float.
+
+        With //: net = (50*33)//100 = 1650//100 = 16, result = 50-16 = 34.
+        With /: net = 1650/100 = 16.5, result = 50-16.5 = 33.5.
+        """
+        assert compute_discount(50, 33) == 34
+
 
 def describe_bounded_increment():
     def it_adds_value_and_step():
@@ -153,14 +161,28 @@ def describe_sum_range():
 
 
 def describe_build_report_line():
-    def it_formats_label_with_sep_and_pct():
-        assert build_report_line("Score", 75, 100) == "Score: %"
+    def it_formats_label_with_percentage():
+        # 75 * 100 // 100 = 75
+        assert build_report_line("Score", 75, 100) == "Score: 75%"
 
     def it_handles_zero_count():
-        assert build_report_line("Items", 0, 10) == "Items: %"
+        # 0 * 100 // 10 = 0
+        assert build_report_line("Items", 0, 10) == "Items: 0%"
 
     def it_handles_empty_label():
-        assert build_report_line("", 50, 100) == ": %"
+        # 50 * 100 // 100 = 50
+        assert build_report_line("", 50, 100) == ": 50%"
+
+    def it_uses_floor_division_for_percentage():
+        """Distinguishes // from /: floor div gives int string, true div gives float string."""
+        # 1 * 100 // 3 = 33, not 33.333...
+        assert build_report_line("test", 1, 3) == "test: 33%"
+
+    def it_uses_multiplication_for_ratio():
+        """Distinguishes * from + in ratio = count * 100."""
+        # With *: ratio = 5 * 100 = 500, pct = 500 // 100 = 5
+        # With +: ratio = 5 + 100 = 105, pct = 105 // 100 = 1
+        assert build_report_line("x", 5, 100) == "x: 5%"
 
 
 def describe_score_attempt():

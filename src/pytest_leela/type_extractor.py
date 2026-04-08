@@ -119,11 +119,21 @@ class _FuncInfo:
 
 
 def _find_enclosing_func(functions: list[_FuncInfo], lineno: int) -> _FuncInfo | None:
-    """Find the function that contains a given line."""
+    """Find the innermost function that contains a given line.
+
+    When functions are nested, multiple entries may contain the same line.
+    We return the one with the smallest range (innermost), which is the one
+    whose annotations and locals are actually in scope for that line.
+    """
+    best: _FuncInfo | None = None
+    best_range = -1
     for func in functions:
         if func.start_line <= lineno <= func.end_line:
-            return func
-    return None
+            span = func.end_line - func.start_line
+            if best is None or span < best_range:
+                best = func
+                best_range = span
+    return best
 
 
 def _infer_expr_type(
@@ -194,8 +204,17 @@ def _infer_assigned_value_type(
     if isinstance(value, ast.Call):
         if isinstance(value.func, ast.Name) and value.func.id == "len":
             return "int"
-    # BinOp: if both sides agree on a type, propagate it
+    # BinOp: propagate type from left operand if resolvable, else right.
+    # If the left operand is a known variable (in env or param_types) whose type
+    # is None (conflicted or unannotated), we do NOT fall through to the right —
+    # propagating the right operand's type would silently ignore that the left
+    # operand has an unknown/conflicted type.
     if isinstance(value, ast.BinOp):
+        if isinstance(value.left, ast.Name):
+            left_name = value.left.id
+            if left_name in env or left_name in param_types:
+                # Left is a known variable; its type (possibly None) is authoritative.
+                return _infer_assigned_value_type(value.left, param_types, env)
         left = _infer_assigned_value_type(value.left, param_types, env)
         if left is not None:
             return left
@@ -257,9 +276,19 @@ def _env_assign(env: dict[str, str | None], name: str, inferred: str | None) -> 
 
 
 def _infer_binop_type(node: ast.BinOp, func: _FuncInfo) -> str | None:
-    """Infer the type of a BinOp's operands from annotations."""
+    """Infer the type of a BinOp's operands from annotations.
+
+    Resolution order: left operand, then right operand.  If the left operand
+    is a variable known to the environment or parameter map but whose type is
+    None (unknown/conflicted), we do NOT fall through to the right — doing so
+    would silently ignore that the left has an unresolvable type.
+    """
     env = func.assignment_env
-    # Check left operand
+    # If left is a variable with a known (but possibly None) type, use it directly.
+    if isinstance(node.left, ast.Name):
+        name = node.left.id
+        if name in env or name in func.param_types:
+            return _infer_expr_type(node.left, func, env)
     left_type = _infer_expr_type(node.left, func, env)
     if left_type is not None:
         return left_type
@@ -269,9 +298,19 @@ def _infer_binop_type(node: ast.BinOp, func: _FuncInfo) -> str | None:
 
 
 def _infer_augassign_type(node: ast.AugAssign, func: _FuncInfo) -> str | None:
-    """Infer the type of an AugAssign from target or value annotations."""
+    """Infer the type of an AugAssign from target or value annotations.
+
+    The target's type takes priority.  If the target is a variable whose type
+    is known to the environment or parameter map (even as None / conflicted),
+    its type is used directly without falling through to the value's type.
+    Falling through would silently ignore a conflicted target type.
+    """
     env = func.assignment_env
-    # Check target (e.g., x += 1 — look up x's type)
+    # If target is a variable with a known (possibly None) type, use it directly.
+    if isinstance(node.target, ast.Name):
+        name = node.target.id
+        if name in env or name in func.param_types:
+            return _infer_expr_type(node.target, func, env)
     target_type = _infer_expr_type(node.target, func, env)
     if target_type is not None:
         return target_type
@@ -343,7 +382,7 @@ def _type_came_from_dataflow(
         node = _find_node_at(tree, point_lineno, point_col_offset, "BinOp")
         if isinstance(node, ast.BinOp):
             return _operand_from_env_not_param(node.left, env, param_types) or (
-                _type_of_operand(node.left, func, env) is None
+                _infer_expr_type(node.left, func, env) is None
                 and _operand_from_env_not_param(node.right, env, param_types)
             )
         return False
@@ -362,7 +401,7 @@ def _type_came_from_dataflow(
         node = _find_node_at(tree, point_lineno, point_col_offset, "AugAssign")
         if isinstance(node, ast.AugAssign):
             return _operand_from_env_not_param(node.target, env, param_types) or (
-                _type_of_operand(node.target, func, env) is None
+                _infer_expr_type(node.target, func, env) is None
                 and _operand_from_env_not_param(node.value, env, param_types)
             )
         return False
@@ -387,15 +426,6 @@ def _operand_from_env_not_param(
         if name in env and env[name] is not None:
             return name not in param_types
     return False
-
-
-def _type_of_operand(
-    operand: ast.expr,
-    func: _FuncInfo,
-    env: dict[str, str | None],
-) -> str | None:
-    """Lightweight helper: return the type of a single operand or None."""
-    return _infer_expr_type(operand, func, env)
 
 
 def enrich_mutation_points(
