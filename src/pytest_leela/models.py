@@ -5,6 +5,33 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
+@dataclass
+class EnrichmentStats:
+    """Breakdown of how mutation points received their inferred type.
+
+    ``from_annotations`` counts points whose type came from a parameter
+    annotation, return-type annotation, or a literal constant in the operand.
+
+    ``from_assignment_dataflow`` counts points whose type was resolved via the
+    assignment environment — i.e. the type flowed from a local-variable
+    assignment (``x = 5``, ``x: int = ...``) rather than from a declared
+    parameter or return annotation.
+
+    A single point is counted in exactly one bucket.  Points that received no
+    type information are counted in neither.
+    """
+
+    from_annotations: int = 0
+    from_assignment_dataflow: int = 0
+
+    def __add__(self, other: EnrichmentStats) -> EnrichmentStats:
+        return EnrichmentStats(
+            from_annotations=self.from_annotations + other.from_annotations,
+            from_assignment_dataflow=self.from_assignment_dataflow
+            + other.from_assignment_dataflow,
+        )
+
+
 @dataclass(frozen=True)
 class MutationPoint:
     """A location in source code where a mutation can be applied."""
@@ -69,6 +96,7 @@ class RunResult:
     wall_time_seconds: float
     coverage_map: CoverageMap | None = None
     target_sources: dict[str, str] = field(default_factory=dict)  # file_path -> source
+    enrichment_stats: EnrichmentStats = field(default_factory=EnrichmentStats)
 
     @property
     def killed(self) -> int:
