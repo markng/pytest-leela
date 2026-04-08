@@ -206,6 +206,7 @@ def run_tests_for_mutant(
         # Note: signal.SIGALRM is Unix-only; the pytest-leela test harness
         # only runs on Unix (Linux/macOS) where this is intentional.
         timed_out = False
+        segfaulted = False
         timeout_seconds: float | None = None
         old_handler = signal.SIG_DFL
         if test_times is not None and test_ids:
@@ -220,6 +221,20 @@ def run_tests_for_mutant(
             old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
             signal.alarm(math.ceil(timeout_seconds))
 
+        # Install SIGSEGV handler to survive bytecode mutations that
+        # produce invalid code objects.  On Python 3.14, executing a
+        # code object with corrupted bytecode (e.g. from a mutation of
+        # _patch_single_code patching the wrong offset) raises SIGSEGV
+        # instead of a Python exception.  Converting it to SystemExit
+        # lets the existing except block catch it and mark the mutant
+        # as killed.
+        def _sigsegv_handler(_signum: int, _frame: object) -> None:
+            nonlocal segfaulted
+            segfaulted = True
+            raise SystemExit("leela: mutant caused segfault")
+
+        old_sigsegv = signal.signal(signal.SIGSEGV, _sigsegv_handler)
+
         plugins: list[Any] = [collector]
 
         # Run pytest in-process (suppress noisy output)
@@ -230,13 +245,19 @@ def run_tests_for_mutant(
             ):
                 pytest.main(args, plugins=plugins)
         except (Exception, SystemExit):
-            # Cancel the alarm and restore the handler first.
+            # Cancel the alarm and restore the handlers first.
             if timeout_seconds is not None:
                 signal.alarm(0)
+            signal.signal(signal.SIGSEGV, old_sigsegv)
             # A mutation that crashes the test runner (or times out)
             # counts as killed.
             elapsed = time.monotonic() - start
-            killing_test = "<timeout>" if timed_out else "<crashed>"
+            if timed_out:
+                killing_test = "<timeout>"
+            elif segfaulted:
+                killing_test = "<segfault>"
+            else:
+                killing_test = "<crashed>"
             return MutantResult(
                 mutant=mutant,
                 killed=True,
@@ -250,6 +271,7 @@ def run_tests_for_mutant(
             if timeout_seconds is not None:
                 signal.alarm(0)
                 signal.signal(signal.SIGALRM, old_handler)
+            signal.signal(signal.SIGSEGV, old_sigsegv)
 
             # Restore meta_path: removes hooks that inner pytest.main()
             # added (AssertionRewritingHook etc.).  The saved snapshot

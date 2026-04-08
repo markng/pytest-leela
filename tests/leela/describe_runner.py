@@ -978,6 +978,85 @@ def describe_timeout_guard_conditions():
         assert alarm_values[1] == 0  # cancellation in finally
 
 
+def describe_sigsegv_handler():
+    """Tests for the SIGSEGV handler that catches invalid bytecode crashes."""
+
+    def it_marks_mutant_as_killed_with_segfault_label(tmp_path, monkeypatch):
+        """When SIGSEGV fires during inner pytest.main(), the mutant is killed
+        with '<segfault>' label instead of crashing the process."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
+
+        sigsegv_closure: dict[str, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> object:
+            if signum == signal.SIGSEGV:
+                sigsegv_closure["handler"] = handler
+            return signal.SIG_DFL
+
+        def fake_alarm(seconds: int) -> int:
+            return 0
+
+        def pytest_main_that_triggers_sigsegv(
+            *args: object, **kwargs: object
+        ) -> int:
+            # Simulate SIGSEGV by invoking the installed handler
+            handler = sigsegv_closure.get("handler")
+            if handler is not None and callable(handler):
+                handler(signal.SIGSEGV, None)
+            return 0
+
+        with (
+            patch("pytest_leela.runner.time.monotonic", side_effect=[0.0, 1.0]),
+            patch("pytest_leela.runner.signal.alarm", fake_alarm),
+            patch("pytest_leela.runner.signal.signal", fake_signal),
+            patch(
+                "pytest_leela.runner.pytest.main",
+                pytest_main_that_triggers_sigsegv,
+            ),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        assert result.killed is True
+        assert result.killing_test == "<segfault>"
+        assert "<segfault>" in result.killing_tests
+
+    def it_installs_and_restores_sigsegv_handler(tmp_path, monkeypatch):
+        """SIGSEGV handler is installed before and restored after pytest.main()."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
+
+        signal_calls: list[tuple[int, object]] = []
+
+        def tracking_signal(signum: int, handler: object) -> object:
+            signal_calls.append((signum, handler))
+            return signal.SIG_DFL
+
+        with (
+            patch("pytest_leela.runner.signal.signal", tracking_signal),
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+            )
+
+        # Should have at least one install and one restore of SIGSEGV
+        sigsegv_calls = [c for c in signal_calls if c[0] == signal.SIGSEGV]
+        assert len(sigsegv_calls) >= 2  # install + restore in finally
+        # Last SIGSEGV call should restore the old handler (SIG_DFL)
+        assert sigsegv_calls[-1][1] == signal.SIG_DFL
+
+
 def describe_clear_user_modules():
     def it_removes_cwd_local_modules(monkeypatch, tmp_path):
         """Kills line 77: ``mod is not None → mod is None``.
