@@ -545,7 +545,6 @@ def describe_find_mutation_points():
             binops = [p for p in points if p.node_type == "BinOp"]
             assert len(binops) >= 1
 
-
         def it_does_not_skip_binop_on_same_line_as_pragma_string():
             """Kills ast_analysis.py line 287: and → or.
 

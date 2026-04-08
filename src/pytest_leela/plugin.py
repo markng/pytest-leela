@@ -12,9 +12,16 @@ import pytest
 from pytest_leela.config import ALL_OPERATORS, load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import Engine
-from pytest_leela.git_diff import _is_test_file, changed_files
+from pytest_leela.git_diff import changed_files
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
+
+
+def _is_test_file(basename: str, python_files: list[str]) -> bool:
+    """Return True if the filename matches the project's test-file patterns."""
+    return basename == "conftest.py" or any(
+        fnmatch.fnmatch(basename, p) for p in python_files
+    )
 
 
 _SKIP_DIRS = {
@@ -73,7 +80,7 @@ def pytest_configure(config: pytest.Config) -> None:
         config.pluginmanager.register(BenchmarkPlugin(config), "leela-benchmark")
 
 
-def _find_target_files(target: str) -> list[str]:
+def _find_target_files(target: str, python_files: list[str]) -> list[str]:
     """Resolve a --target path to a list of .py files."""
     target_path = os.path.abspath(target)
     if os.path.isfile(target_path) and target_path.endswith(".py"):
@@ -83,12 +90,12 @@ def _find_target_files(target: str) -> list[str]:
             os.path.abspath(p)
             for p in _glob.glob(os.path.join(target_path, "**", "*.py"), recursive=True)
             if not os.path.basename(p).startswith("__")
-            and not _is_test_file(os.path.basename(p))
+            and not _is_test_file(os.path.basename(p), python_files)
         )
     return []
 
 
-def _find_default_targets(rootpath: Path) -> list[str]:
+def _find_default_targets(rootpath: Path, python_files: list[str]) -> list[str]:
     """Look for common source directories to use as default targets.
 
     Falls back to rootpath itself when no ``src/`` or ``target/`` directory
@@ -100,14 +107,15 @@ def _find_default_targets(rootpath: Path) -> list[str]:
             return sorted(
                 os.path.abspath(str(p))
                 for p in candidate_dir.rglob("*.py")
-                if not p.name.startswith("__") and not _is_test_file(p.name)
+                if not p.name.startswith("__")
+                and not _is_test_file(p.name, python_files)
             )
     # Fallback: scan rootpath itself for a flat-layout project
     return sorted(
         os.path.abspath(str(p))
         for p in rootpath.rglob("*.py")
         if not p.name.startswith("__")
-        and not _is_test_file(p.name)
+        and not _is_test_file(p.name, python_files)
         and not any(
             part in _SKIP_DIRS or fnmatch.fnmatch(part, "*.egg-info")
             for part in p.relative_to(rootpath).parts
@@ -157,6 +165,7 @@ class LeelaPlugin:
         """Resolve target files from config options."""
         rootpath = session.config.rootpath
         leela_config = load_config(rootpath)
+        python_files = self.config.getini("python_files")
 
         targets = self.config.getoption("target", default=[])
         diff_base = self.config.getoption("diff", default=None)
@@ -164,12 +173,12 @@ class LeelaPlugin:
         if targets:
             target_files: list[str] = []
             for t in targets:
-                target_files.extend(_find_target_files(t))
+                target_files.extend(_find_target_files(t, python_files))
             target_files = sorted(set(target_files))
         elif diff_base:
-            target_files = changed_files(diff_base)
+            target_files = changed_files(diff_base, test_file_patterns=python_files)
         else:
-            target_files = _find_default_targets(rootpath)
+            target_files = _find_default_targets(rootpath, python_files)
 
         return _apply_excludes(target_files, leela_config.exclude, rootpath)
 
