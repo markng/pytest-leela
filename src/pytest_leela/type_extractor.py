@@ -126,13 +126,13 @@ def _find_enclosing_func(functions: list[_FuncInfo], lineno: int) -> _FuncInfo |
     whose annotations and locals are actually in scope for that line.
     """
     best: _FuncInfo | None = None
-    best_range = -1
+    best_span: int
     for func in functions:
         if func.start_line <= lineno <= func.end_line:
             span = func.end_line - func.start_line
-            if best is None or span < best_range:
+            if best is None or span < best_span:
                 best = func
-                best_range = span
+                best_span = span
     return best
 
 
@@ -315,10 +315,8 @@ def _infer_augassign_type(node: ast.AugAssign, func: _FuncInfo) -> str | None:
         name = node.target.id
         if name in env or name in func.param_types:
             return _infer_expr_type(node.target, func, env)
-    target_type = _infer_expr_type(node.target, func, env)
-    if target_type is not None:
-        return target_type
-    # Check value expression
+    # Check value expression (target is a non-Name node — subscript or attribute —
+    # which _infer_expr_type cannot resolve, so fall directly to the value).
     value_type = _infer_expr_type(node.value, func, env)
     return value_type
 

@@ -1088,37 +1088,33 @@ def describe_build_assignment_env_multi_target():
         assert binops[0].inferred_type == "int"
 
 
-def describe_infer_augassign_type_target_type_fallback():
-    """Kill line 320: return target_type → return None in _infer_augassign_type."""
+def describe_infer_augassign_type_non_name_target():
+    """Tests for _infer_augassign_type when target is a non-Name node (subscript/attribute).
 
-    def it_returns_float_target_type_from_param_via_non_env_fast_path():
-        """When target Name is a param annotation, type comes from the env fast path.
+    For non-Name targets the Name-in-env fast path is skipped entirely and the
+    function falls directly to inferring from the value expression.
+    """
 
-        This exercises the _infer_expr_type(target) call at line 318 and the
-        'if target_type is not None: return target_type' check at line 319-320.
-
-        Kills line 320: return target_type → return None.
-        """
+    def it_returns_float_for_param_target_via_fast_path():
+        """Target Name in param_types uses the fast path and returns the param type."""
         source = "def f(x: float) -> None:\n    x += 1\n"
         points = find_mutation_points(source, "test.py", "test")
         enriched, _ = enrich_mutation_points(source, points)
         augassigns = [p for p in enriched if p.node_type == "AugAssign"]
         assert len(augassigns) == 1
-        # x in param_types as "float" → target_type = "float" → must return "float"
         assert augassigns[0].inferred_type == "float"
 
     def it_returns_value_type_when_target_is_subscript():
-        """Target is a Subscript (not Name), not in env/params → falls to value.
+        """Target is a Subscript — fast path skipped; type inferred from value.
 
-        Lines 321-323: value_type = _infer_expr_type(node.value); return value_type.
-        This ensures the value-fallback path works when target is unresolvable.
+        The non-Name target path goes directly to value_type = _infer_expr_type(value).
         """
         source = "def f(data):\n    data[0] += 1.5\n"
         points = find_mutation_points(source, "test.py", "test")
         enriched, _ = enrich_mutation_points(source, points)
         augassigns = [p for p in enriched if p.node_type == "AugAssign"]
         assert len(augassigns) == 1
-        # data is unannotated; target is subscript (unresolvable); value 1.5 → float
+        # data is unannotated; target is subscript; value 1.5 → float
         assert augassigns[0].inferred_type == "float"
 
 
