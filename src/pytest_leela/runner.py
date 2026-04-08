@@ -1,4 +1,4 @@
-"""Execute tests against a single mutant in-process."""
+"""Execute tests against a single mutant."""
 
 from __future__ import annotations
 

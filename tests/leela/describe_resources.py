@@ -1,7 +1,7 @@
 """Tests for pytest_leela.resources — CPU and memory resource limiting."""
 
 import math
-from unittest.mock import mock_open, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 from pytest_leela.resources import (
     ResourceLimits,
@@ -43,39 +43,50 @@ def describe_resource_limits():
 
 def describe_apply_cpu_limit():
     def it_calls_sched_setaffinity_with_correct_cores():
-        with (
-            patch("pytest_leela.resources.os.cpu_count", return_value=8),
-            patch("pytest_leela.resources.os.sched_setaffinity") as mock_set,
-        ):
-            apply_cpu_limit(4)
-            mock_set.assert_called_once_with(0, {0, 1, 2, 3})
+        """Sched_setaffinity may not exist on all platforms (e.g., macOS), so
+        we mock the whole os module to ensure the attribute is present."""
+        mock_os = MagicMock()
+        mock_os.cpu_count.return_value = 8
+        mock_os.sched_setaffinity = MagicMock()
+        with patch("pytest_leela.resources.os", mock_os):
+            from pytest_leela.resources import apply_cpu_limit
 
-    def it_caps_cores_to_available(self=None):
-        with (
-            patch("pytest_leela.resources.os.cpu_count", return_value=2),
-            patch("pytest_leela.resources.os.sched_setaffinity") as mock_set,
-        ):
+            apply_cpu_limit(4)
+            mock_os.sched_setaffinity.assert_called_once_with(0, {0, 1, 2, 3})
+
+    def it_caps_cores_to_available():
+        """Sched_setaffinity may not exist on all platforms (e.g., macOS), so
+        we mock the whole os module to ensure the attribute is present."""
+        mock_os = MagicMock()
+        mock_os.cpu_count.return_value = 2
+        mock_os.sched_setaffinity = MagicMock()
+        with patch("pytest_leela.resources.os", mock_os):
+            from pytest_leela.resources import apply_cpu_limit
+
             apply_cpu_limit(8)
-            mock_set.assert_called_once_with(0, {0, 1})
+            mock_os.sched_setaffinity.assert_called_once_with(0, {0, 1})
 
     def it_uses_fallback_when_cpu_count_returns_none():
-        """cpu_count() or 4: when None, should use 4."""
-        with (
-            patch("pytest_leela.resources.os.cpu_count", return_value=None),
-            patch("pytest_leela.resources.os.sched_setaffinity") as mock_set,
-        ):
+        """cpu_count() or 4: when None, should use 4.  Uses full mock os since
+        sched_setaffinity may not exist on all platforms (e.g., macOS)."""
+        mock_os = MagicMock()
+        mock_os.cpu_count.return_value = None
+        mock_os.sched_setaffinity = MagicMock()
+        with patch("pytest_leela.resources.os", mock_os):
+            from pytest_leela.resources import apply_cpu_limit
+
             apply_cpu_limit(2)
-            mock_set.assert_called_once_with(0, {0, 1})
+            mock_os.sched_setaffinity.assert_called_once_with(0, {0, 1})
 
     def it_handles_attribute_error():
-        """Gracefully handles platforms without sched_setaffinity."""
-        with (
-            patch("pytest_leela.resources.os.cpu_count", return_value=4),
-            patch(
-                "pytest_leela.resources.os.sched_setaffinity",
-                side_effect=AttributeError,
-            ),
-        ):
+        """Gracefully handles platforms without sched_setaffinity.  Uses full
+        mock os since sched_setaffinity may not exist on all platforms."""
+        mock_os = MagicMock()
+        mock_os.cpu_count.return_value = 4
+        mock_os.sched_setaffinity = MagicMock(side_effect=AttributeError)
+        with patch("pytest_leela.resources.os", mock_os):
+            from pytest_leela.resources import apply_cpu_limit
+
             # Should not raise
             apply_cpu_limit(2)
 
