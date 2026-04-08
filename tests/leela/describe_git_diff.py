@@ -126,100 +126,100 @@ def describe_parse_diff_hunks():
                 assert isinstance(item, int)
 
 
-def describe_changed_files_test_file_exclusion():
-    def it_excludes_conftest_always_regardless_of_patterns():
-        """conftest.py must always be excluded, even if patterns would allow it."""
-        import tempfile
-        from unittest.mock import MagicMock, patch
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            conftest_path = os.path.join(tmpdir, "conftest.py")
-            open(conftest_path, "w").close()
-
-            mock_result = MagicMock()
-            mock_result.stdout = "conftest.py\n"
-
-            old_cwd = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                with patch(
-                    "pytest_leela.git_diff.subprocess.run",
-                    return_value=mock_result,
-                ):
-                    from pytest_leela.git_diff import changed_files
-
-                    # Even with empty patterns, conftest.py must be excluded
-                    result = changed_files("main", test_file_patterns=[])
-            finally:
-                os.chdir(old_cwd)
-
-            assert os.path.basename(result[0]) not in result if result else True
-            assert "conftest.py" not in {os.path.basename(f) for f in result}
-
-    def it_excludes_default_test_patterns_when_test_file_patterns_is_none():
-        """When test_file_patterns=None, default patterns (test_*.py, *_test.py) apply."""
-        import tempfile
-        from unittest.mock import MagicMock, patch
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            test_path = os.path.join(tmpdir, "test_foo.py")
-            source_path = os.path.join(tmpdir, "app_main.py")
-            open(test_path, "w").close()
-            open(source_path, "w").close()
-
-            mock_result = MagicMock()
-            mock_result.stdout = "test_foo.py\napp_main.py\n"
-
-            old_cwd = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                with patch(
-                    "pytest_leela.git_diff.subprocess.run",
-                    return_value=mock_result,
-                ):
-                    from pytest_leela.git_diff import changed_files
-
-                    result = changed_files("main", test_file_patterns=None)
-            finally:
-                os.chdir(old_cwd)
-
-            basenames = {os.path.basename(f) for f in result}
-            assert "test_foo.py" not in basenames
-            assert "app_main.py" in basenames
-
-    def it_excludes_custom_describe_pattern():
-        """Custom patterns like describe_*.py must be excluded when specified."""
-        import tempfile
-        from unittest.mock import MagicMock, patch
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            describe_path = os.path.join(tmpdir, "describe_utils.py")
-            app_path = os.path.join(tmpdir, "app.py")
-            open(describe_path, "w").close()
-            open(app_path, "w").close()
-
-            mock_result = MagicMock()
-            mock_result.stdout = "describe_utils.py\napp.py\n"
-
-            old_cwd = os.getcwd()
-            os.chdir(tmpdir)
-            try:
-                with patch(
-                    "pytest_leela.git_diff.subprocess.run",
-                    return_value=mock_result,
-                ):
-                    from pytest_leela.git_diff import changed_files
-
-                    result = changed_files("main", test_file_patterns=["describe_*.py"])
-            finally:
-                os.chdir(old_cwd)
-
-            basenames = {os.path.basename(f) for f in result}
-            assert "describe_utils.py" not in basenames
-            assert "app.py" in basenames
-
-
 def describe_changed_files():
+    def context_test_file_exclusion_with_patterns():
+        def it_excludes_conftest_always_regardless_of_patterns():
+            """conftest.py must always be excluded, even if patterns would allow it."""
+            import tempfile
+            from unittest.mock import MagicMock, patch
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                conftest_path = os.path.join(tmpdir, "conftest.py")
+                open(conftest_path, "w").close()
+
+                mock_result = MagicMock()
+                mock_result.stdout = "conftest.py\n"
+
+                old_cwd = os.getcwd()
+                os.chdir(tmpdir)
+                try:
+                    with patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=mock_result,
+                    ):
+                        from pytest_leela.git_diff import changed_files
+
+                        # Even with empty patterns, conftest.py must be excluded
+                        result = changed_files("main", test_file_patterns=[])
+                finally:
+                    os.chdir(old_cwd)
+
+                assert "conftest.py" not in {os.path.basename(f) for f in result}
+
+        def it_excludes_default_test_patterns_when_test_file_patterns_is_none():
+            """When test_file_patterns=None, default patterns (test_*.py, *_test.py) apply."""
+            import tempfile
+            from unittest.mock import MagicMock, patch
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                test_path = os.path.join(tmpdir, "test_foo.py")
+                source_path = os.path.join(tmpdir, "app_main.py")
+                open(test_path, "w").close()
+                open(source_path, "w").close()
+
+                mock_result = MagicMock()
+                mock_result.stdout = "test_foo.py\napp_main.py\n"
+
+                old_cwd = os.getcwd()
+                os.chdir(tmpdir)
+                try:
+                    with patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=mock_result,
+                    ):
+                        from pytest_leela.git_diff import changed_files
+
+                        result = changed_files("main", test_file_patterns=None)
+                finally:
+                    os.chdir(old_cwd)
+
+                basenames = {os.path.basename(f) for f in result}
+                assert "test_foo.py" not in basenames
+                assert "app_main.py" in basenames
+
+        def it_excludes_custom_describe_pattern():
+            """Custom patterns like describe_*.py must be excluded when specified."""
+            import tempfile
+            from unittest.mock import MagicMock, patch
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                describe_path = os.path.join(tmpdir, "describe_utils.py")
+                app_path = os.path.join(tmpdir, "app.py")
+                open(describe_path, "w").close()
+                open(app_path, "w").close()
+
+                mock_result = MagicMock()
+                mock_result.stdout = "describe_utils.py\napp.py\n"
+
+                old_cwd = os.getcwd()
+                os.chdir(tmpdir)
+                try:
+                    with patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=mock_result,
+                    ):
+                        from pytest_leela.git_diff import changed_files
+
+                        result = changed_files(
+                            "main", test_file_patterns=["describe_*.py"]
+                        )
+                finally:
+                    os.chdir(old_cwd)
+
+                basenames = {os.path.basename(f) for f in result}
+                assert "describe_utils.py" not in basenames
+                assert "app.py" in basenames
+
     def it_excludes_test_files():
         """changed_files must filter out test files from git output."""
         import tempfile
