@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import sys
 from dataclasses import replace
 
 from pytest_leela.models import EnrichmentStats, MutationPoint
@@ -126,7 +127,7 @@ def _find_enclosing_func(functions: list[_FuncInfo], lineno: int) -> _FuncInfo |
     whose annotations and locals are actually in scope for that line.
     """
     best: _FuncInfo | None = None
-    best_span: int
+    best_span = sys.maxsize
     for func in functions:
         if func.start_line <= lineno <= func.end_line:
             span = func.end_line - func.start_line
