@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import fnmatch
 import os
 import re
 import subprocess
 
 
-def changed_files(base: str = "main") -> list[str]:
+def changed_files(
+    base: str = "main", test_file_patterns: list[str] | None = None
+) -> list[str]:
     """Get list of Python files changed since the base ref."""
     try:
         result = subprocess.run(
@@ -28,12 +31,22 @@ def changed_files(base: str = "main") -> list[str]:
         except (subprocess.CalledProcessError, FileNotFoundError):
             return []
 
+    patterns = (
+        test_file_patterns
+        if test_file_patterns is not None
+        else ["test_*.py", "*_test.py"]
+    )
     files = []
     for line in result.stdout.strip().splitlines():
         line = line.strip()
         if line.endswith(".py"):
             abs_path = os.path.abspath(line)
-            if os.path.exists(abs_path):
+            basename = os.path.basename(abs_path)
+            if (
+                os.path.exists(abs_path)
+                and basename != "conftest.py"
+                and not any(fnmatch.fnmatch(basename, p) for p in patterns)
+            ):
                 files.append(abs_path)
     return files
 

@@ -16,62 +16,65 @@ from pytest_leela.plugin import (
 
 
 def describe_is_test_file():
-    def it_detects_test_prefix():
-        assert _is_test_file("test_foo.py") is True
+    DEFAULT_PATTERNS = ["test_*.py", "describe_*.py"]
 
-    def it_detects_test_suffix():
-        assert _is_test_file("foo_test.py") is True
+    def it_detects_conftest_regardless_of_patterns():
+        """conftest.py must always be excluded, even with empty patterns."""
+        assert _is_test_file("conftest.py", []) is True
+        assert _is_test_file("conftest.py", DEFAULT_PATTERNS) is True
 
-    def it_detects_conftest():
-        assert _is_test_file("conftest.py") is True
+    def it_matches_fnmatch_patterns():
+        """Patterns are matched using fnmatch semantics."""
+        assert _is_test_file("test_foo.py", DEFAULT_PATTERNS) is True
+        assert _is_test_file("describe_utils.py", DEFAULT_PATTERNS) is True
+        assert _is_test_file("foo_test.py", DEFAULT_PATTERNS) is False
 
-    def it_detects_tests_py():
-        assert _is_test_file("tests.py") is True
+    def it_respects_custom_patterns():
+        """Custom patterns are applied instead of defaults."""
+        custom = ["describe_*.py"]
+        assert _is_test_file("describe_utils.py", custom) is True
+        assert _is_test_file("test_foo.py", custom) is False
 
-    def it_allows_regular_modules():
-        assert _is_test_file("models.py") is False
+    def it_allows_non_test_modules():
+        """Regular source files are not flagged."""
+        assert _is_test_file("models.py", DEFAULT_PATTERNS) is False
+        assert _is_test_file("app.py", DEFAULT_PATTERNS) is False
 
-    def it_allows_modules_with_test_in_name():
-        """A module like 'contest.py' should not be flagged."""
-        assert _is_test_file("contest.py") is False
-
-    def it_detects_tests_prefix():
-        """Django projects often use 'tests_mailerlite.py' etc."""
-        assert _is_test_file("tests_mailerlite.py") is True
-
-    def it_requires_exact_prefix_match():
-        """'testing_utils.py' starts with 'test' but not 'test_'."""
-        assert _is_test_file("testing_utils.py") is False
+    def it_requires_exact_fnmatch_match():
+        """fnmatch must match the full basename."""
+        assert _is_test_file("testing_utils.py", ["test_*.py"]) is False
 
 
 def describe_find_target_files():
     def it_returns_single_file_for_python_file(tmp_path):
         target = tmp_path / "module.py"
         target.write_text("x = 1\n")
-        result = _find_target_files(str(target))
+        result = _find_target_files(str(target), ["test_*.py", "describe_*.py"])
         assert result == [str(target.resolve())]
 
     def it_returns_empty_for_nonexistent_path():
-        result = _find_target_files("/nonexistent/path/nope.py")
+        result = _find_target_files(
+            "/nonexistent/path/nope.py", ["test_*.py", "describe_*.py"]
+        )
         assert result == []
 
     def it_returns_empty_for_non_python_file(tmp_path):
         target = tmp_path / "data.txt"
         target.write_text("hello\n")
-        result = _find_target_files(str(target))
+        result = _find_target_files(str(target), ["test_*.py", "describe_*.py"])
         assert result == []
 
     def it_finds_all_python_files_in_directory(tmp_path):
         (tmp_path / "a.py").write_text("x = 1\n")
         (tmp_path / "b.py").write_text("y = 2\n")
-        result = _find_target_files(str(tmp_path))
+        result = _find_target_files(str(tmp_path), ["test_*.py", "describe_*.py"])
         basenames = sorted(os.path.basename(f) for f in result)
         assert basenames == ["a.py", "b.py"]
 
     def it_excludes_dunder_files_from_directory(tmp_path):
         (tmp_path / "__init__.py").write_text("")
         (tmp_path / "real.py").write_text("x = 1\n")
-        result = _find_target_files(str(tmp_path))
+        result = _find_target_files(str(tmp_path), ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "__init__.py" not in basenames
         assert "real.py" in basenames
@@ -81,7 +84,7 @@ def describe_find_target_files():
         sub.mkdir()
         (sub / "deep.py").write_text("z = 3\n")
         (tmp_path / "top.py").write_text("a = 1\n")
-        result = _find_target_files(str(tmp_path))
+        result = _find_target_files(str(tmp_path), ["test_*.py", "describe_*.py"])
         basenames = sorted(os.path.basename(f) for f in result)
         assert "deep.py" in basenames
         assert "top.py" in basenames
@@ -91,7 +94,7 @@ def describe_find_target_files():
         # A directory ending with .py should NOT be returned as a single file
         weird_dir = tmp_path / "notafile.py"
         weird_dir.mkdir()
-        result = _find_target_files(str(weird_dir))
+        result = _find_target_files(str(weird_dir), ["test_*.py", "describe_*.py"])
         # It's a dir, so it falls through to isdir branch and returns its contents
         assert isinstance(result, list)
         # Crucially, the single-file return path was NOT taken
@@ -100,7 +103,7 @@ def describe_find_target_files():
     def it_returns_list_not_none_for_directory(tmp_path):
         """Return value from directory branch must be a list, not None."""
         (tmp_path / "mod.py").write_text("x = 1\n")
-        result = _find_target_files(str(tmp_path))
+        result = _find_target_files(str(tmp_path), ["test_*.py", "describe_*.py"])
         assert isinstance(result, list)
         assert len(result) > 0
 
@@ -108,31 +111,29 @@ def describe_find_target_files():
         """Return value from file branch must be a list, not None."""
         f = tmp_path / "mod.py"
         f.write_text("x = 1\n")
-        result = _find_target_files(str(f))
+        result = _find_target_files(str(f), ["test_*.py", "describe_*.py"])
         assert isinstance(result, list)
         assert len(result) == 1
 
     def it_returns_empty_list_not_none_for_unknown(tmp_path):
         """Fallback return must be an empty list, not None."""
-        result = _find_target_files(str(tmp_path / "nonexistent"))
+        result = _find_target_files(
+            str(tmp_path / "nonexistent"), ["test_*.py", "describe_*.py"]
+        )
         assert result == []
         assert result is not None
 
     def it_excludes_test_files_from_directory(tmp_path):
         (tmp_path / "models.py").write_text("x = 1\n")
         (tmp_path / "test_models.py").write_text("def test(): pass\n")
-        (tmp_path / "views_test.py").write_text("def test(): pass\n")
+        (tmp_path / "describe_utils.py").write_text("def it_works(): pass\n")
         (tmp_path / "conftest.py").write_text("import pytest\n")
-        (tmp_path / "tests.py").write_text("from django.test import TestCase\n")
-        (tmp_path / "tests_mailerlite.py").write_text("def test(): pass\n")
-        result = _find_target_files(str(tmp_path))
+        result = _find_target_files(str(tmp_path), ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "models.py" in basenames
         assert "test_models.py" not in basenames
-        assert "views_test.py" not in basenames
+        assert "describe_utils.py" not in basenames
         assert "conftest.py" not in basenames
-        assert "tests.py" not in basenames
-        assert "tests_mailerlite.py" not in basenames
 
 
 def describe_find_default_targets():
@@ -140,7 +141,7 @@ def describe_find_default_targets():
         target_dir = tmp_path / "target"
         target_dir.mkdir()
         (target_dir / "app.py").write_text("x = 1\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         assert len(result) == 1
         assert "app.py" in result[0]
 
@@ -148,7 +149,7 @@ def describe_find_default_targets():
         src_dir = tmp_path / "src"
         src_dir.mkdir()
         (src_dir / "lib.py").write_text("y = 2\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         assert len(result) == 1
         assert "lib.py" in result[0]
 
@@ -160,7 +161,7 @@ def describe_find_default_targets():
         src_dir = tmp_path / "src"
         src_dir.mkdir()
         (src_dir / "from_src.py").write_text("b = 2\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "from_target.py" in basenames
         assert "from_src.py" not in basenames
@@ -170,7 +171,7 @@ def describe_find_default_targets():
         src_dir.mkdir()
         (src_dir / "__init__.py").write_text("")
         (src_dir / "real.py").write_text("x = 1\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "__init__.py" not in basenames
         assert "real.py" in basenames
@@ -178,7 +179,7 @@ def describe_find_default_targets():
     def it_falls_back_to_rootpath_when_no_standard_dirs(tmp_path):
         """When neither src/ nor target/ exists, scan rootpath itself."""
         (tmp_path / "app.py").write_text("x = 1\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         assert len(result) == 1
         assert "app.py" in result[0]
 
@@ -188,20 +189,20 @@ def describe_find_default_targets():
         (tmp_path / "__init__.py").write_text("")
         (tmp_path / "test_app.py").write_text("def test(): pass\n")
         (tmp_path / "conftest.py").write_text("import pytest\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert basenames == ["app.py"]
 
     def it_returns_empty_when_no_standard_dirs_and_no_py_files(tmp_path):
         """Empty rootpath with no .py files returns empty list."""
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         assert result == []
 
     def it_returns_list_not_none_when_dir_exists(tmp_path):
         src_dir = tmp_path / "src"
         src_dir.mkdir()
         (src_dir / "mod.py").write_text("x = 1\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         assert isinstance(result, list)
         assert len(result) > 0
 
@@ -211,7 +212,7 @@ def describe_find_default_targets():
         pkg = src_dir / "pkg"
         pkg.mkdir(parents=True)
         (pkg / "nested.py").write_text("z = 3\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         assert len(result) >= 1
         assert any("nested.py" in f for f in result)
 
@@ -221,13 +222,11 @@ def describe_find_default_targets():
         (src_dir / "app.py").write_text("x = 1\n")
         (src_dir / "test_app.py").write_text("def test(): pass\n")
         (src_dir / "conftest.py").write_text("import pytest\n")
-        (src_dir / "tests.py").write_text("from django.test import TestCase\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "app.py" in basenames
         assert "test_app.py" not in basenames
         assert "conftest.py" not in basenames
-        assert "tests.py" not in basenames
 
     def it_skips_venv_in_fallback(tmp_path):
         """Rootpath fallback must not recurse into .venv/."""
@@ -235,7 +234,7 @@ def describe_find_default_targets():
         venv_dir.mkdir(parents=True)
         (venv_dir / "six.py").write_text("x = 1\n")
         (tmp_path / "app.py").write_text("y = 2\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "app.py" in basenames
         assert "six.py" not in basenames
@@ -248,7 +247,7 @@ def describe_find_default_targets():
             d.mkdir(exist_ok=True)
             (d / "mod.py").write_text("x = 1\n")
         (tmp_path / "real.py").write_text("y = 2\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert basenames == ["real.py"]
 
@@ -258,7 +257,7 @@ def describe_find_default_targets():
         egg_dir.mkdir()
         (egg_dir / "PKG-INFO.py").write_text("x = 1\n")
         (tmp_path / "app.py").write_text("y = 2\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "app.py" in basenames
         assert "PKG-INFO.py" not in basenames
@@ -269,7 +268,7 @@ def describe_find_default_targets():
         nested.mkdir(parents=True)
         (nested / "index.py").write_text("x = 1\n")
         (tmp_path / "app.py").write_text("y = 2\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "app.py" in basenames
         assert "index.py" not in basenames
@@ -279,7 +278,7 @@ def describe_find_default_targets():
         src_dir = tmp_path / "src" / "build"
         src_dir.mkdir(parents=True)
         (src_dir / "builder.py").write_text("x = 1\n")
-        result = _find_default_targets(tmp_path)
+        result = _find_default_targets(tmp_path, ["test_*.py", "describe_*.py"])
         basenames = [os.path.basename(f) for f in result]
         assert "builder.py" in basenames
 

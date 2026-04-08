@@ -127,6 +127,173 @@ def describe_parse_diff_hunks():
 
 
 def describe_changed_files():
+    def context_test_file_exclusion_with_patterns():
+        def it_excludes_conftest_always_regardless_of_patterns():
+            """conftest.py must always be excluded, even if patterns would allow it."""
+            import tempfile
+            from unittest.mock import MagicMock, patch
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                conftest_path = os.path.join(tmpdir, "conftest.py")
+                open(conftest_path, "w").close()
+
+                mock_result = MagicMock()
+                mock_result.stdout = "conftest.py\n"
+
+                old_cwd = os.getcwd()
+                os.chdir(tmpdir)
+                try:
+                    with patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=mock_result,
+                    ):
+                        from pytest_leela.git_diff import changed_files
+
+                        # Even with empty patterns, conftest.py must be excluded
+                        result = changed_files("main", test_file_patterns=[])
+                finally:
+                    os.chdir(old_cwd)
+
+                assert "conftest.py" not in {os.path.basename(f) for f in result}
+
+        def it_excludes_default_test_patterns_when_test_file_patterns_is_none():
+            """When test_file_patterns=None, default patterns (test_*.py, *_test.py) apply."""
+            import tempfile
+            from unittest.mock import MagicMock, patch
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                test_path = os.path.join(tmpdir, "test_foo.py")
+                source_path = os.path.join(tmpdir, "app_main.py")
+                open(test_path, "w").close()
+                open(source_path, "w").close()
+
+                mock_result = MagicMock()
+                mock_result.stdout = "test_foo.py\napp_main.py\n"
+
+                old_cwd = os.getcwd()
+                os.chdir(tmpdir)
+                try:
+                    with patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=mock_result,
+                    ):
+                        from pytest_leela.git_diff import changed_files
+
+                        result = changed_files("main", test_file_patterns=None)
+                finally:
+                    os.chdir(old_cwd)
+
+                basenames = {os.path.basename(f) for f in result}
+                assert "test_foo.py" not in basenames
+                assert "app_main.py" in basenames
+
+        def it_excludes_custom_describe_pattern():
+            """Custom patterns like describe_*.py must be excluded when specified."""
+            import tempfile
+            from unittest.mock import MagicMock, patch
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                describe_path = os.path.join(tmpdir, "describe_utils.py")
+                app_path = os.path.join(tmpdir, "app.py")
+                open(describe_path, "w").close()
+                open(app_path, "w").close()
+
+                mock_result = MagicMock()
+                mock_result.stdout = "describe_utils.py\napp.py\n"
+
+                old_cwd = os.getcwd()
+                os.chdir(tmpdir)
+                try:
+                    with patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=mock_result,
+                    ):
+                        from pytest_leela.git_diff import changed_files
+
+                        result = changed_files(
+                            "main", test_file_patterns=["describe_*.py"]
+                        )
+                finally:
+                    os.chdir(old_cwd)
+
+                basenames = {os.path.basename(f) for f in result}
+                assert "describe_utils.py" not in basenames
+                assert "app.py" in basenames
+
+    def it_excludes_test_files():
+        """changed_files must filter out test files from git output."""
+        import tempfile
+        from unittest.mock import MagicMock, patch
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create real files with exact names so they exist on disk
+            test_path = os.path.join(tmpdir, "test_foo.py")
+            source_path = os.path.join(tmpdir, "app_main.py")
+            conftest_path = os.path.join(tmpdir, "conftest.py")
+
+            open(test_path, "w").close()
+            open(source_path, "w").close()
+            open(conftest_path, "w").close()
+
+            mock_result = MagicMock()
+            mock_result.stdout = "test_foo.py\napp_main.py\nconftest.py\n"
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with patch(
+                    "pytest_leela.git_diff.subprocess.run",
+                    return_value=mock_result,
+                ):
+                    from pytest_leela.git_diff import changed_files
+
+                    result = changed_files("main")
+            finally:
+                os.chdir(old_cwd)
+
+            basenames = {os.path.basename(f) for f in result}
+            assert "test_foo.py" not in basenames, (
+                f"test file should be excluded, got {basenames}"
+            )
+            assert "conftest.py" not in basenames, (
+                f"conftest.py should be excluded, got {basenames}"
+            )
+            assert "app_main.py" in basenames, (
+                f"source file should be included, got {basenames}"
+            )
+
+    def it_includes_non_test_files():
+        """changed_files must pass through source files."""
+        import tempfile
+        from unittest.mock import MagicMock, patch
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path1 = os.path.join(tmpdir, "app.py")
+            path2 = os.path.join(tmpdir, "utils.py")
+
+            open(path1, "w").close()
+            open(path2, "w").close()
+
+            mock_result = MagicMock()
+            mock_result.stdout = "app.py\nutils.py\n"
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with patch(
+                    "pytest_leela.git_diff.subprocess.run",
+                    return_value=mock_result,
+                ):
+                    from pytest_leela.git_diff import changed_files
+
+                    result = changed_files("main")
+            finally:
+                os.chdir(old_cwd)
+
+            basenames = {os.path.basename(f) for f in result}
+            assert "app.py" in basenames
+            assert "utils.py" in basenames
+
     def it_returns_list_type():
         """changed_files must return a list, not None."""
         from unittest.mock import patch
@@ -150,33 +317,33 @@ def describe_changed_files():
         from pytest_leela.git_diff import changed_files
 
         # Create a real temp .py file so os.path.exists passes
-        with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as f:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            f = tempfile.NamedTemporaryFile(dir=tmpdir, suffix=".py", delete=False)
             tmp_path = f.name
+            basename = os.path.basename(tmp_path)
+            f.close()
 
-        try:
-            # The filename must be relative — changed_files calls os.path.abspath
-            rel_name = os.path.basename(tmp_path)
+            try:
+                mock_result = MagicMock()
+                mock_result.stdout = basename + "\n"
 
-            mock_result = MagicMock()
-            mock_result.stdout = rel_name + "\n"
-
-            with patch(
-                "pytest_leela.git_diff.subprocess.run", return_value=mock_result
-            ):
-                # Need to be in the same dir as the temp file for abspath to match
                 old_cwd = os.getcwd()
-                os.chdir(os.path.dirname(tmp_path))
+                os.chdir(tmpdir)
                 try:
-                    result = changed_files("main")
+                    with patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=mock_result,
+                    ):
+                        result = changed_files("main")
                 finally:
                     os.chdir(old_cwd)
 
-            assert result is not None
-            assert isinstance(result, list)
-            assert len(result) == 1
-            assert result[0] == os.path.abspath(tmp_path)
-        finally:
-            os.unlink(tmp_path)
+                assert result is not None
+                assert isinstance(result, list)
+                assert len(result) == 1
+                assert os.path.basename(result[0]) == basename
+            finally:
+                os.unlink(tmp_path)
 
 
 def describe_changed_lines():
