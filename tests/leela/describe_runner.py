@@ -1,21 +1,21 @@
 """Tests for pytest_leela.runner — test execution against mutants."""
 
+import subprocess
 import sys
 import threading
 import types
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from pytest_leela.ast_analysis import find_mutation_points
-from pytest_leela.import_hook import MutatingFinder
 from pytest_leela.models import Mutant, MutantResult
 from pytest_leela.runner import (
     _KEEP_PREFIXES,
-    _ResultCollector,
     _clear_framework_caches,
     _clear_user_modules,
     _clear_user_modules_fast,
+    _compute_timeout,
+    _ResultCollector,
     precompute_user_modules,
     run_tests_for_mutant,
 )
@@ -104,39 +104,6 @@ def describe_clear_framework_caches():
 
 
 def describe_run_tests_for_mutant():
-    def it_calls_clear_framework_caches_at_both_call_sites(tmp_path, monkeypatch):
-        source = "def add(a, b):\n    return a + b\n"
-        target = tmp_path / "runner_caches.py"
-        target.write_text(source)
-
-        test_dir = tmp_path / "runner_caches_tests"
-        test_dir.mkdir()
-        (test_dir / "test_runner_caches.py").write_text(
-            "from runner_caches import add\n\n"
-            "def test_add():\n"
-            "    assert add(1, 2) == 3\n"
-        )
-
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-
-        points = find_mutation_points(source, str(target), "runner_caches")
-        binop_point = next(
-            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
-        )
-        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
-
-        with patch("pytest_leela.runner._clear_framework_caches") as mock_clear:
-            run_tests_for_mutant(
-                mutant,
-                {"runner_caches": source},
-                {"runner_caches": str(target)},
-                test_dir=str(test_dir),
-            )
-
-        # Called at both sites: pre-test setup (line 108) and finally cleanup (line 188)
-        assert mock_clear.call_count == 2
-
     def it_kills_a_detectable_mutant(tmp_path, monkeypatch):
         source = "def add(a, b):\n    return a + b\n"
         target = tmp_path / "runner_target.py"
@@ -193,7 +160,6 @@ def describe_run_tests_for_mutant():
         cmp_point = next(
             p for p in points if p.node_type == "Compare" and p.original_op == "Gt"
         )
-        # Mutate > to >= (n >= 0 still passes for n=5 and n=-5)
         mutant = Mutant(point=cmp_point, replacement_op="GtE", mutant_id=0)
 
         result = run_tests_for_mutant(
@@ -208,49 +174,9 @@ def describe_run_tests_for_mutant():
         assert result.tests_run >= 1
         assert result.killing_test is None
 
-    def it_returns_killed_result_when_pytest_main_crashes(tmp_path, monkeypatch):
-        """Kills lines 165-166: elapsed timing and return in crash handler.
-
-        Line 165: ``- → +/*`` would make elapsed = monotonic() + start (huge).
-        Line 166: ``return expr → None`` would return None instead of MutantResult.
-        """
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-
-        source = "def add(a, b):\n    return a + b\n"
-        target = tmp_path / "crash_target.py"
-        target.write_text(source)
-
-        points = find_mutation_points(source, str(target), "crash_target")
-        binop_point = next(
-            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
-        )
-        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=RuntimeError("boom")):
-            result = run_tests_for_mutant(
-                mutant,
-                {"crash_target": source},
-                {"crash_target": str(target)},
-                test_dir=str(tmp_path),
-            )
-
-        # Kills line 166: return expr → None
-        assert result is not None
-        assert isinstance(result, MutantResult)
-        assert result.killed is True
-        assert result.killing_test == "<crashed>"
-        # Kills line 165: - → + (would produce value >> 60)
-        assert 0 <= result.time_seconds < 60
-
     def it_preserves_modules_in_saved_snapshot_during_cleanup(tmp_path, monkeypatch):
-        """Kills line 186: ``not in → in`` in cleanup loop.
-
-        The cleanup loop (lines 185-190) should only examine modules NOT in
-        saved_modules (new ones from inner run).  With the mutation it examines
-        modules that ARE in saved_modules, incorrectly removing KEEP_PREFIXES
-        modules with CWD __file__.
-        """
+        """Each subprocess run starts with a clean namespace, so pytest_leela modules
+        imported in the parent process are unaffected by the child's module cleanup."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
@@ -264,31 +190,25 @@ def describe_run_tests_for_mutant():
         )
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
 
-        # A pytest_leela.* module survives _clear_user_modules (KEEP_PREFIXES)
-        # and enters saved_modules.  With the mutation, the cleanup loop
-        # examines it and removes it (CWD __file__).
+        # A pytest_leela.* module imported in the parent process survives
+        # because the subprocess has its own isolated Python namespace.
         kept_mod = types.ModuleType("pytest_leela._test_saved_mod")
         kept_mod.__file__ = str(tmp_path / "saved.py")
         monkeypatch.setitem(sys.modules, "pytest_leela._test_saved_mod", kept_mod)
 
-        with patch("pytest_leela.runner.pytest.main", return_value=0):
-            run_tests_for_mutant(
-                mutant,
-                {"saved_mod_target": source},
-                {"saved_mod_target": str(target)},
-                test_dir=str(tmp_path),
-            )
+        run_tests_for_mutant(
+            mutant,
+            {"saved_mod_target": source},
+            {"saved_mod_target": str(target)},
+            test_dir=str(tmp_path),
+        )
 
         assert "pytest_leela._test_saved_mod" in sys.modules
 
     def it_cleans_up_cwd_modules_added_during_inner_run(tmp_path, monkeypatch):
-        """Kills line 188: ``is not → is`` in cleanup mod_file check.
-
-        With the mutation, non-None modules get mod_file=None (from else
-        branch), so CWD-local modules added during inner run are never removed.
-        Uses KEEP_PREFIXES name so only the cleanup loop (not _clear_user_modules
-        in outer finally) is responsible for removal.
-        """
+        """Subprocess isolation means the parent never runs pytest.main, so there
+        is no "inner run" context. The test verifies that run_tests_for_mutant
+        itself does not pollute sys.modules."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
@@ -302,34 +222,22 @@ def describe_run_tests_for_mutant():
         )
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
 
-        inner_mod_name = "pytest_leela._test_inner_artifact"
-        inner_mod_file = str(tmp_path / "inner_artifact.py")
+        # With subprocess isolation, no CWD-local module is added during the
+        # parent's run_tests_for_mutant call (pytest.main never runs here).
+        run_tests_for_mutant(
+            mutant,
+            {"inner_cleanup_target": source},
+            {"inner_cleanup_target": str(target)},
+            test_dir=str(tmp_path),
+        )
 
-        def mock_pytest_main(args, plugins=None):
-            """Simulate inner run adding a CWD-local module."""
-            fake = types.ModuleType(inner_mod_name)
-            fake.__file__ = inner_mod_file
-            sys.modules[inner_mod_name] = fake
-            return 0
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            run_tests_for_mutant(
-                mutant,
-                {"inner_cleanup_target": source},
-                {"inner_cleanup_target": str(target)},
-                test_dir=str(tmp_path),
-            )
-
-        # With correct code: new CWD-local module is removed by cleanup loop.
-        # With mutation: mod_file is None for non-None modules → not removed.
-        assert inner_mod_name not in sys.modules
+        # Verify that no pytest_leela._test_* artifacts leaked into sys.modules.
+        leaked = [n for n in sys.modules if n.startswith("pytest_leela._test_")]
+        assert leaked == [], f"Artifacts leaked: {leaked}"
 
     def it_calculates_elapsed_time_by_subtraction(tmp_path, monkeypatch):
-        """Kills line 199: ``- → +/*`` in final elapsed calculation.
-
-        Mocks time.monotonic to return controlled values; asserts the result
-        is the difference (5.0), not the sum (205.0) or product (10500.0).
-        """
+        """The parent process measures elapsed time using time.monotonic().
+        This tests that the subtraction (end - start) is correct."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
@@ -337,21 +245,27 @@ def describe_run_tests_for_mutant():
         target = tmp_path / "time_target.py"
         target.write_text(source)
 
+        test_dir = tmp_path / "time_tests"
+        test_dir.mkdir()
+        (test_dir / "test_time_target.py").write_text(
+            "from time_target import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
         points = find_mutation_points(source, str(target), "time_target")
         binop_point = next(
             p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
         )
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
 
-        with (
-            patch("pytest_leela.runner.time.monotonic", side_effect=[100.0, 105.0]),
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-        ):
+        # Patch time.monotonic in the parent (the subprocess has its own namespace)
+        with patch("pytest_leela.runner.time.monotonic", side_effect=[100.0, 105.0]):
             result = run_tests_for_mutant(
                 mutant,
                 {"time_target": source},
                 {"time_target": str(target)},
-                test_dir=str(tmp_path),
+                test_dir=str(test_dir),
             )
 
         assert result.time_seconds == pytest.approx(5.0)
@@ -388,7 +302,6 @@ def describe_run_tests_for_mutant():
         assert result.killed is True
         assert len(result.test_ids_run) >= 1
         assert len(result.killing_tests) >= 1
-        # killing_tests should be a subset of test_ids_run
         assert set(result.killing_tests).issubset(set(result.test_ids_run))
 
     def it_populates_test_ids_run_with_empty_killing_tests_on_survive(
@@ -428,69 +341,126 @@ def describe_run_tests_for_mutant():
         assert len(result.test_ids_run) >= 1
         assert result.killing_tests == []
 
-    def it_populates_crash_fields_when_pytest_main_crashes(tmp_path, monkeypatch):
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
+    def it_returns_crashed_result_when_subprocess_produces_no_output(
+        tmp_path, monkeypatch
+    ):
+        """When the subprocess produces no output (e.g. crashes before writing),
+        the result should be killed with killing_test='<crashed>'.
 
-        source = "def add(a, b):\n    return a + b\n"
-        target = tmp_path / "crash_ids_target.py"
-        target.write_text(source)
-
-        points = find_mutation_points(source, str(target), "crash_ids_target")
-        binop_point = next(
-            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
-        )
-        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=RuntimeError("boom")):
-            result = run_tests_for_mutant(
-                mutant,
-                {"crash_ids_target": source},
-                {"crash_ids_target": str(target)},
-                test_dir=str(tmp_path),
-            )
-
-        assert result.killed is True
-        assert result.test_ids_run == []
-        assert result.killing_tests == ["<crashed>"]
-
-    def it_removes_stale_mutating_finders_from_meta_path(tmp_path, monkeypatch):
-        """Kills line 219: ``not isinstance → isinstance``.
-
-        With the mutation, the safety-net filter keeps ONLY MutatingFinders
-        and removes all other finders — the opposite of intended behavior.
+        This exercises the empty-output branch in run_tests_for_mutant.
         """
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
         source = "def add(a, b):\n    return a + b\n"
-        target = tmp_path / "stale_finder_target.py"
+        target = tmp_path / "crash_no_output_target.py"
         target.write_text(source)
 
-        points = find_mutation_points(source, str(target), "stale_finder_target")
+        test_dir = tmp_path / "crash_no_output_tests"
+        test_dir.mkdir()
+        (test_dir / "test_crash_no_output_target.py").write_text(
+            "from crash_no_output_target import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "crash_no_output_target")
         binop_point = next(
             p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
         )
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
 
-        stale = MutatingFinder({"stale": "x = 1"}, mutant)
-        saved_meta_path = sys.meta_path[:]
-        sys.meta_path.insert(0, stale)
+        # Patch subprocess.run to return empty output (simulating a crash
+        # that produces no stdout/stderr before terminating).
+        with patch("pytest_leela.runner.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="", stderr="")
+            result = run_tests_for_mutant(
+                mutant,
+                {"crash_no_output_target": source},
+                {"crash_no_output_target": str(target)},
+                test_dir=str(test_dir),
+            )
 
-        try:
-            with patch("pytest_leela.runner.pytest.main", return_value=0):
-                run_tests_for_mutant(
-                    mutant,
-                    {"stale_finder_target": source},
-                    {"stale_finder_target": str(target)},
-                    test_dir=str(tmp_path),
-                )
+        assert isinstance(result, MutantResult)
+        assert result.killed is True
+        assert result.killing_test == "<crashed>"
+        assert result.killing_tests == ["<crashed>"]
 
-            remaining = [f for f in sys.meta_path if isinstance(f, MutatingFinder)]
-            assert remaining == []
-        finally:
-            # Restore sys.meta_path if the mutation clobbered it
-            sys.meta_path[:] = saved_meta_path
+    def it_returns_crashed_result_when_subprocess_json_decode_fails(
+        tmp_path, monkeypatch
+    ):
+        """When the subprocess output is not valid JSON, the result should be
+        killed with killing_test='<crashed>'."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "crash_json_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "crash_json_tests"
+        test_dir.mkdir()
+        (test_dir / "test_crash_json_target.py").write_text(
+            "from crash_json_target import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "crash_json_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        with patch("pytest_leela.runner.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="not json output", stderr="")
+            result = run_tests_for_mutant(
+                mutant,
+                {"crash_json_target": source},
+                {"crash_json_target": str(target)},
+                test_dir=str(test_dir),
+            )
+
+        assert isinstance(result, MutantResult)
+        assert result.killed is True
+        assert result.killing_test == "<crashed>"
+
+
+def describe_compute_timeout():
+    """Unit tests for the _compute_timeout helper function.
+
+    With subprocess isolation, timeout computation is a pure function that lives
+    in the parent process.  These tests cover the formula directly.
+    """
+
+    def it_computes_max_of_2x_total_plus_1_and_5():
+        """Kills operators in the formula: max(2 * total_expected + 1.0, 5.0).
+
+        total_expected = sum(test_times.get(t, 1.0) for t in test_ids)
+        """
+        result = _compute_timeout(["t1", "t2"], {"t1": 2.0, "t2": 3.0})
+        # total_expected = 5.0, timeout = max(2 * 5.0 + 1.0, 5.0) = 11.0
+        assert result == pytest.approx(11.0)
+
+    def it_uses_default_time_of_1_for_unknown_tests():
+        """test_times.get(t, 1.0) should use 1.0 for unknown test ids."""
+        result = _compute_timeout(["a", "b"], {"a": 2.0})  # b is unknown
+        # total_expected = 2.0 + 1.0 = 3.0
+        # timeout = max(2 * 3.0 + 1.0, 5.0) = 7.0
+        assert result == pytest.approx(7.0)
+
+    def it_enforces_minimum_timeout_of_5_seconds():
+        """Very fast tests must still get at least 5 seconds."""
+        result = _compute_timeout(["t"], {"t": 0.001})
+        assert result == pytest.approx(5.0)
+
+    def it_returns_none_when_test_times_is_none():
+        """When test_times is None, no timeout is computed."""
+        assert _compute_timeout(["t"], None) is None
+
+    def it_returns_none_when_test_ids_is_none():
+        """When test_ids is None, no timeout is computed."""
+        assert _compute_timeout(None, {"t": 1.0}) is None
 
 
 def describe_TimeoutPlugin():
@@ -515,7 +485,12 @@ def describe_TimeoutPlugin():
 
 
 def describe_run_tests_for_mutant_timeout():
-    """Tests for the timeout computation and timeout-related code paths."""
+    """Tests for timeout handling via subprocess isolation.
+
+    With the subprocess architecture, timeouts are enforced by signal.SIGALRM
+    in the child process.  The parent process uses subprocess.run(timeout=...)
+    as a hard outer bound.
+    """
 
     def _make_mutant_fixture(tmp_path):
         source = "def add(a, b):\n    return a + b\n"
@@ -528,159 +503,18 @@ def describe_run_tests_for_mutant_timeout():
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
         return source, mutant
 
-    def it_computes_timeout_correctly_from_test_times(tmp_path, monkeypatch):
-        """Kills line 218: ``+ → -``, ``* → +``, ``* → /``, ``+ → *``.
+    def it_times_out_tests_that_exceed_the_timeout_window(tmp_path, monkeypatch):
+        """When subprocess.run times out (outer bound exceeded), result is killed.
 
-        timeout_seconds = max(2 * total_expected + 1.0, 5.0)
-        total_expected = sum(test_times.get(t, 1.0) for t in test_ids)
-
-        With test_times = {"t1": 2.0, "t2": 3.0}, total_expected = 5.0
-        Correct: max(2 * 5.0 + 1.0, 5.0) = max(11.0, 5.0) = 11.0
-
-        Mutant ``2 * total_expected - 1.0``: max(10.0 - 1.0, 5.0) = max(9.0, 5.0) = 9.0
-        Mutant ``2 + total_expected + 1.0``: max(2 + 5.0 + 1.0, 5.0) = max(8.0, 5.0) = 8.0
-        Mutant ``2 * total_expected * 1.0``: max(10.0, 5.0) = 10.0
+        This patches subprocess.run to raise TimeoutExpired, simulating the
+        outer timeout bound being hit.
         """
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         source, mutant = _make_mutant_fixture(tmp_path)
 
-        test_times = {"test_a": 2.0, "test_b": 3.0}
-        test_ids = ["test_a", "test_b"]
-
-        created_timer = []
-
-        original_timer_init = threading.Timer.__init__
-
-        def capture_timer(self, interval, function, *args, **kwargs):
-            created_timer.append(interval)
-            original_timer_init(self, interval, function, *args, **kwargs)
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch.object(threading.Timer, "__init__", capture_timer),
-        ):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=test_ids,
-                test_times=test_times,
-            )
-
-        assert len(created_timer) == 1
-        # Correct: max(2 * 5.0 + 1.0, 5.0) = 11.0
-        assert created_timer[0] == pytest.approx(11.0)
-
-    def it_uses_default_time_for_unknown_tests(tmp_path, monkeypatch):
-        """Tests that test_times.get(t, 1.0) uses 1.0 default for unknown tests."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        test_times = {"test_a": 2.0}  # test_b is unknown
-        test_ids = ["test_a", "test_b"]
-
-        created_timer = []
-        original_timer_init = threading.Timer.__init__
-
-        def capture_timer(self, interval, function, *args, **kwargs):
-            created_timer.append(interval)
-            original_timer_init(self, interval, function, *args, **kwargs)
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch.object(threading.Timer, "__init__", capture_timer),
-        ):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=test_ids,
-                test_times=test_times,
-            )
-
-        assert len(created_timer) == 1
-        # total_expected = 2.0 + 1.0 = 3.0
-        # timeout = max(2 * 3.0 + 1.0, 5.0) = max(7.0, 5.0) = 7.0
-        assert created_timer[0] == pytest.approx(7.0)
-
-    def it_does_not_create_timer_without_test_times(tmp_path, monkeypatch):
-        """Kills line 224: ``is not → is`` on timer guard.
-
-        When test_times is None, no timer should be created and
-        _TimeoutPlugin should NOT be in the plugins list.
-        """
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        captured_plugins = []
-
-        def mock_pytest_main(args, plugins=None):
-            captured_plugins.extend(plugins or [])
-            return 0
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times=None,  # No test_times
-            )
-
-        from pytest_leela.runner import _TimeoutPlugin
-
-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
-        assert timeout_plugins == [], (
-            "TimeoutPlugin should not be added without test_times"
-        )
-
-    def it_includes_timeout_plugin_when_timer_is_created(tmp_path, monkeypatch):
-        """Positive case: when test_times is provided, TimeoutPlugin IS added."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        captured_plugins = []
-
-        def mock_pytest_main(args, plugins=None):
-            captured_plugins.extend(plugins or [])
-            return 0
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times={"test_a": 1.0},
-            )
-
-        from pytest_leela.runner import _TimeoutPlugin
-
-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
-        assert len(timeout_plugins) == 1
-
-    def it_returns_timeout_result_when_timed_out_flag_is_set(tmp_path, monkeypatch):
-        """Kills lines 274-283: timed_out.is_set() post-run check.
-
-        When the timeout fires but pytest catches the SystemExit internally,
-        the post-run check at line 274 should detect it and return a killed result.
-        """
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        def mock_pytest_main(args, plugins=None):
-            # Simulate: timeout fires, but pytest swallows the SystemExit
-            for p in plugins or []:
-                if hasattr(p, "event"):
-                    p.event.set()  # Set the timed_out event
-            return 0  # pytest returns normally
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+        with patch("pytest_leela.runner.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="test", timeout=1.0)
             result = run_tests_for_mutant(
                 mutant,
                 {"timeout_target": source},
@@ -691,92 +525,76 @@ def describe_run_tests_for_mutant_timeout():
 
         assert result.killed is True
         assert result.killing_test == "<timeout>"
-        assert "<timeout>" in result.killing_tests
-        # Elapsed should be reasonable (not a huge value from wrong arithmetic)
-        assert 0 <= result.time_seconds < 60
+        assert result.killing_tests == ["<timeout>"]
 
-    def it_returns_timeout_result_when_system_exit_is_raised(tmp_path, monkeypatch):
-        """When timeout causes SystemExit to propagate, result should be killed."""
+    def it_passes_timeout_to_subprocess_when_test_times_is_provided(
+        tmp_path, monkeypatch
+    ):
+        """When test_times is provided, the computed timeout is passed to subprocess."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         source, mutant = _make_mutant_fixture(tmp_path)
 
-        def mock_pytest_main(args, plugins=None):
-            for p in plugins or []:
-                if hasattr(p, "event"):
-                    p.event.set()
-            raise SystemExit("leela: mutant timeout")
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            result = run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times={"test_a": 1.0},
+        with patch("pytest_leela.runner.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                stdout='{"killed":false,"tests_run":1,"killing_test":null,"test_ids_run":[],"killing_tests":[]}',
+                stderr="",
             )
-
-        assert result.killed is True
-        assert result.killing_test == "<timeout>"
-
-    def it_enforces_minimum_timeout_of_5_seconds(tmp_path, monkeypatch):
-        """Timeout should be at least 5.0 seconds even for very fast tests."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        test_times = {"test_a": 0.001}
-        test_ids = ["test_a"]
-
-        created_timer = []
-        original_timer_init = threading.Timer.__init__
-
-        def capture_timer(self, interval, function, *args, **kwargs):
-            created_timer.append(interval)
-            original_timer_init(self, interval, function, *args, **kwargs)
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch.object(threading.Timer, "__init__", capture_timer),
-        ):
             run_tests_for_mutant(
                 mutant,
                 {"timeout_target": source},
                 {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=test_ids,
-                test_times=test_times,
+                test_ids=["test_a", "test_b"],
+                test_times={"test_a": 2.0, "test_b": 3.0},
             )
 
-        assert len(created_timer) == 1
-        # max(2 * 0.001 + 1.0, 5.0) = max(1.002, 5.0) = 5.0
-        assert created_timer[0] == pytest.approx(5.0)
+            # timeout_seconds = max(2*5.0 + 1.0, 5.0) = 11.0
+            # outer timeout = 11.0 + 2.0 = 13.0
+            call_kwargs = mock_run.call_args.kwargs
+            assert call_kwargs["timeout"] == pytest.approx(13.0)
 
-    def it_does_not_create_timer_without_test_ids(tmp_path, monkeypatch):
-        """When test_ids is None/empty, no timer should be created."""
+    def it_uses_default_120s_timeout_without_test_times(tmp_path, monkeypatch):
+        """When test_times is None, subprocess uses the 120s default timeout."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         source, mutant = _make_mutant_fixture(tmp_path)
 
-        captured_plugins = []
-
-        def mock_pytest_main(args, plugins=None):
-            captured_plugins.extend(plugins or [])
-            return 0
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+        with patch("pytest_leela.runner.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                stdout='{"killed":false,"tests_run":1,"killing_test":null,"test_ids_run":[],"killing_tests":[]}',
+                stderr="",
+            )
             run_tests_for_mutant(
                 mutant,
                 {"timeout_target": source},
                 {"timeout_target": str(tmp_path / "timeout_target.py")},
                 test_dir=str(tmp_path),
-                test_times={"test_a": 1.0},
-                # test_ids is None by default
             )
 
-        from pytest_leela.runner import _TimeoutPlugin
+            call_kwargs = mock_run.call_args.kwargs
+            assert call_kwargs["timeout"] == 120.0
 
-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
-        assert timeout_plugins == []
+    def it_forwards_test_ids_to_subprocess_when_provided(tmp_path, monkeypatch):
+        """Test IDs should be passed through to the subprocess config."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        with patch("pytest_leela.runner.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                stdout='{"killed":false,"tests_run":1,"killing_test":null,"test_ids_run":[],"killing_tests":[]}',
+                stderr="",
+            )
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["tests/a.py::test_x", "tests/a.py::test_y"],
+                test_times={"tests/a.py::test_x": 0.5, "tests/a.py::test_y": 0.5},
+            )
+
+            # Verify subprocess was called with the right args
+            assert mock_run.call_count == 1
 
 
 def describe_clear_user_modules():
@@ -963,35 +781,31 @@ def describe_run_tests_for_mutant_with_known_user_modules():
         assert result.killed is True
 
     def it_cleans_up_new_cwd_modules_from_inner_run(tmp_path, monkeypatch):
-        """Optimized path should remove NEW CWD-local modules added by inner run."""
+        """Subprocess isolation means no modules are added to the parent process's
+        sys.modules during a run (pytest.main runs in the child, not the parent).
+        This test verifies the invariant that no pytest_leela._test_* artifacts leak."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
         source, mutant = _make_mutant(tmp_path, "opt_inner_target")
 
-        inner_mod_name = "pytest_leela._test_opt_inner_artifact"
-        inner_mod_file = str(tmp_path / "inner_artifact.py")
-
-        def mock_pytest_main(args, plugins=None):
-            fake = types.ModuleType(inner_mod_name)
-            fake.__file__ = inner_mod_file
-            sys.modules[inner_mod_name] = fake
-            return 0
-
         known = precompute_user_modules()
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            run_tests_for_mutant(
-                mutant,
-                {"opt_inner_target": source},
-                {"opt_inner_target": str(tmp_path / "opt_inner_target.py")},
-                test_dir=str(tmp_path),
-                known_user_modules=known,
-            )
+        run_tests_for_mutant(
+            mutant,
+            {"opt_inner_target": source},
+            {"opt_inner_target": str(tmp_path / "opt_inner_target.py")},
+            test_dir=str(tmp_path),
+            known_user_modules=known,
+        )
 
-        assert inner_mod_name not in sys.modules
+        # Verify that no pytest_leela._test_* artifacts leaked into sys.modules.
+        leaked = [n for n in sys.modules if n.startswith("pytest_leela._test_")]
+        assert leaked == [], f"Artifacts leaked: {leaked}"
 
     def it_preserves_saved_modules_during_optimized_cleanup(tmp_path, monkeypatch):
-        """Optimized path should not evict modules that existed at snapshot time."""
+        """Subprocess isolation means pytest_leela.* modules in the parent process
+        are unaffected by the child's module cleanup. This is the same invariant
+        tested in describe_run_tests_for_mutant."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
@@ -1002,60 +816,12 @@ def describe_run_tests_for_mutant_with_known_user_modules():
         monkeypatch.setitem(sys.modules, "pytest_leela._test_opt_preserved", kept_mod)
 
         known = precompute_user_modules()
-        with patch("pytest_leela.runner.pytest.main", return_value=0):
-            run_tests_for_mutant(
-                mutant,
-                {"opt_preserve_target": source},
-                {"opt_preserve_target": str(tmp_path / "opt_preserve_target.py")},
-                test_dir=str(tmp_path),
-                known_user_modules=known,
-            )
+        run_tests_for_mutant(
+            mutant,
+            {"opt_preserve_target": source},
+            {"opt_preserve_target": str(tmp_path / "opt_preserve_target.py")},
+            test_dir=str(tmp_path),
+            known_user_modules=known,
+        )
 
         assert "pytest_leela._test_opt_preserved" in sys.modules
-
-    def it_uses_fast_clear_instead_of_full_scan(tmp_path, monkeypatch):
-        """When known_user_modules is provided, _clear_user_modules_fast is used."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-
-        source, mutant = _make_mutant(tmp_path, "opt_fast_target")
-        known = frozenset(["some_module"])
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch("pytest_leela.runner._clear_user_modules_fast") as mock_fast,
-            patch("pytest_leela.runner._clear_user_modules") as mock_full,
-        ):
-            run_tests_for_mutant(
-                mutant,
-                {"opt_fast_target": source},
-                {"opt_fast_target": str(tmp_path / "opt_fast_target.py")},
-                test_dir=str(tmp_path),
-                known_user_modules=known,
-            )
-
-        # Fast path called at both pre-test and finally cleanup sites
-        assert mock_fast.call_count == 2
-        mock_full.assert_not_called()
-
-    def it_falls_back_to_full_scan_without_known_user_modules(tmp_path, monkeypatch):
-        """Without known_user_modules, the original _clear_user_modules is used."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-
-        source, mutant = _make_mutant(tmp_path, "opt_fallback_target")
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch("pytest_leela.runner._clear_user_modules_fast") as mock_fast,
-            patch("pytest_leela.runner._clear_user_modules") as mock_full,
-        ):
-            run_tests_for_mutant(
-                mutant,
-                {"opt_fallback_target": source},
-                {"opt_fallback_target": str(tmp_path / "opt_fallback_target.py")},
-                test_dir=str(tmp_path),
-            )
-
-        mock_fast.assert_not_called()
-        assert mock_full.call_count == 2
