@@ -495,17 +495,6 @@ def describe_run_tests_for_mutant():
 def describe_run_tests_for_mutant_timeout():
     """Tests for the SIGALRM-based timeout in run_tests_for_mutant()."""
 
-    def _make_mutant_fixture(tmp_path):
-        source = "def add(a, b):\n    return a + b\n"
-        target = tmp_path / "timeout_target.py"
-        target.write_text(source)
-        points = find_mutation_points(source, str(target), "timeout_target")
-        binop_point = next(
-            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
-        )
-        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
-        return source, mutant
-
     def it_returns_killed_when_signal_handler_fires(tmp_path, monkeypatch):
         """When SIGALRM handler fires, result.killing_test must be '<timeout>'.
 
@@ -515,7 +504,7 @@ def describe_run_tests_for_mutant_timeout():
         """
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
 
         handler_closure: dict[str, object] = {}
 
@@ -559,7 +548,7 @@ def describe_run_tests_for_mutant_timeout():
         """Any exception from pytest.main causes killed result."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
 
         with patch("pytest_leela.runner.pytest.main", side_effect=RuntimeError("boom")):
             result = run_tests_for_mutant(
@@ -713,55 +702,6 @@ def describe_timeout_computation():
 
         # Two calls: register handler and restore old handler
         assert len(restore_calls) == 2
-
-    def it_has_post_run_timed_out_check(tmp_path, monkeypatch):
-        """Post-run ``if timed_out:`` block sets killing_test to <timeout>.
-
-        When pytest catches the signal's SystemExit internally and returns
-        normally, the post-run check detects timed_out=True and returns a
-        timeout result instead of the normal result.
-        """
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-
-        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
-
-        handler_closure: dict[str, object] = {}
-
-        def fake_signal(signum: int, handler: object) -> object:
-            if signum == signal.SIGALRM:
-                if handler == signal.SIG_DFL:
-                    return signal.SIG_DFL
-                handler_closure["func"] = handler
-                return signal.SIG_DFL
-            return signal.SIG_DFL
-
-        def fake_alarm(seconds: int) -> int:
-            return 0
-
-        def pytest_main_catches_timeout(*args: object, **kwargs: object) -> int:
-            # Invoke handler: sets timed_out=True in runner's closure,
-            # raises SystemExit. pytest catches it internally and returns normally.
-            if handler_closure.get("func") is not None:
-                handler_closure["func"](signal.SIGALRM, None)  # type: ignore[index]
-            return 0  # pytest caught the SystemExit internally
-
-        with (
-            patch("pytest_leela.runner.signal.alarm", fake_alarm),
-            patch("pytest_leela.runner.signal.signal", fake_signal),
-            patch("pytest_leela.runner.pytest.main", pytest_main_catches_timeout),
-        ):
-            result = run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times={"test_a": 1.0},
-            )
-
-        # Post-run check: timed_out=True → killed with "<timeout>"
-        assert result.killed is True
-        assert result.killing_test == "<timeout>"
 
 
 def describe_timeout_guard_conditions():
