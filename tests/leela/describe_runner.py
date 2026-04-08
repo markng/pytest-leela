@@ -1,21 +1,19 @@
 """Tests for pytest_leela.runner — test execution against mutants."""
 
 import sys
-import threading
 import types
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.import_hook import MutatingFinder
 from pytest_leela.models import Mutant, MutantResult
 from pytest_leela.runner import (
     _KEEP_PREFIXES,
-    _ResultCollector,
     _clear_framework_caches,
     _clear_user_modules,
     _clear_user_modules_fast,
+    _ResultCollector,
     precompute_user_modules,
     run_tests_for_mutant,
 )
@@ -493,29 +491,8 @@ def describe_run_tests_for_mutant():
             sys.meta_path[:] = saved_meta_path
 
 
-def describe_TimeoutPlugin():
-    def it_raises_system_exit_when_event_is_set():
-        """_TimeoutPlugin.pytest_runtest_protocol raises when the event fires."""
-        from pytest_leela.runner import _TimeoutPlugin
-
-        event = threading.Event()
-        event.set()
-        plugin = _TimeoutPlugin(event)
-        with pytest.raises(SystemExit, match="leela: mutant timeout"):
-            plugin.pytest_runtest_protocol(item=None, nextitem=None)
-
-    def it_does_not_raise_when_event_is_not_set():
-        """_TimeoutPlugin.pytest_runtest_protocol returns None when no timeout."""
-        from pytest_leela.runner import _TimeoutPlugin
-
-        event = threading.Event()
-        plugin = _TimeoutPlugin(event)
-        result = plugin.pytest_runtest_protocol(item=None, nextitem=None)
-        assert result is None
-
-
 def describe_run_tests_for_mutant_timeout():
-    """Tests for the timeout computation and timeout-related code paths."""
+    """Tests for the SIGALRM-based timeout in run_tests_for_mutant()."""
 
     def _make_mutant_fixture(tmp_path):
         source = "def add(a, b):\n    return a + b\n"
@@ -528,159 +505,17 @@ def describe_run_tests_for_mutant_timeout():
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
         return source, mutant
 
-    def it_computes_timeout_correctly_from_test_times(tmp_path, monkeypatch):
-        """Kills line 218: ``+ → -``, ``* → +``, ``* → /``, ``+ → *``.
-
-        timeout_seconds = max(2 * total_expected + 1.0, 5.0)
-        total_expected = sum(test_times.get(t, 1.0) for t in test_ids)
-
-        With test_times = {"t1": 2.0, "t2": 3.0}, total_expected = 5.0
-        Correct: max(2 * 5.0 + 1.0, 5.0) = max(11.0, 5.0) = 11.0
-
-        Mutant ``2 * total_expected - 1.0``: max(10.0 - 1.0, 5.0) = max(9.0, 5.0) = 9.0
-        Mutant ``2 + total_expected + 1.0``: max(2 + 5.0 + 1.0, 5.0) = max(8.0, 5.0) = 8.0
-        Mutant ``2 * total_expected * 1.0``: max(10.0, 5.0) = 10.0
-        """
+    def it_returns_killed_when_signal_handler_fires(tmp_path, monkeypatch):
+        """When SIGALRM handler raises SystemExit, result should be killed."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         source, mutant = _make_mutant_fixture(tmp_path)
 
-        test_times = {"test_a": 2.0, "test_b": 3.0}
-        test_ids = ["test_a", "test_b"]
-
-        created_timer = []
-
-        original_timer_init = threading.Timer.__init__
-
-        def capture_timer(self, interval, function, *args, **kwargs):
-            created_timer.append(interval)
-            original_timer_init(self, interval, function, *args, **kwargs)
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch.object(threading.Timer, "__init__", capture_timer),
+        # pytest.main raises SystemExit from the signal handler
+        with patch(
+            "pytest_leela.runner.pytest.main",
+            side_effect=SystemExit("leela: mutant timeout"),
         ):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=test_ids,
-                test_times=test_times,
-            )
-
-        assert len(created_timer) == 1
-        # Correct: max(2 * 5.0 + 1.0, 5.0) = 11.0
-        assert created_timer[0] == pytest.approx(11.0)
-
-    def it_uses_default_time_for_unknown_tests(tmp_path, monkeypatch):
-        """Tests that test_times.get(t, 1.0) uses 1.0 default for unknown tests."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        test_times = {"test_a": 2.0}  # test_b is unknown
-        test_ids = ["test_a", "test_b"]
-
-        created_timer = []
-        original_timer_init = threading.Timer.__init__
-
-        def capture_timer(self, interval, function, *args, **kwargs):
-            created_timer.append(interval)
-            original_timer_init(self, interval, function, *args, **kwargs)
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch.object(threading.Timer, "__init__", capture_timer),
-        ):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=test_ids,
-                test_times=test_times,
-            )
-
-        assert len(created_timer) == 1
-        # total_expected = 2.0 + 1.0 = 3.0
-        # timeout = max(2 * 3.0 + 1.0, 5.0) = max(7.0, 5.0) = 7.0
-        assert created_timer[0] == pytest.approx(7.0)
-
-    def it_does_not_create_timer_without_test_times(tmp_path, monkeypatch):
-        """Kills line 224: ``is not → is`` on timer guard.
-
-        When test_times is None, no timer should be created and
-        _TimeoutPlugin should NOT be in the plugins list.
-        """
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        captured_plugins = []
-
-        def mock_pytest_main(args, plugins=None):
-            captured_plugins.extend(plugins or [])
-            return 0
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times=None,  # No test_times
-            )
-
-        from pytest_leela.runner import _TimeoutPlugin
-
-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
-        assert timeout_plugins == [], (
-            "TimeoutPlugin should not be added without test_times"
-        )
-
-    def it_includes_timeout_plugin_when_timer_is_created(tmp_path, monkeypatch):
-        """Positive case: when test_times is provided, TimeoutPlugin IS added."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        captured_plugins = []
-
-        def mock_pytest_main(args, plugins=None):
-            captured_plugins.extend(plugins or [])
-            return 0
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=["test_a"],
-                test_times={"test_a": 1.0},
-            )
-
-        from pytest_leela.runner import _TimeoutPlugin
-
-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
-        assert len(timeout_plugins) == 1
-
-    def it_returns_timeout_result_when_timed_out_flag_is_set(tmp_path, monkeypatch):
-        """Kills lines 274-283: timed_out.is_set() post-run check.
-
-        When the timeout fires but pytest catches the SystemExit internally,
-        the post-run check at line 274 should detect it and return a killed result.
-        """
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        def mock_pytest_main(args, plugins=None):
-            # Simulate: timeout fires, but pytest swallows the SystemExit
-            for p in plugins or []:
-                if hasattr(p, "event"):
-                    p.event.set()  # Set the timed_out event
-            return 0  # pytest returns normally
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
             result = run_tests_for_mutant(
                 mutant,
                 {"timeout_target": source},
@@ -690,24 +525,15 @@ def describe_run_tests_for_mutant_timeout():
             )
 
         assert result.killed is True
-        assert result.killing_test == "<timeout>"
-        assert "<timeout>" in result.killing_tests
-        # Elapsed should be reasonable (not a huge value from wrong arithmetic)
-        assert 0 <= result.time_seconds < 60
+        assert result.killing_test == "<crashed>"
 
-    def it_returns_timeout_result_when_system_exit_is_raised(tmp_path, monkeypatch):
-        """When timeout causes SystemExit to propagate, result should be killed."""
+    def it_returns_killed_on_general_exception_from_pytest_main(tmp_path, monkeypatch):
+        """Any exception from pytest.main causes killed result."""
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         source, mutant = _make_mutant_fixture(tmp_path)
 
-        def mock_pytest_main(args, plugins=None):
-            for p in plugins or []:
-                if hasattr(p, "event"):
-                    p.event.set()
-            raise SystemExit("leela: mutant timeout")
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+        with patch("pytest_leela.runner.pytest.main", side_effect=RuntimeError("boom")):
             result = run_tests_for_mutant(
                 mutant,
                 {"timeout_target": source},
@@ -717,66 +543,7 @@ def describe_run_tests_for_mutant_timeout():
             )
 
         assert result.killed is True
-        assert result.killing_test == "<timeout>"
-
-    def it_enforces_minimum_timeout_of_5_seconds(tmp_path, monkeypatch):
-        """Timeout should be at least 5.0 seconds even for very fast tests."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        test_times = {"test_a": 0.001}
-        test_ids = ["test_a"]
-
-        created_timer = []
-        original_timer_init = threading.Timer.__init__
-
-        def capture_timer(self, interval, function, *args, **kwargs):
-            created_timer.append(interval)
-            original_timer_init(self, interval, function, *args, **kwargs)
-
-        with (
-            patch("pytest_leela.runner.pytest.main", return_value=0),
-            patch.object(threading.Timer, "__init__", capture_timer),
-        ):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_ids=test_ids,
-                test_times=test_times,
-            )
-
-        assert len(created_timer) == 1
-        # max(2 * 0.001 + 1.0, 5.0) = max(1.002, 5.0) = 5.0
-        assert created_timer[0] == pytest.approx(5.0)
-
-    def it_does_not_create_timer_without_test_ids(tmp_path, monkeypatch):
-        """When test_ids is None/empty, no timer should be created."""
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.syspath_prepend(str(tmp_path))
-        source, mutant = _make_mutant_fixture(tmp_path)
-
-        captured_plugins = []
-
-        def mock_pytest_main(args, plugins=None):
-            captured_plugins.extend(plugins or [])
-            return 0
-
-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
-            run_tests_for_mutant(
-                mutant,
-                {"timeout_target": source},
-                {"timeout_target": str(tmp_path / "timeout_target.py")},
-                test_dir=str(tmp_path),
-                test_times={"test_a": 1.0},
-                # test_ids is None by default
-            )
-
-        from pytest_leela.runner import _TimeoutPlugin
-
-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
-        assert timeout_plugins == []
+        assert result.killing_test == "<crashed>"
 
 
 def describe_clear_user_modules():

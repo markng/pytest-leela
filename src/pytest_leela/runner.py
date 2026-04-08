@@ -7,8 +7,8 @@ import io
 import ntpath  # noqa: F401 — keep in sys.modules (see engine.py comment)
 import os
 import posixpath  # noqa: F401 — same as ntpath
+import signal
 import sys
-import threading
 import time
 import types
 from typing import Any
@@ -114,17 +114,6 @@ def _clear_user_modules() -> None:
         sys.modules.pop(name, None)
 
 
-class _TimeoutPlugin:
-    """Pytest plugin that aborts the run when a timeout event fires."""
-
-    def __init__(self, event: threading.Event) -> None:
-        self.event = event
-
-    def pytest_runtest_protocol(self, item: Any, nextitem: Any) -> None:
-        if self.event.is_set():
-            raise SystemExit("leela: mutant timeout")
-
-
 class _ResultCollector:
     """Minimal pytest plugin to collect test results."""
 
@@ -209,20 +198,26 @@ def run_tests_for_mutant(
         saved_meta_path = sys.meta_path[:]
         saved_modules = dict(sys.modules)
 
-        # Set up per-mutant timeout to prevent infinite loops from
-        # control-flow mutations (e.g. break→continue).
-        timed_out = threading.Event()
-        timer: threading.Timer | None = None
+        # Set up per-mutant timeout using signal.SIGALRM to prevent
+        # infinite loops from control-flow mutations (e.g. break→continue).
+        # SIGALRM is used instead of threading.Timer because daemon threads
+        # can cause segfaults during Python 3.14's session teardown GC.
+        timed_out = False
+        timeout_seconds: float | None = None
+        old_handler = signal.SIG_DFL
         if test_times is not None and test_ids:
             total_expected = sum(test_times.get(t, 1.0) for t in test_ids)
             timeout_seconds = max(2 * total_expected + 1.0, 5.0)
-            timer = threading.Timer(timeout_seconds, timed_out.set)
-            timer.daemon = True
-            timer.start()
+
+            def _timeout_handler(_signum: int, _frame: object) -> None:
+                nonlocal timed_out
+                timed_out = True
+                raise SystemExit("leela: mutant timeout")
+
+            old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(int(timeout_seconds))
 
         plugins: list[Any] = [collector]
-        if timer is not None:
-            plugins.append(_TimeoutPlugin(timed_out))
 
         # Run pytest in-process (suppress noisy output)
         try:
@@ -235,7 +230,7 @@ def run_tests_for_mutant(
             # A mutation that crashes the test runner (or times out)
             # counts as killed.
             elapsed = time.monotonic() - start
-            killing_test = "<timeout>" if timed_out.is_set() else "<crashed>"
+            killing_test = "<timeout>" if timed_out else "<crashed>"
             return MutantResult(
                 mutant=mutant,
                 killed=True,
@@ -246,8 +241,9 @@ def run_tests_for_mutant(
                 killing_tests=[killing_test],
             )
         finally:
-            if timer is not None:
-                timer.cancel()
+            if timeout_seconds is not None:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
 
             # Restore meta_path: removes hooks that inner pytest.main()
             # added (AssertionRewritingHook etc.).  The saved snapshot
@@ -271,7 +267,7 @@ def run_tests_for_mutant(
 
         # If the timeout fired but pytest caught the SystemExit internally,
         # treat it as killed.
-        if timed_out.is_set():
+        if timed_out:
             elapsed = time.monotonic() - start
             return MutantResult(
                 mutant=mutant,
