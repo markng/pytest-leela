@@ -533,3 +533,118 @@ def describe_enrich_mutation_points():
             augassigns = [p for p in enriched if p.node_type == "AugAssign"]
             assert len(augassigns) == 1
             assert augassigns[0].inferred_type == "str"
+
+    # --- Group 6: Assignment-based forward propagation ---
+
+    def describe_assignment_dataflow():
+        """Level-1 assignment-based dataflow: type inference from local assignments."""
+
+        def it_infers_int_from_int_literal_assignment():
+            """x = 5 before a BinOp using x should resolve x to int."""
+            source = "def f():\n    x = 5\n    return x + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            assert binops[0].inferred_type == "int"
+
+        def it_infers_float_from_float_literal_assignment():
+            """x = 1.5 should propagate float type."""
+            source = "def f():\n    x = 1.5\n    return x + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            assert binops[0].inferred_type == "float"
+
+        def it_infers_str_from_str_literal_assignment():
+            """x = 'hello' should propagate str type."""
+            source = "def f():\n    x = \"hello\"\n    return x + 'world'\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            assert binops[0].inferred_type == "str"
+
+        def it_infers_type_from_annotated_assignment():
+            """x: int = ... should use the annotation, not the value."""
+            source = "def f():\n    x: int = compute()\n    return x + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            assert binops[0].inferred_type == "int"
+
+        def it_propagates_type_from_param_through_variable():
+            """y = x where x: int should propagate int to y."""
+            source = "def f(x: int):\n    y = x\n    return y + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            assert binops[0].inferred_type == "int"
+
+        def it_resolves_unknown_when_conflicting_assignments():
+            """If x is assigned int then str, type should be unknown (None)."""
+            source = 'def f():\n    x = 1\n    x = "hello"\n    return x + 1\n'
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            # Conflicting assignments → unknown; falls back to int from literal '1'
+            # on the right side of the binop
+            assert binops[0].inferred_type == "int"
+
+        def it_resolves_compare_from_assigned_variable():
+            """Assignment env should flow through Compare inference."""
+            source = (
+                "def f():\n"
+                "    threshold = 10\n"
+                "    value = 5\n"
+                "    return value > threshold\n"
+            )
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            compares = [p for p in enriched if p.node_type == "Compare"]
+            assert len(compares) >= 1
+            assert compares[0].inferred_type == "int"
+
+        def it_infers_int_from_len_call_assignment():
+            """n = len(items) should be inferred as int."""
+            source = "def f(items):\n    n = len(items)\n    return n + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            assert binops[0].inferred_type == "int"
+
+        def it_does_not_enter_nested_blocks():
+            """Assignments inside if/for/while blocks are not walked."""
+            source = "def f():\n    if True:\n        x = 5\n    return x + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            # x is only assigned inside an if block — not in top-level body
+            # so it should not appear in the env; type falls back to None for x,
+            # but '1' is int so we still get int
+            assert binops[0].inferred_type == "int"
+
+        def it_handles_annotation_without_value():
+            """x: int (no assignment) should still populate env."""
+            source = "def f():\n    x: int\n    return x + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            assert binops[0].inferred_type == "int"
+
+        def it_env_assignment_overrides_param_annotation():
+            """If a param x: float is shadowed by x = 5 (int), env wins."""
+            source = "def f(x: float):\n    x = 5\n    return x + 1\n"
+            points = find_mutation_points(source, "test.py", "test")
+            enriched = enrich_mutation_points(source, points)
+            binops = [p for p in enriched if p.node_type == "BinOp"]
+            assert len(binops) >= 1
+            # env wins: x = 5 is int, overrides param annotation float
+            assert binops[0].inferred_type == "int"

@@ -83,7 +83,15 @@ class _TypeCollector(ast.NodeVisitor):
 class _FuncInfo:
     """Info about a single function's type annotations."""
 
-    __slots__ = ("name", "start_line", "end_line", "param_types", "return_type", "body")
+    __slots__ = (
+        "name",
+        "start_line",
+        "end_line",
+        "param_types",
+        "return_type",
+        "body",
+        "_assignment_env",
+    )
 
     def __init__(
         self,
@@ -100,6 +108,14 @@ class _FuncInfo:
         self.param_types = param_types
         self.return_type = return_type
         self.body = body
+        self._assignment_env: dict[str, str | None] | None = None
+
+    @property
+    def assignment_env(self) -> dict[str, str | None]:
+        """Lazily build and cache the assignment type environment."""
+        if self._assignment_env is None:
+            self._assignment_env = _build_assignment_env(self.body, self.param_types)
+        return self._assignment_env
 
 
 def _find_enclosing_func(functions: list[_FuncInfo], lineno: int) -> _FuncInfo | None:
@@ -110,54 +126,168 @@ def _find_enclosing_func(functions: list[_FuncInfo], lineno: int) -> _FuncInfo |
     return None
 
 
-def _infer_binop_type(node: ast.BinOp, func: _FuncInfo) -> str | None:
-    """Infer the type of a BinOp's operands from annotations."""
-    # Check left operand
-    left_type = _infer_expr_type(node.left, func)
-    if left_type is not None:
-        return left_type
-    # Check right operand
-    right_type = _infer_expr_type(node.right, func)
-    return right_type
+def _infer_expr_type(
+    node: ast.expr,
+    func: _FuncInfo,
+    env: dict[str, str | None] | None = None,
+) -> str | None:
+    """Infer the type of an expression from function annotations and assignment env.
 
-
-def _infer_expr_type(node: ast.expr, func: _FuncInfo) -> str | None:
-    """Infer the type of an expression from function annotations."""
-    if isinstance(node, ast.Name) and node.id in func.param_types:
-        return func.param_types[node.id]
+    Resolution order:
+      1. Assignment environment (forward-propagated local variables)
+      2. Parameter annotations
+      3. Literal constants
+      4. Known built-in calls (len)
+    """
+    if isinstance(node, ast.Name):
+        name = node.id
+        # Check assignment environment first
+        if env is not None and name in env:
+            return env[name]
+        # Fall back to parameter annotations
+        if name in func.param_types:
+            return func.param_types[name]
+        return None
     if isinstance(node, ast.Constant):
-        if isinstance(node.value, int) and not isinstance(node.value, bool):
+        if isinstance(node.value, bool):
+            return "bool"
+        if isinstance(node.value, int):
             return "int"
         if isinstance(node.value, float):
             return "float"
         if isinstance(node.value, str):
             return "str"
-        if isinstance(node.value, bool):
-            return "bool"
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name) and node.func.id == "len":
             return "int"
     return None
 
 
+def _infer_assigned_value_type(
+    value: ast.expr,
+    param_types: dict[str, str],
+    env: dict[str, str | None],
+) -> str | None:
+    """Infer the type of a value expression during assignment environment building.
+
+    This is a lightweight variant of _infer_expr_type used while building the
+    assignment environment.  We can't call _infer_expr_type directly here because
+    _FuncInfo is not yet fully constructed; instead we replicate the Name / Constant
+    / Call logic against the in-progress env and param_types.
+    """
+    if isinstance(value, ast.Name):
+        name = value.id
+        if name in env:
+            return env[name]
+        if name in param_types:
+            return param_types[name]
+        return None
+    if isinstance(value, ast.Constant):
+        if isinstance(value.value, bool):
+            return "bool"
+        if isinstance(value.value, int):
+            return "int"
+        if isinstance(value.value, float):
+            return "float"
+        if isinstance(value.value, str):
+            return "str"
+    if isinstance(value, ast.Call):
+        if isinstance(value.func, ast.Name) and value.func.id == "len":
+            return "int"
+    # BinOp: if both sides agree on a type, propagate it
+    if isinstance(value, ast.BinOp):
+        left = _infer_assigned_value_type(value.left, param_types, env)
+        if left is not None:
+            return left
+        right = _infer_assigned_value_type(value.right, param_types, env)
+        return right
+    return None
+
+
+def _build_assignment_env(
+    func_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    param_types: dict[str, str],
+) -> dict[str, str | None]:
+    """Build a type environment from a single forward pass over the function body.
+
+    Walks top-level statements in the function body in order.  For each
+    assignment or annotated assignment encountered it attempts to infer the
+    type of the assigned value.  If a variable is assigned multiple times
+    with differing types, the entry is set to None (unknown).
+
+    Rules:
+    - ``x: int = ...``  — use the annotation (AnnAssign)
+    - ``x = 5``         — infer from the literal / expression (Assign)
+    - Conflicting re-assignments → None
+    - Only the direct (top-level) body is walked; statements inside nested
+      blocks (if, for, while, …) are deliberately skipped to avoid
+      control-flow sensitivity.
+    """
+    env: dict[str, str | None] = {}
+
+    for stmt in func_node.body:
+        # Annotated assignment: x: int = ... or x: int (no value)
+        if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+            var_name = stmt.target.id
+            ann_type = _annotation_to_str(stmt.annotation)
+            _env_assign(env, var_name, ann_type)
+
+        # Plain assignment: x = <expr>  (only single-target, simple Name target)
+        elif isinstance(stmt, ast.Assign):
+            # Only handle single-target assignments to a bare Name
+            if len(stmt.targets) == 1 and isinstance(stmt.targets[0], ast.Name):
+                var_name = stmt.targets[0].id
+                inferred = _infer_assigned_value_type(stmt.value, param_types, env)
+                _env_assign(env, var_name, inferred)
+
+    return env
+
+
+def _env_assign(env: dict[str, str | None], name: str, inferred: str | None) -> None:
+    """Update the environment for a new assignment to *name*.
+
+    If the variable already exists with a different (non-None) type, mark it
+    as unknown (None) to avoid false type claims from conflicting assignments.
+    """
+    if name not in env:
+        env[name] = inferred
+    elif env[name] != inferred:
+        # Conflicting types — fall back to unknown
+        env[name] = None
+
+
+def _infer_binop_type(node: ast.BinOp, func: _FuncInfo) -> str | None:
+    """Infer the type of a BinOp's operands from annotations."""
+    env = func.assignment_env
+    # Check left operand
+    left_type = _infer_expr_type(node.left, func, env)
+    if left_type is not None:
+        return left_type
+    # Check right operand
+    right_type = _infer_expr_type(node.right, func, env)
+    return right_type
+
+
 def _infer_augassign_type(node: ast.AugAssign, func: _FuncInfo) -> str | None:
     """Infer the type of an AugAssign from target or value annotations."""
+    env = func.assignment_env
     # Check target (e.g., x += 1 — look up x's type)
-    target_type = _infer_expr_type(node.target, func)
+    target_type = _infer_expr_type(node.target, func, env)
     if target_type is not None:
         return target_type
     # Check value expression
-    value_type = _infer_expr_type(node.value, func)
+    value_type = _infer_expr_type(node.value, func, env)
     return value_type
 
 
 def _infer_compare_type(node: ast.Compare, func: _FuncInfo) -> str | None:
     """Infer type context for a Compare node."""
-    left_type = _infer_expr_type(node.left, func)
+    env = func.assignment_env
+    left_type = _infer_expr_type(node.left, func, env)
     if left_type is not None:
         return left_type
     for comp in node.comparators:
-        comp_type = _infer_expr_type(comp, func)
+        comp_type = _infer_expr_type(comp, func, env)
         if comp_type is not None:
             return comp_type
     return None
@@ -223,7 +353,9 @@ def enrich_mutation_points(
         elif point.node_type == "UnaryOp":
             node = _find_node_at(tree, point.lineno, point.col_offset, "UnaryOp")
             if isinstance(node, ast.UnaryOp):
-                inferred_type = _infer_expr_type(node.operand, func)
+                inferred_type = _infer_expr_type(
+                    node.operand, func, func.assignment_env
+                )
 
         if inferred_type is not None:
             point = replace(point, inferred_type=inferred_type)
