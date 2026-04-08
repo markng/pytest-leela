@@ -2,6 +2,7 @@
 
 from pytest_leela.models import (
     CoverageMap,
+    EnrichmentStats,
     Mutant,
     MutantResult,
     MutationPoint,
@@ -219,3 +220,55 @@ def describe_run_result_new_fields():
             target_sources={"app.py": "x = 1\n"},
         )
         assert run.target_sources == {"app.py": "x = 1\n"}
+
+    def it_defaults_enrichment_stats_to_zero():
+        run = RunResult(
+            target_files=[],
+            total_mutants=0,
+            mutants_tested=0,
+            mutants_pruned=0,
+            results=[],
+            wall_time_seconds=0.0,
+        )
+        assert run.enrichment_stats.from_annotations == 0
+        assert run.enrichment_stats.from_assignment_dataflow == 0
+
+    def it_stores_enrichment_stats_when_provided():
+        stats = EnrichmentStats(from_annotations=5, from_assignment_dataflow=3)
+        run = RunResult(
+            target_files=["app.py"],
+            total_mutants=8,
+            mutants_tested=8,
+            mutants_pruned=0,
+            results=[],
+            wall_time_seconds=0.0,
+            enrichment_stats=stats,
+        )
+        assert run.enrichment_stats.from_annotations == 5
+        assert run.enrichment_stats.from_assignment_dataflow == 3
+
+
+def describe_enrichment_stats():
+    def it_initialises_to_zeros():
+        stats = EnrichmentStats()
+        assert stats.from_annotations == 0
+        assert stats.from_assignment_dataflow == 0
+
+    def it_accepts_explicit_values():
+        stats = EnrichmentStats(from_annotations=4, from_assignment_dataflow=7)
+        assert stats.from_annotations == 4
+        assert stats.from_assignment_dataflow == 7
+
+    def it_adds_two_stats_together():
+        a = EnrichmentStats(from_annotations=3, from_assignment_dataflow=2)
+        b = EnrichmentStats(from_annotations=1, from_assignment_dataflow=5)
+        c = a + b
+        assert c.from_annotations == 4
+        assert c.from_assignment_dataflow == 7
+
+    def it_adding_two_zeros_gives_zero():
+        a = EnrichmentStats()
+        b = EnrichmentStats()
+        c = a + b
+        assert c.from_annotations == 0
+        assert c.from_assignment_dataflow == 0

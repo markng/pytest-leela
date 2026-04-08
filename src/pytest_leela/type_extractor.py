@@ -5,7 +5,7 @@ from __future__ import annotations
 import ast
 from dataclasses import replace
 
-from pytest_leela.models import MutationPoint
+from pytest_leela.models import EnrichmentStats, MutationPoint
 
 
 def _annotation_to_str(node: ast.expr) -> str | None:
@@ -309,18 +309,114 @@ def _find_node_at(
     return None
 
 
+def _type_came_from_dataflow(
+    inferred_type: str,
+    point_node_type: str,
+    func: _FuncInfo,
+    tree: ast.AST,
+    point_lineno: int,
+    point_col_offset: int,
+) -> bool:
+    """Return True when *inferred_type* was sourced from the assignment environment.
+
+    A type is considered to come from dataflow when the operand(s) that
+    produced it are local variables whose types are present in the assignment
+    environment but *not* in the parameter annotation map.
+
+    The heuristic is conservative: if at least one operand's type is resolved
+    via the assignment env and is absent from param_types, we credit dataflow.
+    Annotation-sourced enrichment (param annotations, return type, literal
+    constants, len()) is credited to annotations.
+    """
+    env = func.assignment_env
+    param_types = func.param_types
+
+    if point_node_type == "Return":
+        # Return type always comes from the explicit return annotation.
+        return False
+
+    if point_node_type == "BoolOp":
+        # BoolOp is hardcoded to "bool"; no env lookup involved.
+        return False
+
+    if point_node_type == "BinOp":
+        node = _find_node_at(tree, point_lineno, point_col_offset, "BinOp")
+        if isinstance(node, ast.BinOp):
+            return _operand_from_env_not_param(node.left, env, param_types) or (
+                _type_of_operand(node.left, func, env) is None
+                and _operand_from_env_not_param(node.right, env, param_types)
+            )
+        return False
+
+    if point_node_type == "Compare":
+        node = _find_node_at(tree, point_lineno, point_col_offset, "Compare")
+        if isinstance(node, ast.Compare):
+            if _operand_from_env_not_param(node.left, env, param_types):
+                return True
+            for comp in node.comparators:
+                if _operand_from_env_not_param(comp, env, param_types):
+                    return True
+        return False
+
+    if point_node_type == "AugAssign":
+        node = _find_node_at(tree, point_lineno, point_col_offset, "AugAssign")
+        if isinstance(node, ast.AugAssign):
+            return _operand_from_env_not_param(node.target, env, param_types) or (
+                _type_of_operand(node.target, func, env) is None
+                and _operand_from_env_not_param(node.value, env, param_types)
+            )
+        return False
+
+    if point_node_type == "UnaryOp":
+        node = _find_node_at(tree, point_lineno, point_col_offset, "UnaryOp")
+        if isinstance(node, ast.UnaryOp):
+            return _operand_from_env_not_param(node.operand, env, param_types)
+        return False
+
+    return False
+
+
+def _operand_from_env_not_param(
+    operand: ast.expr,
+    env: dict[str, str | None],
+    param_types: dict[str, str],
+) -> bool:
+    """Return True if *operand* is a Name whose type comes from env, not param_types."""
+    if isinstance(operand, ast.Name):
+        name = operand.id
+        if name in env and env[name] is not None:
+            return name not in param_types
+    return False
+
+
+def _type_of_operand(
+    operand: ast.expr,
+    func: _FuncInfo,
+    env: dict[str, str | None],
+) -> str | None:
+    """Lightweight helper: return the type of a single operand or None."""
+    return _infer_expr_type(operand, func, env)
+
+
 def enrich_mutation_points(
     source: str, points: list[MutationPoint]
-) -> list[MutationPoint]:
-    """Add inferred type information to mutation points."""
+) -> tuple[list[MutationPoint], EnrichmentStats]:
+    """Add inferred type information to mutation points.
+
+    Returns a tuple of (enriched_points, stats) where *stats* breaks down how
+    many points received their type from parameter/return annotations versus
+    from local-variable assignment dataflow.
+    """
     if not points:
-        return points
+        return points, EnrichmentStats()
 
     tree = ast.parse(source)
     collector = _TypeCollector()
     collector.visit(tree)
 
     enriched: list[MutationPoint] = []
+    stats = EnrichmentStats()
+
     for point in points:
         func = _find_enclosing_func(collector.functions, point.lineno)
         if func is None:
@@ -358,8 +454,20 @@ def enrich_mutation_points(
                 )
 
         if inferred_type is not None:
+            from_dataflow = _type_came_from_dataflow(
+                inferred_type,
+                point.node_type,
+                func,
+                tree,
+                point.lineno,
+                point.col_offset,
+            )
+            if from_dataflow:
+                stats.from_assignment_dataflow += 1
+            else:
+                stats.from_annotations += 1
             point = replace(point, inferred_type=inferred_type)
 
         enriched.append(point)
 
-    return enriched
+    return enriched, stats

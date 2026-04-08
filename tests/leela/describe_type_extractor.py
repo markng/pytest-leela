@@ -11,7 +11,7 @@ def describe_enrich_mutation_points():
     def it_infers_int_type_from_parameter_annotation():
         source = "def f(x: int, y: int) -> int:\n    return x + y\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         binops = [p for p in enriched if p.node_type == "BinOp"]
         assert len(binops) >= 1
         assert binops[0].inferred_type == "int"
@@ -19,7 +19,7 @@ def describe_enrich_mutation_points():
     def it_infers_str_type_from_parameter_annotation():
         source = "def f(a: str, b: str) -> str:\n    return a + b\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         binops = [p for p in enriched if p.node_type == "BinOp"]
         assert len(binops) >= 1
         assert binops[0].inferred_type == "str"
@@ -27,7 +27,7 @@ def describe_enrich_mutation_points():
     def it_infers_return_type_for_return_nodes():
         source = "def f() -> bool:\n    return True\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         returns = [p for p in enriched if p.node_type == "Return"]
         assert len(returns) == 1
         assert returns[0].inferred_type == "bool"
@@ -35,7 +35,7 @@ def describe_enrich_mutation_points():
     def it_handles_optional_return_types():
         source = "from typing import Optional\ndef f(x: int) -> Optional[int]:\n    if x > 0:\n        return x\n    return None\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         returns = [p for p in enriched if p.node_type == "Return"]
         for r in returns:
             assert r.inferred_type == "Optional[int]"
@@ -43,7 +43,7 @@ def describe_enrich_mutation_points():
     def it_leaves_unannotated_as_none():
         source = "def f(x, y):\n    return x + y\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         binops = [p for p in enriched if p.node_type == "BinOp"]
         assert len(binops) >= 1
         assert binops[0].inferred_type is None
@@ -51,7 +51,7 @@ def describe_enrich_mutation_points():
     def it_infers_float_type_from_annotation():
         source = "def f(x: float, y: float) -> float:\n    return x + y\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         binops = [p for p in enriched if p.node_type == "BinOp"]
         assert len(binops) >= 1
         assert binops[0].inferred_type == "float"
@@ -59,19 +59,19 @@ def describe_enrich_mutation_points():
     def it_infers_bool_for_boolop():
         source = "def f(a: bool, b: bool) -> bool:\n    return a and b\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         boolops = [p for p in enriched if p.node_type == "BoolOp"]
         assert len(boolops) >= 1
         assert boolops[0].inferred_type == "bool"
 
     def it_returns_empty_list_unchanged():
-        enriched = enrich_mutation_points("def f(): pass\n", [])
+        enriched, _ = enrich_mutation_points("def f(): pass\n", [])
         assert enriched == []
 
     def it_infers_type_from_constant_operand():
         source = "def f(x):\n    return x + 1\n"
         points = find_mutation_points(source, "test.py", "test")
-        enriched = enrich_mutation_points(source, points)
+        enriched, _ = enrich_mutation_points(source, points)
         binops = [p for p in enriched if p.node_type == "BinOp"]
         assert len(binops) >= 1
         assert binops[0].inferred_type == "int"
@@ -83,7 +83,7 @@ def describe_enrich_mutation_points():
             """L15: str constant annotation (forward reference like 'int')."""
             source = 'def f(x: "int") -> "bool":\n    return x > 0\n'
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             compares = [p for p in enriched if p.node_type == "Compare"]
             assert len(compares) >= 1
             assert compares[0].inferred_type == "int"
@@ -95,7 +95,7 @@ def describe_enrich_mutation_points():
             """L16: non-str constant annotation (None -> 'None')."""
             source = "def f(x: None, y: int) -> int:\n    return x + y\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # x has annotation None -> _annotation_to_str returns str(None) = "None"
@@ -106,7 +106,7 @@ def describe_enrich_mutation_points():
             """L21-22: Attribute annotation like typing.Optional."""
             source = "import typing\ndef f() -> typing.Optional:\n    return None\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "typing.Optional"
@@ -115,7 +115,7 @@ def describe_enrich_mutation_points():
             """L23: Attribute with base that _annotation_to_str can't resolve."""
             source = "def f(x: foo().bar, y: int) -> int:\n    return x + y\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # x annotation unresolvable (foo().bar -> None), y is "int"
@@ -126,7 +126,7 @@ def describe_enrich_mutation_points():
             """L26-29: Optional[T] with resolvable inner type."""
             source = "from typing import Optional\ndef f(x: Optional[str]) -> Optional[int]:\n    return len(x)\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "Optional[int]"
@@ -135,7 +135,7 @@ def describe_enrich_mutation_points():
             """L28 false path: Optional[<unresolvable>] returns just 'Optional'."""
             source = "from typing import Optional\ndef f() -> Optional[foo().bar]:\n    return None\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             # inner is unresolvable -> falls through to return base ("Optional")
@@ -145,7 +145,7 @@ def describe_enrich_mutation_points():
             """list[T] -> 'list'."""
             source = "def f(x: list[int]) -> list[int]:\n    return x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "list"
@@ -154,7 +154,7 @@ def describe_enrich_mutation_points():
             """dict[K, V] -> 'dict'."""
             source = "def f(x: dict[str, int]) -> dict[str, int]:\n    return x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "dict"
@@ -163,7 +163,7 @@ def describe_enrich_mutation_points():
             """set[T] -> 'set'."""
             source = "def f(x: set[int]) -> set[int]:\n    return x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "set"
@@ -172,7 +172,7 @@ def describe_enrich_mutation_points():
             """tuple[T, ...] -> 'tuple'."""
             source = "def f(x: tuple[int, str]) -> tuple[int, str]:\n    return x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "tuple"
@@ -181,7 +181,7 @@ def describe_enrich_mutation_points():
             """L32: Subscript with non-container base returns base name."""
             source = "from typing import Sequence\ndef f() -> Sequence[int]:\n    return []\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "Sequence"
@@ -190,7 +190,7 @@ def describe_enrich_mutation_points():
             """L33, L37-38: X | None -> Optional[X]."""
             source = "def f(x: int | None) -> int | None:\n    return x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "Optional[int]"
@@ -199,7 +199,7 @@ def describe_enrich_mutation_points():
             """L39-40: None | X -> Optional[X]."""
             source = "def f(x: None | str) -> None | str:\n    return x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type == "Optional[str]"
@@ -208,7 +208,7 @@ def describe_enrich_mutation_points():
             """L41-42: X | Y (neither None) -> None."""
             source = "def f(x: int | str) -> int | str:\n    return x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             returns = [p for p in enriched if p.node_type == "Return"]
             assert len(returns) >= 1
             assert returns[0].inferred_type is None
@@ -217,7 +217,7 @@ def describe_enrich_mutation_points():
             """L41: BitOr with left=None (unresolvable) -> None."""
             source = "def f(x: foo() | bar()) -> int:\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             # Filter to the Add BinOp on line 2 (not the BitOr in the annotation)
             add_binops = [
                 p for p in enriched if p.node_type == "BinOp" and p.original_op == "Add"
@@ -230,7 +230,7 @@ def describe_enrich_mutation_points():
             """L42: final return None for unhandled AST node types (e.g. Set)."""
             source = "def f(x: {1, 2}, y: int) -> int:\n    return x + y\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # x annotation is a Set literal — not handled -> None
@@ -244,7 +244,7 @@ def describe_enrich_mutation_points():
             """L133: bool literal not classified as int (bool is subclass of int)."""
             source = "def f(x):\n    return x + True\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # True is bool, not int — must return "bool" not "int"
@@ -254,7 +254,7 @@ def describe_enrich_mutation_points():
             """L135-136: float constant in BinOp."""
             source = "def f(x):\n    return x + 1.5\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "float"
@@ -263,7 +263,7 @@ def describe_enrich_mutation_points():
             """L137-138: str constant in BinOp."""
             source = 'def f(x):\n    return x + "hello"\n'
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "str"
@@ -272,7 +272,7 @@ def describe_enrich_mutation_points():
             """L139-140: bool constant returns 'bool'."""
             source = "def f(x):\n    return x + False\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "bool"
@@ -281,7 +281,7 @@ def describe_enrich_mutation_points():
             """L141-143: len() call returns 'int'."""
             source = "def f(x, y):\n    return len(x) + y\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "int"
@@ -290,7 +290,7 @@ def describe_enrich_mutation_points():
             """L142: non-len Call returns None."""
             source = "def f(x, y):\n    return abs(x) + y\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # abs() is not len(), neither operand has type info
@@ -303,7 +303,7 @@ def describe_enrich_mutation_points():
             """L152-153: left operand has annotation."""
             source = "def f(x: int) -> bool:\n    return x > 0\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             compares = [p for p in enriched if p.node_type == "Compare"]
             assert len(compares) >= 1
             assert compares[0].inferred_type == "int"
@@ -312,7 +312,7 @@ def describe_enrich_mutation_points():
             """L156-157: only comparator is typed (int literal)."""
             source = "def f(x):\n    return x > 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             compares = [p for p in enriched if p.node_type == "Compare"]
             assert len(compares) >= 1
             assert compares[0].inferred_type == "int"
@@ -321,7 +321,7 @@ def describe_enrich_mutation_points():
             """L158: neither left nor comparators have type info."""
             source = "def f(x, y):\n    return x > y\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             compares = [p for p in enriched if p.node_type == "Compare"]
             assert len(compares) >= 1
             assert compares[0].inferred_type is None
@@ -330,7 +330,7 @@ def describe_enrich_mutation_points():
             """L156-157: comparator is a float literal."""
             source = "def f(x):\n    return x > 1.5\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             compares = [p for p in enriched if p.node_type == "Compare"]
             assert len(compares) >= 1
             assert compares[0].inferred_type == "float"
@@ -363,7 +363,7 @@ def describe_enrich_mutation_points():
                 return tree
 
             monkeypatch.setattr(ast, "parse", nullify_end_lineno)
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # With + 100: end_line = 1 + 100 = 101, BinOp at line 101 is within [1, 101]
@@ -374,7 +374,7 @@ def describe_enrich_mutation_points():
             """L112: _find_enclosing_func returns None for module-level code."""
             source = "x = 1 + 2\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type is None
@@ -399,7 +399,7 @@ def describe_enrich_mutation_points():
                 original_op="Add",
                 inferred_type=None,
             )
-            enriched = enrich_mutation_points(source, [bad_point])
+            enriched, _ = enrich_mutation_points(source, [bad_point])
             assert enriched[0].inferred_type is None
 
         def it_leaves_type_none_when_compare_node_not_found():
@@ -414,7 +414,7 @@ def describe_enrich_mutation_points():
                 original_op="Gt",
                 inferred_type=None,
             )
-            enriched = enrich_mutation_points(source, [bad_point])
+            enriched, _ = enrich_mutation_points(source, [bad_point])
             assert enriched[0].inferred_type is None
 
         def it_leaves_type_none_when_unaryop_node_not_found():
@@ -429,7 +429,7 @@ def describe_enrich_mutation_points():
                 original_op="USub",
                 inferred_type=None,
             )
-            enriched = enrich_mutation_points(source, [bad_point])
+            enriched, _ = enrich_mutation_points(source, [bad_point])
             assert enriched[0].inferred_type is None
 
     # --- Enrichment dispatch (L195-214) ---
@@ -439,7 +439,7 @@ def describe_enrich_mutation_points():
             """L211-214: UnaryOp node type gets enriched from operand type."""
             source = "def f(x: int) -> int:\n    return -x\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             unaryops = [p for p in enriched if p.node_type == "UnaryOp"]
             assert len(unaryops) >= 1
             assert unaryops[0].inferred_type == "int"
@@ -448,7 +448,7 @@ def describe_enrich_mutation_points():
             """L198-201: BinOp enrichment produces correct type."""
             source = "def f(x: float) -> float:\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # Left operand x has type "float", should take precedence over right (int)
@@ -458,7 +458,7 @@ def describe_enrich_mutation_points():
             """L203-206: Compare enrichment through node lookup."""
             source = "def f(x: str) -> bool:\n    return x > 'a'\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             compares = [p for p in enriched if p.node_type == "Compare"]
             assert len(compares) >= 1
             assert compares[0].inferred_type == "str"
@@ -467,7 +467,7 @@ def describe_enrich_mutation_points():
             """Async functions are processed the same as sync functions."""
             source = "async def f(x: int) -> int:\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "int"
@@ -484,14 +484,14 @@ def describe_enrich_mutation_points():
                 original_op="Unknown",
                 inferred_type=None,
             )
-            enriched = enrich_mutation_points(source, [unknown_point])
+            enriched, _ = enrich_mutation_points(source, [unknown_point])
             assert enriched[0].inferred_type is None
 
     def describe_augmented_assignment():
         def it_infers_type_from_target_annotation():
             source = "def f(x: int) -> None:\n    x += 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             augassigns = [p for p in enriched if p.node_type == "AugAssign"]
             assert len(augassigns) == 1
             assert augassigns[0].inferred_type == "int"
@@ -499,7 +499,7 @@ def describe_enrich_mutation_points():
         def it_infers_type_from_value_when_target_untyped():
             source = "def f(x) -> None:\n    x += 1.5\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             augassigns = [p for p in enriched if p.node_type == "AugAssign"]
             assert len(augassigns) == 1
             assert augassigns[0].inferred_type == "float"
@@ -507,7 +507,7 @@ def describe_enrich_mutation_points():
         def it_leaves_type_none_when_both_untyped():
             source = "def f(x) -> None:\n    x += y\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             augassigns = [p for p in enriched if p.node_type == "AugAssign"]
             assert len(augassigns) == 1
             assert augassigns[0].inferred_type is None
@@ -523,13 +523,13 @@ def describe_enrich_mutation_points():
                 original_op="Add",
                 inferred_type=None,
             )
-            enriched = enrich_mutation_points(source, [bad_point])
+            enriched, _ = enrich_mutation_points(source, [bad_point])
             assert enriched[0].inferred_type is None
 
         def it_infers_str_type_from_target():
             source = "def f(s: str) -> None:\n    s += 'world'\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             augassigns = [p for p in enriched if p.node_type == "AugAssign"]
             assert len(augassigns) == 1
             assert augassigns[0].inferred_type == "str"
@@ -543,7 +543,7 @@ def describe_enrich_mutation_points():
             """x = 5 before a BinOp using x should resolve x to int."""
             source = "def f():\n    x = 5\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "int"
@@ -552,7 +552,7 @@ def describe_enrich_mutation_points():
             """x = 1.5 should propagate float type."""
             source = "def f():\n    x = 1.5\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "float"
@@ -561,7 +561,7 @@ def describe_enrich_mutation_points():
             """x = 'hello' should propagate str type."""
             source = "def f():\n    x = \"hello\"\n    return x + 'world'\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "str"
@@ -570,7 +570,7 @@ def describe_enrich_mutation_points():
             """x: int = ... should use the annotation, not the value."""
             source = "def f():\n    x: int = compute()\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "int"
@@ -579,7 +579,7 @@ def describe_enrich_mutation_points():
             """y = x where x: int should propagate int to y."""
             source = "def f(x: int):\n    y = x\n    return y + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "int"
@@ -588,7 +588,7 @@ def describe_enrich_mutation_points():
             """If x is assigned int then str, type should be unknown (None)."""
             source = 'def f():\n    x = 1\n    x = "hello"\n    return x + 1\n'
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # Conflicting assignments → unknown; falls back to int from literal '1'
@@ -604,7 +604,7 @@ def describe_enrich_mutation_points():
                 "    return value > threshold\n"
             )
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             compares = [p for p in enriched if p.node_type == "Compare"]
             assert len(compares) >= 1
             assert compares[0].inferred_type == "int"
@@ -613,7 +613,7 @@ def describe_enrich_mutation_points():
             """n = len(items) should be inferred as int."""
             source = "def f(items):\n    n = len(items)\n    return n + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "int"
@@ -622,7 +622,7 @@ def describe_enrich_mutation_points():
             """Assignments inside if/for/while blocks are not walked."""
             source = "def f():\n    if True:\n        x = 5\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # x is only assigned inside an if block — not in top-level body
@@ -634,7 +634,7 @@ def describe_enrich_mutation_points():
             """x: int (no assignment) should still populate env."""
             source = "def f():\n    x: int\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             assert binops[0].inferred_type == "int"
@@ -643,8 +643,82 @@ def describe_enrich_mutation_points():
             """If a param x: float is shadowed by x = 5 (int), env wins."""
             source = "def f(x: float):\n    x = 5\n    return x + 1\n"
             points = find_mutation_points(source, "test.py", "test")
-            enriched = enrich_mutation_points(source, points)
+            enriched, _ = enrich_mutation_points(source, points)
             binops = [p for p in enriched if p.node_type == "BinOp"]
             assert len(binops) >= 1
             # env wins: x = 5 is int, overrides param annotation float
             assert binops[0].inferred_type == "int"
+
+
+def describe_enrichment_stats():
+    """Verify EnrichmentStats tracking in enrich_mutation_points."""
+
+    def it_returns_empty_stats_for_empty_points():
+        _, stats = enrich_mutation_points("def f(): pass\n", [])
+        assert stats.from_annotations == 0
+        assert stats.from_assignment_dataflow == 0
+
+    def it_counts_annotation_enrichment():
+        """Parameter annotation enrichment goes to from_annotations."""
+        source = "def f(x: int, y: int) -> int:\n    return x + y\n"
+        points = find_mutation_points(source, "test.py", "test")
+        _, stats = enrich_mutation_points(source, points)
+        assert stats.from_annotations > 0
+        assert stats.from_assignment_dataflow == 0
+
+    def it_counts_return_annotation_enrichment():
+        """Return annotation enrichment goes to from_annotations."""
+        source = "def f() -> bool:\n    return True\n"
+        points = find_mutation_points(source, "test.py", "test")
+        _, stats = enrich_mutation_points(source, points)
+        assert stats.from_annotations >= 1
+        assert stats.from_assignment_dataflow == 0
+
+    def it_counts_dataflow_enrichment_from_literal_assignment():
+        """Assignment from literal (x = 5) goes to from_assignment_dataflow."""
+        source = "def f():\n    x = 5\n    return x + 1\n"
+        points = find_mutation_points(source, "test.py", "test")
+        _, stats = enrich_mutation_points(source, points)
+        # x is in env (not param_types), so the BinOp is credited to dataflow
+        assert stats.from_assignment_dataflow >= 1
+
+    def it_counts_dataflow_enrichment_from_compare():
+        """Dataflow through Compare node is counted as assignment dataflow."""
+        source = "def f():\n    threshold = 10\n    return threshold > 5\n"
+        points = find_mutation_points(source, "test.py", "test")
+        _, stats = enrich_mutation_points(source, points)
+        assert stats.from_assignment_dataflow >= 1
+
+    def it_buckets_are_mutually_exclusive():
+        """Each enriched point is in exactly one bucket (total = annotations + dataflow)."""
+        source = "def f(x: int) -> int:\n    y = 5\n    return x + y\n"
+        points = find_mutation_points(source, "test.py", "test")
+        enriched, stats = enrich_mutation_points(source, points)
+        enriched_count = sum(1 for p in enriched if p.inferred_type is not None)
+        assert enriched_count == stats.from_annotations + stats.from_assignment_dataflow
+
+    def it_returns_zero_stats_when_no_types_inferred():
+        """Unannotated functions with no literal assignments produce zero stats."""
+        source = "def f(x, y):\n    return x + y\n"
+        points = find_mutation_points(source, "test.py", "test")
+        _, stats = enrich_mutation_points(source, points)
+        # x + y: neither x nor y has a type source
+        # BUT: the right-hand literal path isn't here — x and y are both params
+        assert stats.from_annotations == 0
+        assert stats.from_assignment_dataflow == 0
+
+    def it_counts_boolop_as_annotation():
+        """BoolOp is hardcoded to 'bool' — not from dataflow."""
+        source = "def f(a, b):\n    return a and b\n"
+        points = find_mutation_points(source, "test.py", "test")
+        _, stats = enrich_mutation_points(source, points)
+        assert stats.from_annotations >= 1
+        assert stats.from_assignment_dataflow == 0
+
+    def it_unannotated_module_level_code_is_uncounted():
+        """Module-level mutation points outside any function produce no stats."""
+        source = "x = 1 + 2\n"
+        points = find_mutation_points(source, "test.py", "test")
+        _, stats = enrich_mutation_points(source, points)
+        assert stats.from_annotations == 0
+        assert stats.from_assignment_dataflow == 0
