@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import math
 import ntpath  # noqa: F401 — keep in sys.modules (see engine.py comment)
 import os
 import posixpath  # noqa: F401 — same as ntpath
@@ -202,6 +203,8 @@ def run_tests_for_mutant(
         # infinite loops from control-flow mutations (e.g. break→continue).
         # SIGALRM is used instead of threading.Timer because daemon threads
         # can cause segfaults during Python 3.14's session teardown GC.
+        # Note: signal.SIGALRM is Unix-only; the pytest-leela test harness
+        # only runs on Unix (Linux/macOS) where this is intentional.
         timed_out = False
         timeout_seconds: float | None = None
         old_handler = signal.SIG_DFL
@@ -215,7 +218,7 @@ def run_tests_for_mutant(
                 raise SystemExit("leela: mutant timeout")
 
             old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(int(timeout_seconds))
+            signal.alarm(math.ceil(timeout_seconds))
 
         plugins: list[Any] = [collector]
 
@@ -227,6 +230,9 @@ def run_tests_for_mutant(
             ):
                 pytest.main(args, plugins=plugins)
         except (Exception, SystemExit):
+            # Cancel the alarm and restore the handler first.
+            if timeout_seconds is not None:
+                signal.alarm(0)
             # A mutation that crashes the test runner (or times out)
             # counts as killed.
             elapsed = time.monotonic() - start
