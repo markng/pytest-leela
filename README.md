@@ -98,7 +98,7 @@ pytest --leela-benchmark
 - **Per-test coverage mapping** — each mutant runs only the tests that exercise its lines,
   not the whole suite
 - **In-process execution via import hooks** — mutations applied via `sys.meta_path`, zero
-  filesystem writes, fast loop
+  filesystem writes, fast loop. Per-mutant timeouts use `signal.SIGALRM` (Unix-only).
 - **Git diff mode** — `--diff <ref>` limits mutations to lines changed since that ref
 - **Framework-aware** — clears Django URL caches between mutants so view reloads work correctly
 - **Resource limits** — `--max-cores N` caps parallelism; `--max-memory MB` guards memory

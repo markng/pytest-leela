@@ -562,6 +562,170 @@ def describe_run_tests_for_mutant_timeout():
         assert result.killed is True
         assert result.killing_test == "<crashed>"
 
+    def it_computes_elapsed_time_by_subtraction_in_timed_out_path(
+        tmp_path, monkeypatch
+    ):
+        """Kills line 277: ``- → +/*`` in elapsed calculation within timed_out block.
+
+        Mocks time.monotonic to return large, decreasing values so that
+        subtraction gives a small positive elapsed time, while addition or
+        multiplication would give an astronomically large value (>> 60s),
+        causing the assertion to fail.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
+
+        handler_closure: dict[str, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> object:
+            if signum == signal.SIGALRM:
+                if handler == signal.SIG_DFL:
+                    return signal.SIG_DFL
+                handler_closure["func"] = handler
+                return signal.SIG_DFL
+            return signal.SIG_DFL
+
+        def fake_alarm(seconds: int) -> int:
+            return 0
+
+        def pytest_main_that_simulates_timeout(*args: object, **kwargs: object) -> int:
+            # Invoke the handler (sets timed_out=True + raises SystemExit)
+            if handler_closure.get("func") is not None:
+                handler_closure["func"](signal.SIGALRM, None)  # type: ignore[index]
+            return 0  # pytest caught the SystemExit internally
+
+        # Large decreasing values: elapsed = 200002.0 - 200000.0 = 2.0
+        # Mutation ``- → +``: 200002.0 + 200000.0 = 400002.0 >> 60 → assertion fails
+        # Mutation ``- → *``: 200002.0 * 200000.0 = 4e10 >> 60 → assertion fails
+        with (
+            patch(
+                "pytest_leela.runner.time.monotonic",
+                side_effect=[200000.0, 200002.0],
+            ),
+            patch("pytest_leela.runner.signal.alarm", fake_alarm),
+            patch("pytest_leela.runner.signal.signal", fake_signal),
+            patch(
+                "pytest_leela.runner.pytest.main",
+                pytest_main_that_simulates_timeout,
+            ),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        assert result.killed is True
+        assert result.killing_test == "<timeout>"
+        # Kills line 277: - → +/* would give >> 60
+        assert 0 <= result.time_seconds < 60
+
+    def it_returns_a_mutant_result_not_none_in_timed_out_path(tmp_path, monkeypatch):
+        """Kills line 278: ``return expr → return None`` in timed_out block.
+
+        When pytest catches the timeout internally and returns normally,
+        the timed_out check must return a valid MutantResult, not None.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
+
+        handler_closure: dict[str, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> object:
+            if signum == signal.SIGALRM:
+                if handler == signal.SIG_DFL:
+                    return signal.SIG_DFL
+                handler_closure["func"] = handler
+                return signal.SIG_DFL
+            return signal.SIG_DFL
+
+        def fake_alarm(seconds: int) -> int:
+            return 0
+
+        def pytest_main_that_simulates_timeout(*args: object, **kwargs: object) -> int:
+            if handler_closure.get("func") is not None:
+                handler_closure["func"](signal.SIGALRM, None)  # type: ignore[index]
+            return 0
+
+        with (
+            patch("pytest_leela.runner.time.monotonic", side_effect=[0.0, 1.0]),
+            patch("pytest_leela.runner.signal.alarm", fake_alarm),
+            patch("pytest_leela.runner.signal.signal", fake_signal),
+            patch(
+                "pytest_leela.runner.pytest.main",
+                pytest_main_that_simulates_timeout,
+            ),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        # Kills line 278: return expr → return None
+        assert result is not None
+        assert isinstance(result, MutantResult)
+        assert result.killed is True
+
+    def it_calculates_test_ids_run_via_list_concatenation(tmp_path, monkeypatch):
+        """Kills line 284: ``+ → -/*`` in test_ids_run calculation.
+
+        When pytest catches the timeout internally, the timed_out block computes
+        test_ids_run as collector.passed + collector.failed + collector.errors.
+        With empty collector lists, the expression is []. If any + operator is
+        mutated to - or *, Python raises TypeError (list - list or list * list),
+        killing the mutant.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture_for_timeout(tmp_path)
+
+        handler_closure: dict[str, object] = {}
+
+        def fake_signal(signum: int, handler: object) -> object:
+            if signum == signal.SIGALRM:
+                if handler == signal.SIG_DFL:
+                    return signal.SIG_DFL
+                handler_closure["func"] = handler
+                return signal.SIG_DFL
+            return signal.SIG_DFL
+
+        def fake_alarm(seconds: int) -> int:
+            return 0
+
+        def pytest_main_that_simulates_timeout(*args: object, **kwargs: object) -> int:
+            if handler_closure.get("func") is not None:
+                handler_closure["func"](signal.SIGALRM, None)  # type: ignore[index]
+            return 0
+
+        with (
+            patch("pytest_leela.runner.time.monotonic", side_effect=[0.0, 1.0]),
+            patch("pytest_leela.runner.signal.alarm", fake_alarm),
+            patch("pytest_leela.runner.signal.signal", fake_signal),
+            patch(
+                "pytest_leela.runner.pytest.main",
+                pytest_main_that_simulates_timeout,
+            ),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        assert result.killed is True
+        assert result.killing_test == "<timeout>"
+        # Kills line 284: any + → - or + → * causes TypeError (list ±/* list)
+        assert isinstance(result.test_ids_run, list)
+
 
 def _make_mutant_fixture_for_timeout(tmp_path):
     """Shared fixture for timeout-related tests."""
