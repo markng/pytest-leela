@@ -192,3 +192,42 @@ def describe_is_memory_ok():
         limits = ResourceLimits(max_memory_percent=80)
         with patch("pytest_leela.resources.check_memory_usage", return_value=80.0):
             assert is_memory_ok(limits) is False
+
+
+def describe_effective_cores_integer_division():
+    """Kill resources.py line 22: // → / (float division vs integer division).
+
+    With // (correct): odd core count halved gives an int (e.g. 7 // 2 = 3).
+    With / (mutant): odd core count halved gives a float (e.g. 7 / 2 = 3.5).
+    The return type must be int, not float.
+    """
+
+    def it_returns_an_int_for_odd_cpu_count():
+        """7 CPUs: default should be 3 (int), not 3.5 (float).
+
+        Kills line 22: available // 2 → available / 2.
+        """
+        limits = ResourceLimits()
+        with patch("pytest_leela.resources.os.cpu_count", return_value=7):
+            result = limits.effective_cores
+        assert result == 3
+        assert isinstance(result, int)
+
+    def it_returns_an_int_for_even_cpu_count():
+        """8 CPUs: default should be 4 (int), identical for both // and /."""
+        limits = ResourceLimits()
+        with patch("pytest_leela.resources.os.cpu_count", return_value=8):
+            result = limits.effective_cores
+        assert result == 4
+        assert isinstance(result, int)
+
+    def it_returns_an_int_for_three_cpus():
+        """3 CPUs: 3 // 2 = 1 (int), 3 / 2 = 1.5 (float).
+
+        Kills line 22: // → / would return 1.5 instead of 1.
+        """
+        limits = ResourceLimits()
+        with patch("pytest_leela.resources.os.cpu_count", return_value=3):
+            result = limits.effective_cores
+        assert result == 1
+        assert isinstance(result, int)

@@ -79,6 +79,13 @@ def format_terminal_report(result: RunResult) -> str:
     lines.append(
         f"Mutants: {result.total_mutants} candidates, {result.mutants_pruned} pruned by type analysis"
     )
+    stats = result.enrichment_stats
+    total_enriched = stats.from_annotations + stats.from_assignment_dataflow
+    if total_enriched > 0:
+        lines.append(
+            f"  Type enrichment: {stats.from_annotations} from annotations, "
+            f"{stats.from_assignment_dataflow} from assignment dataflow"
+        )
     lines.append("")
 
     # Per-file results

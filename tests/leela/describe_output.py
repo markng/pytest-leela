@@ -4,7 +4,13 @@ import json
 
 import pytest
 
-from pytest_leela.models import Mutant, MutantResult, MutationPoint, RunResult
+from pytest_leela.models import (
+    EnrichmentStats,
+    Mutant,
+    MutantResult,
+    MutationPoint,
+    RunResult,
+)
 from pytest_leela.output import (
     _op_display,
     _pct,
@@ -279,6 +285,76 @@ def describe_format_terminal_report():
         )
         report = format_terminal_report(run)
         assert "SURVIVED" not in report
+
+    def it_shows_enrichment_stats_when_nonzero():
+        """Type enrichment line appears when at least one point was enriched."""
+        run = RunResult(
+            target_files=["src/app.py"],
+            total_mutants=10,
+            mutants_tested=8,
+            mutants_pruned=2,
+            results=[_make_result(killed=True)],
+            wall_time_seconds=1.0,
+            enrichment_stats=EnrichmentStats(
+                from_annotations=5, from_assignment_dataflow=3
+            ),
+        )
+        report = format_terminal_report(run)
+        assert (
+            "Type enrichment: 5 from annotations, 3 from assignment dataflow" in report
+        )
+
+    def it_hides_enrichment_stats_when_zero():
+        """Type enrichment line is absent when no points were enriched."""
+        run = RunResult(
+            target_files=["src/app.py"],
+            total_mutants=5,
+            mutants_tested=5,
+            mutants_pruned=0,
+            results=[_make_result(killed=True)],
+            wall_time_seconds=1.0,
+            enrichment_stats=EnrichmentStats(
+                from_annotations=0, from_assignment_dataflow=0
+            ),
+        )
+        report = format_terminal_report(run)
+        assert "Type enrichment" not in report
+
+    def it_shows_enrichment_stats_with_only_annotations():
+        """Only-annotation enrichment shows correctly (dataflow=0)."""
+        run = RunResult(
+            target_files=["src/app.py"],
+            total_mutants=5,
+            mutants_tested=3,
+            mutants_pruned=2,
+            results=[_make_result(killed=True)],
+            wall_time_seconds=1.0,
+            enrichment_stats=EnrichmentStats(
+                from_annotations=4, from_assignment_dataflow=0
+            ),
+        )
+        report = format_terminal_report(run)
+        assert (
+            "Type enrichment: 4 from annotations, 0 from assignment dataflow" in report
+        )
+
+    def it_shows_enrichment_stats_with_only_dataflow():
+        """Only-dataflow enrichment shows correctly (annotations=0)."""
+        run = RunResult(
+            target_files=["src/app.py"],
+            total_mutants=5,
+            mutants_tested=3,
+            mutants_pruned=2,
+            results=[_make_result(killed=True)],
+            wall_time_seconds=1.0,
+            enrichment_stats=EnrichmentStats(
+                from_annotations=0, from_assignment_dataflow=7
+            ),
+        )
+        report = format_terminal_report(run)
+        assert (
+            "Type enrichment: 0 from annotations, 7 from assignment dataflow" in report
+        )
 
 
 def describe_pct():

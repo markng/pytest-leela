@@ -17,7 +17,13 @@ import types
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.coverage_tracker import collect_coverage
 from pytest_leela.git_diff import changed_lines
-from pytest_leela.models import CoverageMap, Mutant, MutantResult, RunResult
+from pytest_leela.models import (
+    CoverageMap,
+    EnrichmentStats,
+    Mutant,
+    MutantResult,
+    RunResult,
+)
 from pytest_leela.operators import build_allowed_keys, count_pruned, mutations_for
 from pytest_leela.resources import ResourceLimits, apply_limits, is_memory_ok
 from pytest_leela.runner import precompute_user_modules, run_tests_for_mutant
@@ -121,6 +127,7 @@ class Engine:
         target_codes: dict[str, types.CodeType] = {}
         module_to_file: dict[str, str] = {}
         total_pruned = 0
+        total_enrichment_stats = EnrichmentStats()
         mutant_id = 0
 
         for file_path in target_files:
@@ -137,7 +144,8 @@ class Engine:
             points = find_mutation_points(source, abs_path, module_name)
 
             # Type extraction
-            points = enrich_mutation_points(source, points)
+            points, file_stats = enrich_mutation_points(source, points)
+            total_enrichment_stats = total_enrichment_stats + file_stats
 
             # Track pruned count
             total_pruned += count_pruned(
@@ -232,4 +240,5 @@ class Engine:
             target_sources={
                 module_to_file[mod]: src for mod, src in target_sources.items()
             },
+            enrichment_stats=total_enrichment_stats,
         )
