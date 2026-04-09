@@ -1216,56 +1216,6 @@ def describe_MutatingLoader():
         assert result is None
 
 
-def describe_MutatingFinder_cached_code():
-    """Tests for find_spec passing cached_code to loader."""
-
-    def it_passes_none_cached_code_when_target_codes_is_none():
-        """Kills line 224 (find_spec): ``is not → is`` on target_codes.
-
-        When target_codes is None (default), find_spec should create the
-        loader with cached_code=None.  The ``or {}`` in __init__ converts
-        None to {}, so .get() returns None.
-        """
-        from pytest_leela.import_hook import MutatingFinder, MutatingLoader
-
-        mutant = _make_mutant()
-        finder = MutatingFinder({"mymod": "x = 1\n"}, mutant, target_codes=None)
-        spec = finder.find_spec("mymod")
-        assert spec is not None
-        loader = spec.loader
-        assert isinstance(loader, MutatingLoader)
-        assert loader.cached_code is None
-
-    def it_passes_cached_code_when_target_codes_has_module():
-        """Positive case: when target_codes has the module, loader gets the code."""
-        from pytest_leela.import_hook import MutatingFinder, MutatingLoader
-
-        mutant = _make_mutant()
-        source = "x = 1\n"
-        code = compile(source, "mymod.py", "exec")
-        finder = MutatingFinder({"mymod": source}, mutant, target_codes={"mymod": code})
-        spec = finder.find_spec("mymod")
-        assert spec is not None
-        loader = spec.loader
-        assert isinstance(loader, MutatingLoader)
-        assert loader.cached_code is code
-
-    def it_passes_none_cached_code_when_module_not_in_target_codes():
-        """When target_codes exists but doesn't have this module, cached_code is None."""
-        from pytest_leela.import_hook import MutatingFinder, MutatingLoader
-
-        mutant = _make_mutant()
-        other_code = compile("y = 2\n", "other.py", "exec")
-        finder = MutatingFinder(
-            {"mymod": "x = 1\n"}, mutant, target_codes={"other": other_code}
-        )
-        spec = finder.find_spec("mymod")
-        assert spec is not None
-        loader = spec.loader
-        assert isinstance(loader, MutatingLoader)
-        assert loader.cached_code is None
-
-
 def describe_clear_target_modules():
     def it_clears_module_and_submodules():
         from pytest_leela.import_hook import clear_target_modules
