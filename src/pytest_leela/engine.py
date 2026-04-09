@@ -12,7 +12,6 @@ import os
 import sys
 import tempfile
 import time
-import types
 
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.coverage_tracker import collect_coverage
@@ -118,7 +117,6 @@ class Engine:
         # 1-4. For each target file: read source, find mutation points, enrich types
         all_mutants: list[Mutant] = []
         target_sources: dict[str, str] = {}
-        target_codes: dict[str, types.CodeType] = {}
         module_to_file: dict[str, str] = {}
         total_pruned = 0
         mutant_id = 0
@@ -131,7 +129,6 @@ class Engine:
             module_name = _module_name_from_path(abs_path)
             target_sources[module_name] = source
             module_to_file[module_name] = abs_path
-            target_codes[module_name] = compile(source, abs_path, "exec")
 
             # AST analysis
             points = find_mutation_points(source, abs_path, module_name)
@@ -215,7 +212,6 @@ class Engine:
                 test_dir=test_dir,
                 known_user_modules=known_user_modules,
                 test_times=test_times,
-                target_codes=target_codes,
             )
             results.append(result)
 
