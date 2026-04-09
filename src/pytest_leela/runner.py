@@ -10,7 +10,6 @@ import posixpath  # noqa: F401 — same as ntpath
 import sys
 import threading
 import time
-import types
 from typing import Any
 
 # Save references to stdlib path modules.  During self-mutation the inner
@@ -153,7 +152,6 @@ def run_tests_for_mutant(
     test_dir: str | None = None,
     known_user_modules: frozenset[str] | None = None,
     test_times: dict[str, float] | None = None,
-    target_codes: dict[str, types.CodeType] | None = None,
 ) -> MutantResult:
     """Run tests against a single mutant, return the result."""
     start = time.monotonic()
@@ -161,7 +159,7 @@ def run_tests_for_mutant(
     module_names = list(target_sources.keys())
 
     # Install mutating import hook
-    finder = install_hook(target_sources, mutant, module_to_file, target_codes)
+    finder = install_hook(target_sources, mutant, module_to_file)
 
     # Clear target modules by name (they may lack __file__ when loaded
     # through the mutating import hook) and test modules by file path
