@@ -38,11 +38,8 @@ jobs:
         pytest
     - name: Mutation testing (self-check)
       run: |
-        # Exclude bytecode.py: it manipulates code objects, so mutating it
-        # produces invalid bytecode that crashes the interpreter (SIGSEGV)
         python -c "
         targets = [f for f in __import__('glob').glob('src/pytest_leela/*.py')
-                   if not f.endswith('__init__.py')
-                   and not f.endswith('bytecode.py')]
+                   if not f.endswith('__init__.py')]
         print(' '.join(f'--target {t}' for t in sorted(targets)))
         " | xargs pytest --leela
