@@ -8,26 +8,9 @@ import importlib.abc
 import importlib.machinery
 import sys
 import types
-from typing import Any, Callable
+from typing import Any
 
 from pytest_leela.models import Mutant
-
-# Pre-cache bytecode functions at import time.  Doing the import inside
-# exec_module() is fragile: during self-mutation the import machinery
-# would load a MUTATED version of bytecode.py, causing all mutations
-# to silently fail (0% kill rate).  Capturing references at module load
-# avoids the problem entirely — same pattern as _django_clear_url_caches
-# in runner.py.
-try:
-    from pytest_leela.bytecode import (
-        is_bytecode_eligible as _bc_is_eligible,
-        is_supported as _bc_is_supported,
-        mutate_code as _bc_mutate_code,
-    )
-except ImportError:
-    _bc_is_eligible = None
-    _bc_is_supported = None
-    _bc_mutate_code = None
 
 # AST operator classes by name
 _OP_CLASSES: dict[str, type] = {
@@ -221,32 +204,15 @@ class MutatingLoader(importlib.abc.Loader):
         source: str,
         mutant: Mutant,
         filename: str,
-        cached_code: types.CodeType | None = None,
     ) -> None:
         self.source = source
         self.mutant = mutant
         self.filename = filename
-        self.cached_code = cached_code
 
     def create_module(self, spec: importlib.machinery.ModuleSpec) -> None:
         return None
 
     def exec_module(self, module: types.ModuleType) -> None:
-        # Try bytecode path first when a cached code object is available.
-        # Uses pre-cached references to avoid loading a mutated bytecode.py
-        # during self-mutation.
-        if (
-            self.cached_code is not None
-            and _bc_is_supported is not None
-            and _bc_is_supported()
-            and _bc_is_eligible(self.mutant)
-        ):
-            mutated = _bc_mutate_code(self.cached_code, self.mutant)
-            if mutated is not None:
-                exec(mutated, module.__dict__)
-                return
-
-        # Fall back to AST pipeline
         tree = ast.parse(self.source, filename=self.filename)
         applier = MutantApplier(self.mutant)
         tree = applier.visit(tree)
@@ -262,12 +228,10 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         self,
         target_modules: dict[str, str],
         mutant: Mutant,
-        target_codes: dict[str, types.CodeType] | None = None,
     ) -> None:
         # target_modules: {module_name: source_code}
         self.target_modules = target_modules
         self.mutant = mutant
-        self.target_codes = target_codes or {}
         self._module_to_file: dict[str, str] = {}
         for mod_name in target_modules:
             self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
@@ -287,7 +251,6 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
                 self.target_modules[fullname],
                 self.mutant,
                 filename,
-                cached_code=self.target_codes.get(fullname),
             )
             return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
         return None
@@ -297,10 +260,9 @@ def install_hook(
     target_modules: dict[str, str],
     mutant: Mutant,
     module_to_file: dict[str, str] | None = None,
-    target_codes: dict[str, types.CodeType] | None = None,
 ) -> MutatingFinder:
     """Install a mutating import hook. Returns the finder for later removal."""
-    finder = MutatingFinder(target_modules, mutant, target_codes=target_codes)
+    finder = MutatingFinder(target_modules, mutant)
     if module_to_file:
         finder.set_file_paths(module_to_file)
     sys.meta_path.insert(0, finder)
