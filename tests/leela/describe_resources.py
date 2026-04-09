@@ -45,15 +45,15 @@ def describe_apply_cpu_limit():
     def it_calls_sched_setaffinity_with_correct_cores():
         with (
             patch("pytest_leela.resources.os.cpu_count", return_value=8),
-            patch("pytest_leela.resources.os.sched_setaffinity") as mock_set,
+            patch("pytest_leela.resources.os.sched_setaffinity", create=True) as mock_set,
         ):
             apply_cpu_limit(4)
             mock_set.assert_called_once_with(0, {0, 1, 2, 3})
 
-    def it_caps_cores_to_available(self=None):
+    def it_caps_cores_to_available():
         with (
             patch("pytest_leela.resources.os.cpu_count", return_value=2),
-            patch("pytest_leela.resources.os.sched_setaffinity") as mock_set,
+            patch("pytest_leela.resources.os.sched_setaffinity", create=True) as mock_set,
         ):
             apply_cpu_limit(8)
             mock_set.assert_called_once_with(0, {0, 1})
@@ -62,7 +62,7 @@ def describe_apply_cpu_limit():
         """cpu_count() or 4: when None, should use 4."""
         with (
             patch("pytest_leela.resources.os.cpu_count", return_value=None),
-            patch("pytest_leela.resources.os.sched_setaffinity") as mock_set,
+            patch("pytest_leela.resources.os.sched_setaffinity", create=True) as mock_set,
         ):
             apply_cpu_limit(2)
             mock_set.assert_called_once_with(0, {0, 1})
@@ -73,6 +73,7 @@ def describe_apply_cpu_limit():
             patch("pytest_leela.resources.os.cpu_count", return_value=4),
             patch(
                 "pytest_leela.resources.os.sched_setaffinity",
+                create=True,
                 side_effect=AttributeError,
             ),
         ):
