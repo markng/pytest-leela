@@ -213,6 +213,17 @@ class MutatingLoader(importlib.abc.Loader):
         return None
 
     def exec_module(self, module: types.ModuleType) -> None:
+        # Mirror the attribute population that
+        # importlib._bootstrap_external.SourceFileLoader performs via
+        # _init_module_attrs before exec.  Without these, code that
+        # references __file__ at module scope raises NameError during
+        # the mutated import and the mutant is mis-reported as SURVIVED.
+        module.__file__ = self.filename
+        module.__loader__ = self
+        if getattr(module, "__spec__", None) is None:
+            module.__spec__ = importlib.machinery.ModuleSpec(
+                module.__name__, self, origin=self.filename
+            )
         tree = ast.parse(self.source, filename=self.filename)
         applier = MutantApplier(self.mutant)
         tree = applier.visit(tree)
