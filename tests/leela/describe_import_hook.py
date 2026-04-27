@@ -1,7 +1,9 @@
 """Tests for pytest_leela.import_hook — AST mutation application and hook lifecycle."""
 
 import ast
+import importlib.machinery
 import sys
+import types
 
 from pytest_leela.import_hook import (
     MutantApplier,
@@ -1214,6 +1216,101 @@ def describe_MutatingLoader():
         spec = importlib.machinery.ModuleSpec("test", loader)
         result = loader.create_module(spec)
         assert result is None
+
+    def describe_module_attribute_population():
+        """exec_module must populate __file__, __loader__, __spec__ before exec.
+
+        Regression for pith-task 0b048dd4: without these attrs, mutated
+        imports of any module that references __file__ at module scope raise
+        NameError during exec, and the mutant is mis-reported as SURVIVED.
+        """
+
+        def _exec_into_fresh_module(
+            source: str, mutant: Mutant, filename: str, name: str
+        ) -> types.ModuleType:
+            from pytest_leela.import_hook import MutatingLoader
+
+            loader = MutatingLoader(source, mutant, filename)
+            spec = importlib.machinery.ModuleSpec(name, loader, origin=filename)
+            module = types.ModuleType(name)
+            module.__spec__ = spec
+            loader.exec_module(module)
+            return module
+
+        def it_sets_module_file_to_loader_filename():
+            point = _make_point(lineno=1, col_offset=0, node_type="BinOp")
+            mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+            module = _exec_into_fresh_module(
+                "x = 1\n", mutant, "/abs/path/foo.py", "leela_test_attr_file"
+            )
+            assert module.__file__ == "/abs/path/foo.py"
+
+        def it_sets_module_loader_to_self():
+            from pytest_leela.import_hook import MutatingLoader
+
+            point = _make_point(lineno=1, col_offset=0, node_type="BinOp")
+            mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+            loader = MutatingLoader("x = 1\n", mutant, "/abs/path/bar.py")
+            spec = importlib.machinery.ModuleSpec(
+                "leela_test_attr_loader", loader, origin="/abs/path/bar.py"
+            )
+            module = types.ModuleType("leela_test_attr_loader")
+            module.__spec__ = spec
+            loader.exec_module(module)
+            assert module.__loader__ is loader
+
+        def it_creates_spec_when_module_has_none():
+            """If a caller invokes exec_module without setting __spec__,
+            we populate it for parity with SourceFileLoader."""
+            from pytest_leela.import_hook import MutatingLoader
+
+            point = _make_point(lineno=1, col_offset=0, node_type="BinOp")
+            mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+            loader = MutatingLoader("x = 1\n", mutant, "/abs/path/baz.py")
+            module = types.ModuleType("leela_test_attr_spec")
+            assert getattr(module, "__spec__", None) is None
+            loader.exec_module(module)
+            assert module.__spec__ is not None
+            assert module.__spec__.origin == "/abs/path/baz.py"
+            assert module.__spec__.loader is loader
+
+        def it_preserves_existing_spec_when_already_populated():
+            """Don't overwrite a __spec__ already attached by the import system."""
+            from pytest_leela.import_hook import MutatingLoader
+
+            point = _make_point(lineno=1, col_offset=0, node_type="BinOp")
+            mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+            loader = MutatingLoader("x = 1\n", mutant, "/abs/path/qux.py")
+            existing_spec = importlib.machinery.ModuleSpec(
+                "leela_test_attr_keep_spec", loader, origin="/abs/path/qux.py"
+            )
+            module = types.ModuleType("leela_test_attr_keep_spec")
+            module.__spec__ = existing_spec
+            loader.exec_module(module)
+            assert module.__spec__ is existing_spec
+
+        def it_allows_module_scope_dunder_file_reference():
+            """Direct regression: a module that touches __file__ during
+            top-level exec must import successfully under MutatingLoader.
+
+            Pre-fix this raised NameError: name '__file__' is not defined."""
+            source = (
+                "from pathlib import Path\n"
+                "BASE = Path(__file__).resolve().parent\n"
+                "FILE_NAME = Path(__file__).name\n"
+            )
+            point = _make_point(lineno=2, col_offset=7, node_type="BinOp")
+            mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+            module = _exec_into_fresh_module(
+                source,
+                mutant,
+                "/abs/path/uses_file.py",
+                "leela_test_uses_file",
+            )
+            from pathlib import Path as _Path
+
+            assert module.BASE == _Path("/abs/path/uses_file.py").resolve().parent
+            assert module.FILE_NAME == "uses_file.py"
 
 
 def describe_clear_target_modules():

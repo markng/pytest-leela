@@ -379,6 +379,57 @@ def describe_Engine_run():
         assert abs_target in result.target_sources
         assert result.target_sources[abs_target] == source
 
+    def it_kills_mutants_in_module_that_references_dunder_file_at_top_level(
+        tmp_path, monkeypatch
+    ):
+        """Regression for pith-task 0b048dd4: a target module that references
+        __file__ at module scope must still produce killed mutants for code
+        the tests would otherwise catch.
+
+        Pre-fix, MutatingLoader.exec_module did not populate module.__file__
+        before exec.  The mutated import raised NameError on the
+        ``Path(__file__)`` line, the harness counted that as 'no tests
+        killed this mutant', and every BinOp mutant on ``x * 2`` was
+        mis-reported as SURVIVED — even though ``test_double`` would have
+        caught any of them.
+        """
+        target = tmp_path / "uses_file.py"
+        target.write_text(
+            "from pathlib import Path\n"
+            "BASE = Path(__file__).resolve().parent\n"
+            "MARKER = BASE.name\n"
+            "\n"
+            "def double(x):\n"
+            "    return x * 2\n"
+        )
+        test_dir = tmp_path / "uses_file_tests"
+        test_dir.mkdir()
+        (test_dir / "test_uses_file.py").write_text(
+            "from uses_file import double\n\n"
+            "def test_double():\n"
+            "    assert double(3) == 6\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        engine = Engine(use_types=False, use_coverage=False)
+        result = engine.run([str(target)], str(test_dir))
+
+        binop_results = [
+            r for r in result.results if r.mutant.point.node_type == "BinOp"
+        ]
+        assert binop_results, "expected at least one BinOp mutant on `x * 2`"
+        survived = [
+            (r.mutant.point.lineno, r.mutant.replacement_op)
+            for r in binop_results
+            if not r.killed
+        ]
+        assert not survived, (
+            "module-scope __file__ should not cause false-positive SURVIVED; "
+            f"got survivors: {survived}"
+        )
+
 
 def describe_Engine_enabled_categories():
     def it_stores_enabled_categories_as_none_by_default():
