@@ -324,6 +324,59 @@ def describe_run_tests_for_mutant():
         # With mutation: mod_file is None for non-None modules → not removed.
         assert inner_mod_name not in sys.modules
 
+    def it_preserves_non_cwd_modules_added_during_inner_run(tmp_path, monkeypatch):
+        """Kills the ``and → or`` mutation on the inline cleanup mod_file
+        check (the ``mod_file is not None and mod_file.startswith(cwd_prefix)``
+        guard).  With the mutation, the inline cleanup pops every non-None
+        module added during the inner run, regardless of whether its
+        __file__ is under CWD — clobbering modules that legitimately live
+        outside the project tree.
+
+        Uses a KEEP_PREFIXES name so the outer ``_clear_user_modules`` is
+        not responsible for removal — only the inline cleanup loop.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "outside_cwd_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "outside_cwd_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        inner_mod_name = "pytest_leela._test_outside_cwd_artifact"
+        # __file__ deliberately outside the temporary CWD.
+        outside_mod_file = "/non/existent/elsewhere/outside.py"
+
+        def mock_pytest_main(args, plugins=None):
+            fake = types.ModuleType(inner_mod_name)
+            fake.__file__ = outside_mod_file
+            sys.modules[inner_mod_name] = fake
+            return 0
+
+        try:
+            with patch(
+                "pytest_leela.runner.pytest.main", side_effect=mock_pytest_main
+            ):
+                run_tests_for_mutant(
+                    mutant,
+                    {"outside_cwd_target": source},
+                    {"outside_cwd_target": str(target)},
+                    test_dir=str(tmp_path),
+                )
+
+            # Original: non-CWD module is preserved (False AND ... or True AND False).
+            # Mutated (and → or): True OR ... → popped, even though __file__
+            # is not under cwd_prefix.
+            assert inner_mod_name in sys.modules
+            assert sys.modules[inner_mod_name].__file__ == outside_mod_file
+        finally:
+            sys.modules.pop(inner_mod_name, None)
+
     def it_calculates_elapsed_time_by_subtraction(tmp_path, monkeypatch):
         """Kills line 199: ``- → +/*`` in final elapsed calculation.
 
