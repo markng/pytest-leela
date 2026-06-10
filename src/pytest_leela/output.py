@@ -72,6 +72,19 @@ def format_terminal_report(result: RunResult) -> str:
     lines.append("leela mutation testing")
     lines.append("=" * 70)
 
+    # Zero-mutant warning when --diff is active but no mutants were generated.
+    # This guards against the hollow-pass failure mode where an empty working-
+    # tree diff or a ref mismatch silently yields 0 mutants and exit 0.
+    if result.diff_base is not None and result.mutants_tested == 0:
+        lines.append(
+            f"WARNING: --diff {result.diff_base!r} produced 0 mutants. "
+            "No changed lines matched any mutation point — the diff may be "
+            "empty, the ref may be wrong, or all changed lines are in test "
+            "files. Verify with: git diff -U0 "
+            f"{result.diff_base!r}"
+        )
+        lines.append("")
+
     # Target summary
     n_files = len(result.target_files)
     file_label = "file" if n_files == 1 else "files"

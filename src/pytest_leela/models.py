@@ -97,6 +97,7 @@ class RunResult:
     coverage_map: CoverageMap | None = None
     target_sources: dict[str, str] = field(default_factory=dict)  # file_path -> source
     enrichment_stats: EnrichmentStats = field(default_factory=EnrichmentStats)
+    diff_base: str | None = None  # --diff ref that was active, or None for full run
 
     @property
     def killed(self) -> int:
