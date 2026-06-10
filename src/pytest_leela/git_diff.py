@@ -77,7 +77,7 @@ def changed_files(
     if working_tree is not None:
         raw_names.update(working_tree.strip().splitlines())
 
-    if not raw_names and committed is None and working_tree is None:
+    if committed is None and working_tree is None:
         return []
 
     patterns = (

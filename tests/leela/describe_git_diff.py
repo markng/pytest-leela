@@ -4,12 +4,68 @@ import os
 import tempfile
 from unittest.mock import MagicMock, call, patch
 
-from pytest_leela.git_diff import _parse_diff_hunks
+from pytest_leela.git_diff import (
+    _get_repo_root,
+    _parse_diff_hunks,
+    _run_git_diff_names,
+    _run_git_diff_hunks,
+)
 
 
 def _abs(path: str) -> str:
     """Get the absolute path for a relative path, matching _parse_diff_hunks behavior."""
     return os.path.abspath(path)
+
+
+# ---------------------------------------------------------------------------
+# _get_repo_root — lines 20 and 22 survivors
+# ---------------------------------------------------------------------------
+
+
+def describe_get_repo_root():
+    def it_returns_the_stripped_stdout_string_on_success():
+        """Return value must be the stripped stdout string, not None (kills line 20: return expr → return None).
+
+        Pinning the exact string value (not just truthiness) ensures the
+        `return expr` → `return None` mutation is detected.
+        """
+        mock_result = MagicMock()
+        mock_result.stdout = "/some/repo/root\n"
+        with patch("pytest_leela.git_diff.subprocess.run", return_value=mock_result):
+            result = _get_repo_root()
+        assert result == "/some/repo/root"
+        assert result is not None
+
+    def it_returns_none_not_expr_on_called_process_error():
+        """Return value must be exactly None on CalledProcessError (kills line 22: None → expr).
+
+        Using `is None` (not just falsiness) ensures the `return None` →
+        `return expr` mutation is detected — `expr` would be a non-None
+        CompletedProcess object, which is truthy but not None.
+        """
+        with patch(
+            "pytest_leela.git_diff.subprocess.run",
+            side_effect=__import__("subprocess").CalledProcessError(128, "git"),
+        ):
+            result = _get_repo_root()
+        assert result is None
+
+    def it_returns_none_not_expr_on_file_not_found():
+        """Return value must be exactly None when git is not installed (kills line 22: None → expr)."""
+        with patch(
+            "pytest_leela.git_diff.subprocess.run",
+            side_effect=FileNotFoundError,
+        ):
+            result = _get_repo_root()
+        assert result is None
+
+    def it_strips_trailing_newline_from_stdout():
+        """Whitespace is stripped — `result.stdout.strip()` not `result.stdout` (distinct from line-20 survivor but confirms strip semantics)."""
+        mock_result = MagicMock()
+        mock_result.stdout = "  /my/repo  \n"
+        with patch("pytest_leela.git_diff.subprocess.run", return_value=mock_result):
+            result = _get_repo_root()
+        assert result == "/my/repo"
 
 
 def _mock_repo_root(tmpdir: str):
@@ -432,6 +488,193 @@ def describe_changed_files():
             assert len(result) == 1
             assert result[0] == models_path
 
+    # -- line 80 survivors ---------------------------------------------------
+
+    def it_returns_empty_list_only_when_both_diffs_are_none():
+        """Early-return `[]` fires only when committed IS None AND working_tree IS None.
+
+        Kills line 80 `and → or`: if the condition became `or`, a successful
+        committed diff paired with a failing working-tree diff would wrongly
+        return [] instead of the committed names.
+        """
+        from pytest_leela.git_diff import changed_files
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            open(os.path.join(tmpdir, "app.py"), "w").close()
+
+            # committed diff succeeds; working-tree diff raises → None
+            committed_mock = _make_run_mock("app.py\n")
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with _mock_repo_root(tmpdir), patch(
+                    "pytest_leela.git_diff.subprocess.run",
+                    side_effect=[committed_mock, FileNotFoundError],
+                ):
+                    result = changed_files("main")
+            finally:
+                os.chdir(old_cwd)
+
+        # committed succeeded → files must be present, not []
+        assert result != []
+        assert any(os.path.basename(f) == "app.py" for f in result)
+
+    def it_does_not_early_return_when_raw_names_is_non_empty():
+        """Does NOT return [] when raw_names is non-empty, even if one diff is None.
+
+        Kills line 80 `not x → x` (raw_names): if `not raw_names` became
+        `raw_names`, the early return would fire when raw_names is truthy
+        (non-empty), discarding valid results.
+        """
+        from pytest_leela.git_diff import changed_files
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            open(os.path.join(tmpdir, "found.py"), "w").close()
+
+            # First diff returns a name; second fails → None.
+            # raw_names will be non-empty after the first call.
+            committed_mock = _make_run_mock("found.py\n")
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with _mock_repo_root(tmpdir), patch(
+                    "pytest_leela.git_diff.subprocess.run",
+                    side_effect=[committed_mock, FileNotFoundError],
+                ):
+                    result = changed_files("main")
+            finally:
+                os.chdir(old_cwd)
+
+        basenames = {os.path.basename(f) for f in result}
+        assert "found.py" in basenames, (
+            "non-empty raw_names must NOT trigger the early-return path"
+        )
+
+    def it_returns_working_tree_files_when_committed_diff_fails():
+        """Files from working-tree diff are returned when committed diff is None.
+
+        Kills line 80 `is → is not` on working_tree: if the condition became
+        `committed is None and working_tree is not None`, having a successful
+        working-tree diff alongside a failing committed diff would wrongly
+        trigger the early-return [], discarding the working-tree results.
+        """
+        from pytest_leela.git_diff import changed_files
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            open(os.path.join(tmpdir, "unstaged.py"), "w").close()
+
+            # First call (committed) raises → None; second call (working-tree) succeeds
+            working_mock = _make_run_mock("unstaged.py\n")
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with _mock_repo_root(tmpdir), patch(
+                    "pytest_leela.git_diff.subprocess.run",
+                    side_effect=[FileNotFoundError, working_mock],
+                ):
+                    result = changed_files("main")
+            finally:
+                os.chdir(old_cwd)
+
+        basenames = {os.path.basename(f) for f in result}
+        assert "unstaged.py" in basenames, (
+            "working-tree files must be returned even when committed diff fails"
+        )
+
+    def it_returns_empty_list_when_both_diffs_fail_not_a_falsy_object():
+        """Return value is exactly [] when both diffs fail (IS None checks, not IS NOT).
+
+        Kills line 80 `is → is not` (×2): with `is not None`, the condition
+        would be `not raw_names and committed is not None and working_tree is
+        not None`, which would only early-return when both succeeded — the
+        opposite of the intended behaviour.
+        """
+        from pytest_leela.git_diff import changed_files
+
+        with patch(
+            "pytest_leela.git_diff.subprocess.run",
+            side_effect=FileNotFoundError,
+        ):
+            result = changed_files("main")
+
+        assert result == []
+        assert isinstance(result, list)
+
+    # -- line 94 survivor ----------------------------------------------------
+
+    def it_falls_back_to_abspath_when_repo_root_is_none_for_relative_name():
+        """When repo_root IS None, abspath is used (not `os.path.join(None, name)`).
+
+        Kills line 94 `is → is not`: if the condition became
+        `repo_root is not None`, the branch would never fire for the
+        None-repo-root case and would attempt os.path.join(None, name),
+        raising a TypeError.
+
+        Also kills line 94 `and → or`: with `or`, an absolute name alongside
+        a non-None repo_root would take the repo_root branch, producing a
+        wrong path.
+        """
+        from pytest_leela.git_diff import changed_files
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app_path = os.path.join(tmpdir, "myapp.py")
+            open(app_path, "w").close()
+
+            # repo_root is None; git reports a relative name
+            names_mock = _make_run_mock("myapp.py\n")
+
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                with (
+                    patch("pytest_leela.git_diff._get_repo_root", return_value=None),
+                    patch(
+                        "pytest_leela.git_diff.subprocess.run",
+                        return_value=names_mock,
+                    ),
+                ):
+                    result = changed_files("main")
+            finally:
+                os.chdir(old_cwd)
+
+        # Must find the file via abspath(cwd + "myapp.py")
+        assert len(result) == 1
+        assert result[0] == app_path
+
+    def it_uses_abspath_not_repo_root_when_name_is_absolute():
+        """When the name from git is already absolute, repo_root is NOT prepended.
+
+        Kills line 94 `and → or`: with `or`, an absolute path would enter the
+        repo_root branch and produce os.path.join(repo_root, abs_name), which
+        would be wrong (os.path.join ignores the prefix when the second
+        argument is absolute on POSIX, but on Windows it would not, and the
+        intent is still the else-branch).  This test confirms the else-branch
+        (`abspath`) fires for absolute names regardless of repo_root.
+        """
+        from pytest_leela.git_diff import changed_files
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            abs_name = os.path.join(tmpdir, "absolute.py")
+            open(abs_name, "w").close()
+
+            # git reports an absolute path (unusual but possible)
+            names_mock = _make_run_mock(abs_name + "\n")
+
+            with (
+                patch("pytest_leela.git_diff._get_repo_root", return_value=tmpdir),
+                patch(
+                    "pytest_leela.git_diff.subprocess.run",
+                    return_value=names_mock,
+                ),
+            ):
+                result = changed_files("main")
+
+        assert len(result) == 1
+        assert result[0] == abs_name
+
 
 # ---------------------------------------------------------------------------
 # changed_lines
@@ -599,6 +842,91 @@ def describe_changed_lines():
         assert wrong_path not in result, (
             f"wrong double-subdir path {wrong_path} must not appear"
         )
+
+    # -- line 121 survivors --------------------------------------------------
+
+    def it_returns_empty_dict_only_when_both_hunk_diffs_are_none():
+        """Early-return `{}` fires only when committed IS None AND working_tree IS None.
+
+        Kills line 121 `and → or`: with `or`, a successful committed diff +
+        failing working-tree diff would wrongly return {} instead of the
+        committed lines.
+        """
+        from pytest_leela.git_diff import changed_lines
+
+        committed_diff = (
+            "diff --git a/svc.py b/svc.py\n"
+            "--- a/svc.py\n"
+            "+++ b/svc.py\n"
+            "@@ -1,0 +2 @@\n"
+            "+x = 1\n"
+        )
+        committed_mock = _make_run_mock(committed_diff)
+
+        with tempfile.TemporaryDirectory() as repo_root:
+            # First call (committed) succeeds; second call (working-tree) raises → None
+            with _mock_repo_root(repo_root), patch(
+                "pytest_leela.git_diff.subprocess.run",
+                side_effect=[committed_mock, FileNotFoundError],
+            ):
+                result = changed_lines("main")
+
+        # committed diff succeeded → result must not be {}
+        assert result != {}
+        expected_path = os.path.normpath(os.path.join(repo_root, "svc.py"))
+        assert expected_path in result
+        assert 2 in result[expected_path]
+
+    def it_returns_empty_dict_when_committed_is_none_and_working_tree_is_not():
+        """Working-tree diff alone must not trigger the both-None early-return.
+
+        Kills line 121 `is → is not` for the committed_output check: if the
+        condition became `committed_output is not None and ...`, then having
+        ONLY working-tree output (committed is None) would fire the early
+        return and produce {}, discarding valid working-tree lines.
+        """
+        from pytest_leela.git_diff import changed_lines
+
+        working_diff = (
+            "diff --git a/worker.py b/worker.py\n"
+            "--- a/worker.py\n"
+            "+++ b/worker.py\n"
+            "@@ -5,0 +6 @@\n"
+            "+result = compute()\n"
+        )
+        working_mock = _make_run_mock(working_diff)
+
+        with tempfile.TemporaryDirectory() as repo_root:
+            # First call (committed) raises → None; second call (working-tree) succeeds
+            with _mock_repo_root(repo_root), patch(
+                "pytest_leela.git_diff.subprocess.run",
+                side_effect=[FileNotFoundError, working_mock],
+            ):
+                result = changed_lines("main")
+
+        # working-tree succeeded → result must not be {}
+        assert result != {}
+        expected_path = os.path.normpath(os.path.join(repo_root, "worker.py"))
+        assert expected_path in result
+        assert 6 in result[expected_path], "working-tree line must survive when committed is None"
+
+    def it_returns_empty_dict_when_both_hunk_diffs_fail_exactly():
+        """Return value is exactly {} (empty dict) when both hunk diffs fail.
+
+        Kills line 121 `is → is not` (second instance): with `is not None` on
+        working_tree_output, the condition would only early-return when BOTH
+        succeeded — opposite of intended.  Pinning exact `== {}` detects this.
+        """
+        from pytest_leela.git_diff import changed_lines
+
+        with patch(
+            "pytest_leela.git_diff.subprocess.run",
+            side_effect=FileNotFoundError,
+        ):
+            result = changed_lines("main")
+
+        assert result == {}
+        assert isinstance(result, dict)
 
 
 # ---------------------------------------------------------------------------
