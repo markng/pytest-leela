@@ -237,4 +237,5 @@ class Engine:
                 module_to_file[mod]: src for mod, src in target_sources.items()
             },
             enrichment_stats=total_enrichment_stats,
+            diff_base=diff_base,
         )
