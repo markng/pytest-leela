@@ -4,6 +4,8 @@ import sys
 
 import pytest
 
+pytest_plugins = ["pytester"]
+
 
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_call(item):

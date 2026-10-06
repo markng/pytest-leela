@@ -35,6 +35,14 @@ dev = [
     "factory-boy",
     "faker",
 ]
+# Exercises leela's Django handling (pytest-django DB block, model/admin
+# module pinning) end to end.  Django 6 patches ensure_connection itself
+# during django_db tests, which hides the DB-block bug these tests pin, so
+# the extra stays on 5.2 LTS.
+django = [
+    "django>=5.2,<6",
+    "pytest-django>=4.8",
+]
 
 [project.urls]
 Homepage = "https://github.com/markng/pytest-leela"
