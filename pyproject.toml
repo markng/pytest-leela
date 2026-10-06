@@ -32,8 +32,16 @@ dependencies = [
 dev = [
     "pytest-describe>=2.0",
     "mypy",
+    "django-stubs",
     "factory-boy",
     "faker",
+]
+# Exercises leela's Django handling (pytest-django DB block, model/admin
+# module pinning) end to end.  pytest-django 4.10 is the first release
+# whose pytest_unconfigure restores the session's DB block.
+django = [
+    "django>=5.2",
+    "pytest-django>=4.10",
 ]
 
 [project.urls]
@@ -61,6 +69,10 @@ files = ["src/pytest_leela"]
 
 [[tool.mypy.overrides]]
 module = "django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_django.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import contextlib
 import fnmatch
 import glob as _glob
 import os
+import sys
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 
-from pytest_leela.config import ALL_OPERATORS, load_config
+from pytest_leela.config import load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
-from pytest_leela.engine import Engine
+from pytest_leela.engine import BaselineFailure, Engine
 from pytest_leela.git_diff import changed_files
+from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
 
@@ -182,6 +186,31 @@ class LeelaPlugin:
 
         return _apply_excludes(target_files, leela_config.exclude, rootpath)
 
+    @contextlib.contextmanager
+    def _outer_django_db_unblocked(self) -> Generator[None]:
+        """Lift the outer session's pytest-django DB block for leela's run.
+
+        pytest-django blocks DB access at configure time and only restores it
+        at unconfigure, so it is still blocked here.  Each inner session's
+        ``DjangoDbBlocker`` records whatever ``ensure_connection`` is on
+        first use as the "real" one (pytest_django/plugin.py,
+        ``_dj_db_wrapper``: "self._real_ensure_connection =
+        BaseDatabaseWrapper.ensure_connection"), so it would record the
+        outer block and its ``unblock()`` could never reach the database.
+        """
+        if "pytest_django.plugin" not in sys.modules:
+            # pytest-django is not installed or not loaded: nothing to lift.
+            yield
+            return
+        from pytest_django.plugin import blocking_manager_key
+
+        if blocking_manager_key not in self.config.stash:
+            # Loaded but disabled for this session (``-p no:django``).
+            yield
+            return
+        with self.config.stash[blocking_manager_key].unblock():
+            yield
+
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
             return
@@ -218,22 +247,33 @@ class LeelaPlugin:
             max_memory_percent=self.config.getoption("max_memory", default=None),
         )
 
-        engine = Engine(enabled_categories=enabled_categories)
-        result = engine.run(
-            target_files,
-            test_node_ids=test_node_ids,
-            limits=limits,
-            diff_base=diff_base,
-            pre_coverage_map=pre_coverage_map,
-        )
-
-        report = format_terminal_report(result)
-
         tw = (
             session.config.get_terminal_writer()
             if hasattr(session.config, "get_terminal_writer")
             else None
         )
+
+        engine = Engine(enabled_categories=enabled_categories)
+        try:
+            with self._outer_django_db_unblocked():
+                result = engine.run(
+                    target_files,
+                    test_node_ids=test_node_ids,
+                    limits=limits,
+                    diff_base=diff_base,
+                    pre_coverage_map=pre_coverage_map,
+                )
+        except BaselineFailure as exc:
+            message = f"\nleela: aborted: {exc}\n"
+            if tw:
+                tw.write(message)
+            else:
+                print(message)
+            session.exitstatus = 1
+            return
+
+        report = format_terminal_report(result)
+
         if tw:
             tw.write(report)
         else:
@@ -245,5 +285,5 @@ class LeelaPlugin:
 
             generate_html_report(result, html_path)
 
-        if result.survived:
+        if result.survived or (result.errors and leela_config.fail_on_error):
             session.exitstatus = 1

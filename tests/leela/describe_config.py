@@ -186,3 +186,42 @@ def describe_load_config():
                 ValueError, match="'operators' elements must be strings"
             ):
                 load_config(tmp_path)
+
+
+def describe_fail_on_error():
+    def it_defaults_to_true():
+        assert LeelaConfig().fail_on_error is True
+
+    def it_defaults_to_true_when_unset_in_pyproject(tmp_path: Path):
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.pytest-leela]\nexclude = ["x"]\n'
+        )
+        assert load_config(tmp_path).fail_on_error is True
+
+    def it_reads_false_from_pyproject(tmp_path: Path):
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.pytest-leela]\nfail_on_error = false\n"
+        )
+        assert load_config(tmp_path).fail_on_error is False
+
+    def it_reads_true_from_pyproject(tmp_path: Path):
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.pytest-leela]\nfail_on_error = true\n"
+        )
+        assert load_config(tmp_path).fail_on_error is True
+
+    def it_raises_on_a_string_value(tmp_path: Path):
+        (tmp_path / "pyproject.toml").write_text(
+            '[tool.pytest-leela]\nfail_on_error = "false"\n'
+        )
+        with pytest.raises(
+            TypeError, match=r"'fail_on_error' must be true or false.*got str: 'false'"
+        ):
+            load_config(tmp_path)
+
+    def it_raises_on_an_integer_value(tmp_path: Path):
+        (tmp_path / "pyproject.toml").write_text(
+            "[tool.pytest-leela]\nfail_on_error = 0\n"
+        )
+        with pytest.raises(TypeError, match="got int: 0"):
+            load_config(tmp_path)

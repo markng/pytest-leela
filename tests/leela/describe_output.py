@@ -425,3 +425,104 @@ def describe_format_json_report():
         run = _make_run_result()
         data = json.loads(format_json_report(run))
         assert data["target_files"] == run.target_files
+
+
+def _make_error_result(
+    file_path: str = "src/app.py", lineno: int = 12, mutant_id: int = 7
+) -> MutantResult:
+    point = _make_point(file_path=file_path, lineno=lineno)
+    return MutantResult(
+        mutant=Mutant(point=point, replacement_op="Sub", mutant_id=mutant_id),
+        killed=False,
+        tests_run=0,
+        killing_test=None,
+        time_seconds=0.1,
+        error="pytest exited with INTERRUPTED (t.py: ImportError: x)",
+    )
+
+
+def describe_terminal_report_with_errors():
+    def it_marks_errored_mutants_as_error_not_survived():
+        report = format_terminal_report(
+            _make_run_result([_make_result(killed=True), _make_error_result()])
+        )
+        assert "line 12: + \u2192 -" in report
+        assert "ERROR" in report
+        assert "SURVIVED" not in report
+
+    def it_prints_the_error_reason_under_the_mutant():
+        report = format_terminal_report(_make_run_result([_make_error_result()]))
+        assert "      pytest exited with INTERRUPTED (t.py: ImportError: x)" in report
+
+    def it_excludes_errors_from_the_per_file_score_and_counts_them():
+        report = format_terminal_report(
+            _make_run_result(
+                [
+                    _make_result(killed=True, mutant_id=1),
+                    _make_result(killed=False, mutant_id=2),
+                    _make_error_result(),
+                ]
+            )
+        )
+        assert "1/2 killed (50.0%), 1 errors" in report
+
+    def it_omits_the_error_count_for_a_file_without_errors():
+        report = format_terminal_report(_make_run_result([_make_result(killed=True)]))
+        assert "1/1 killed (100.0%)\n" in report
+        assert "errors" not in report
+
+    def it_shows_na_for_a_file_whose_every_mutant_errored():
+        report = format_terminal_report(_make_run_result([_make_error_result()]))
+        assert "0/0 killed (n/a), 1 errors" in report
+
+    def it_excludes_errors_from_the_overall_score():
+        report = format_terminal_report(
+            _make_run_result([_make_result(killed=True), _make_error_result()])
+        )
+        assert "Overall: 1/1 killed (100.0%)" in report
+
+    def it_explains_errored_mutants_in_the_overall_summary():
+        report = format_terminal_report(
+            _make_run_result([_make_result(killed=True), _make_error_result()])
+        )
+        assert (
+            "  1 mutants errored outside the tests (crash, usage error, "
+            "or no tests ran) and are excluded from the score"
+        ) in report
+
+    def it_omits_the_error_summary_when_nothing_errored():
+        report = format_terminal_report(_make_run_result([_make_result(killed=True)]))
+        assert "errored outside the tests" not in report
+
+
+def describe_json_report_with_errors():
+    def it_counts_errors_separately():
+        data = json.loads(
+            format_json_report(
+                _make_run_result(
+                    [
+                        _make_result(killed=True, mutant_id=1),
+                        _make_result(killed=False, mutant_id=2),
+                        _make_error_result(),
+                    ]
+                )
+            )
+        )
+        assert data["killed"] == 1
+        assert data["survived"] == 1
+        assert data["errors"] == 1
+        assert data["mutation_score"] == pytest.approx(50.0)
+        assert len(data["survived_mutants"]) == 1
+
+    def it_lists_errored_mutants_with_their_reason():
+        data = json.loads(format_json_report(_make_run_result([_make_error_result()])))
+        assert data["error_mutants"] == [
+            {
+                "file": "src/app.py",
+                "line": 12,
+                "original": "Add",
+                "replacement": "Sub",
+                "description": "+ \u2192 -",
+                "error": "pytest exited with INTERRUPTED (t.py: ImportError: x)",
+            }
+        ]
