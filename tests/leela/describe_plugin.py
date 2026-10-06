@@ -1153,3 +1153,87 @@ def describe_apply_excludes():
         files = ["/root/migrations/0001.py"]
         result = _apply_excludes(files, ["migrations/*.py"], Path("/root"))
         assert result == []
+
+
+def describe_exit_status_with_errored_mutants():
+    """Errored mutants fail the session unless ``fail_on_error = false``."""
+
+    def _finish(results, leela_config):
+        from pytest_leela.models import RunResult
+        from pytest_leela.plugin import LeelaPlugin
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.return_value = RunResult(
+            target_files=["/fake/mod.py"],
+            total_mutants=len(results),
+            mutants_tested=len(results),
+            mutants_pruned=0,
+            results=results,
+            wall_time_seconds=0.5,
+        )
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=leela_config),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+        return session.exitstatus
+
+    def _result(killed, error=None):
+        from pytest_leela.models import Mutant, MutantResult, MutationPoint
+
+        point = MutationPoint(
+            file_path="/fake/mod.py",
+            module_name="mod",
+            lineno=10,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type="int",
+        )
+        return MutantResult(
+            mutant=Mutant(point=point, replacement_op="Sub", mutant_id=1),
+            killed=killed,
+            tests_run=0 if error else 1,
+            killing_test="t::a" if killed else None,
+            time_seconds=0.1,
+            error=error,
+        )
+
+    def it_fails_the_session_on_an_errored_mutant_by_default():
+        from pytest_leela.config import LeelaConfig
+
+        status = _finish([_result(True), _result(False, "no tests ran")], LeelaConfig())
+        assert status == 1
+
+    def it_passes_with_errors_when_fail_on_error_is_false():
+        from pytest_leela.config import LeelaConfig
+
+        status = _finish(
+            [_result(True), _result(False, "no tests ran")],
+            LeelaConfig(fail_on_error=False),
+        )
+        assert status == 0
+
+    def it_still_fails_on_survivors_when_fail_on_error_is_false():
+        from pytest_leela.config import LeelaConfig
+
+        status = _finish([_result(False)], LeelaConfig(fail_on_error=False))
+        assert status == 1

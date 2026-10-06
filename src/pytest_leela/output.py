@@ -113,26 +113,42 @@ def format_terminal_report(result: RunResult) -> str:
         basename = os.path.basename(file_path)
         file_res = file_results[file_path]
 
-        killed = sum(1 for r in file_res if r.killed)
-        total = len(file_res)
-        pct = _pct(killed, total)
+        killed = sum(1 for r in file_res if r.status == "killed")
+        errored = [r for r in file_res if r.status == "error"]
+        scored = len(file_res) - len(errored)
+        # A file whose every mutant errored has no score at all.
+        pct = f"{_pct(killed, scored):.1f}%" if scored else "n/a"
 
-        lines.append(f"  {basename:<30s} {killed}/{total} killed ({pct:.1f}%)")
+        summary = f"  {basename:<30s} {killed}/{scored} killed ({pct})"
+        if errored:
+            summary += f", {len(errored)} errors"
+        lines.append(summary)
 
-        # Show survived mutants
-        survived = [r for r in file_res if not r.killed]
-        for r in survived:
+        # Show survived and errored mutants
+        for r in file_res:
+            if r.status == "killed":
+                continue
             m = r.mutant
             desc = _op_display(m.point.original_op, m.replacement_op)
-            lines.append(f"    line {m.point.lineno}: {desc:<45s} SURVIVED")
+            if r.status == "error":
+                lines.append(f"    line {m.point.lineno}: {desc:<45s} ERROR")
+                lines.append(f"      {r.error}")
+            else:
+                lines.append(f"    line {m.point.lineno}: {desc:<45s} SURVIVED")
 
     lines.append("")
 
     # Overall summary
     lines.append(
-        f"Overall: {result.killed}/{result.mutants_tested} killed "
+        f"Overall: {result.killed}/{result.mutants_scored} killed "
         f"({result.mutation_score:.1f}%) in {result.wall_time_seconds:.1f}s"
     )
+    if result.errors:
+        lines.append(
+            f"  {len(result.errors)} mutants errored outside the tests "
+            "(collection/import error, crash, or no tests ran) and are "
+            "excluded from the score"
+        )
     if result.mutants_pruned > 0:
         lines.append(
             f"  ({result.total_mutants} candidates, "
@@ -152,6 +168,7 @@ def format_json_report(result: RunResult) -> str:
         "mutants_pruned": result.mutants_pruned,
         "killed": result.killed,
         "survived": len(result.survived),
+        "errors": len(result.errors),
         "mutation_score": round(result.mutation_score, 2),
         "wall_time_seconds": round(result.wall_time_seconds, 2),
         "survived_mutants": [
@@ -165,6 +182,19 @@ def format_json_report(result: RunResult) -> str:
                 ),
             }
             for r in result.survived
+        ],
+        "error_mutants": [
+            {
+                "file": r.mutant.point.file_path,
+                "line": r.mutant.point.lineno,
+                "original": r.mutant.point.original_op,
+                "replacement": r.mutant.replacement_op,
+                "description": _op_display(
+                    r.mutant.point.original_op, r.mutant.replacement_op
+                ),
+                "error": r.error,
+            }
+            for r in result.errors
         ],
     }
     return json.dumps(data, indent=2)

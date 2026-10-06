@@ -25,7 +25,11 @@ from pytest_leela.models import (
 )
 from pytest_leela.operators import build_allowed_keys, count_pruned, mutations_for
 from pytest_leela.resources import ResourceLimits, apply_limits, is_memory_ok
-from pytest_leela.runner import precompute_user_modules, run_tests_for_mutant
+from pytest_leela.runner import (
+    ProjectModuleScope,
+    precompute_user_modules,
+    run_tests_for_mutant,
+)
 from pytest_leela.type_extractor import enrich_mutation_points
 
 
@@ -77,16 +81,11 @@ def _clean_process_state() -> None:
     sys.meta_path[:] = [f for f in sys.meta_path if not isinstance(f, MutatingFinder)]
 
     # 2. Remove modules loaded from temp directories (left by test
-    #    fixtures that create throwaway target files).
-    tmp_prefix = tempfile.gettempdir() + os.sep
-    stale = [
-        name
-        for name, mod in sys.modules.items()
-        if mod is not None
-        and (f := getattr(mod, "__file__", None)) is not None
-        and f.startswith(tmp_prefix)
-    ]
-    for name in stale:
+    #    fixtures that create throwaway target files).  A project or
+    #    virtualenv that itself lives under the temp directory is not a
+    #    fixture: its installed packages and leela's own modules stay.
+    tmp_scope = ProjectModuleScope(tempfile.gettempdir())
+    for name in tmp_scope.module_names():
         sys.modules.pop(name, None)
 
 

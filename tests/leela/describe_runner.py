@@ -1,5 +1,6 @@
 """Tests for pytest_leela.runner — test execution against mutants."""
 
+import os
 import sys
 import threading
 import types
@@ -12,8 +13,11 @@ from pytest_leela.import_hook import MutatingFinder
 from pytest_leela.models import Mutant, MutantResult
 from pytest_leela.runner import (
     _KEEP_PREFIXES,
+    ProjectModuleScope,
     _ResultCollector,
     _clear_framework_caches,
+    _inner_run_error,
+    _last_line,
     _clear_user_modules,
     _clear_user_modules_fast,
     precompute_user_modules,
@@ -29,6 +33,15 @@ class _FakeReport:
         self.when = when
         self.passed = passed
         self.failed = failed
+
+
+class _FakeCollectReport:
+    """Minimal stand-in for a pytest CollectReport."""
+
+    def __init__(self, nodeid: str, failed: bool, longreprtext: str = "") -> None:
+        self.nodeid = nodeid
+        self.failed = failed
+        self.longreprtext = longreprtext
 
 
 def describe_ResultCollector():
@@ -208,11 +221,11 @@ def describe_run_tests_for_mutant():
         assert result.tests_run >= 1
         assert result.killing_test is None
 
-    def it_returns_killed_result_when_pytest_main_crashes(tmp_path, monkeypatch):
-        """Kills lines 165-166: elapsed timing and return in crash handler.
+    def it_returns_error_result_when_pytest_main_crashes(tmp_path, monkeypatch):
+        """A crashed runner is an ERROR, never a kill: no test caught anything.
 
-        Line 165: ``- → +/*`` would make elapsed = monotonic() + start (huge).
-        Line 166: ``return expr → None`` would return None instead of MutantResult.
+        Also kills ``- → +/*`` on the crash handler's elapsed time and
+        ``return expr → None`` on its return.
         """
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
@@ -235,12 +248,12 @@ def describe_run_tests_for_mutant():
                 test_dir=str(tmp_path),
             )
 
-        # Kills line 166: return expr → None
-        assert result is not None
         assert isinstance(result, MutantResult)
-        assert result.killed is True
-        assert result.killing_test == "<crashed>"
-        # Kills line 165: - → + (would produce value >> 60)
+        assert result.killed is False
+        assert result.status == "error"
+        assert result.error == "pytest crashed: RuntimeError: boom"
+        assert result.killing_test is None
+        # - → + would produce a value >> 60
         assert 0 <= result.time_seconds < 60
 
     def it_preserves_modules_in_saved_snapshot_during_cleanup(tmp_path, monkeypatch):
@@ -503,9 +516,9 @@ def describe_run_tests_for_mutant():
                 test_dir=str(tmp_path),
             )
 
-        assert result.killed is True
+        assert result.killed is False
         assert result.test_ids_run == []
-        assert result.killing_tests == ["<crashed>"]
+        assert result.killing_tests == []
 
     def it_removes_stale_mutating_finders_from_meta_path(tmp_path, monkeypatch):
         """Kills line 219: ``not isinstance → isinstance``.
@@ -1112,3 +1125,502 @@ def describe_run_tests_for_mutant_with_known_user_modules():
 
         mock_fast.assert_not_called()
         assert mock_full.call_count == 2
+
+
+_ONCE_ONLY_EXT = (
+    "import builtins\n"
+    "\n"
+    "# Stand-in for a C extension (numpy's _multiarray_umath and friends):\n"
+    "# executing it a second time in one process raises, exactly as CPython\n"
+    "# does for single-phase-init extension modules.\n"
+    "_FLAG = '_leela_once_only_ext_loaded'\n"
+    "if getattr(builtins, _FLAG, False):\n"
+    "    raise ImportError('cannot load module more than once per process')\n"
+    "setattr(builtins, _FLAG, True)\n"
+)
+
+
+def describe_run_tests_for_mutant_with_venv_inside_project():
+    """Regression: a virtualenv under the project cwd (uv's ``.venv``) must
+    not have its packages evicted between mutants.  Evicting them makes a
+    once-only extension fail to re-import, and that crash used to be scored
+    as a kill."""
+
+    def _make_project(tmp_path, monkeypatch):
+        import builtins
+
+        site_packages = tmp_path / ".venv" / "lib" / "python3.13" / "site-packages"
+        site_packages.mkdir(parents=True)
+        (site_packages / "once_only_ext.py").write_text(_ONCE_ONLY_EXT)
+
+        source = "import once_only_ext\n\n\ndef add(a, b):\n    return a + b\n"
+        target = tmp_path / "venv_calc.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "venv_calc_tests"
+        test_dir.mkdir()
+        # Deliberately weak: add(0, 0) == 0 also holds for a - b, so the
+        # Add -> Sub mutant must SURVIVE.  The import is inside the test so
+        # a broken re-import surfaces as a test failure, not a collection
+        # error.
+        (test_dir / "test_venv_calc.py").write_text(
+            "def test_add_zeros():\n"
+            "    from venv_calc import add\n"
+            "    assert add(0, 0) == 0\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(site_packages))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setattr(
+            builtins, "_leela_once_only_ext_loaded", False, raising=False
+        )
+        for name in ("once_only_ext", "venv_calc"):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+
+        # Prime the extension as the outer pytest session would have.
+        import once_only_ext  # noqa: F401
+
+        points = find_mutation_points(source, str(target), "venv_calc")
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        return source, target, test_dir, mutant
+
+    def it_reports_a_weakly_tested_mutant_as_survived(tmp_path, monkeypatch):
+        source, target, test_dir, mutant = _make_project(tmp_path, monkeypatch)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"venv_calc": source},
+            {"venv_calc": str(target)},
+            test_dir=str(test_dir),
+            known_user_modules=precompute_user_modules(),
+        )
+
+        assert result.status == "survived"
+        assert result.killed is False
+        assert result.tests_run == 1
+        assert result.killing_tests == []
+
+    def it_reports_survived_on_the_full_scan_path_too(tmp_path, monkeypatch):
+        source, target, test_dir, mutant = _make_project(tmp_path, monkeypatch)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"venv_calc": source},
+            {"venv_calc": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "survived"
+        assert result.killed is False
+
+    def it_keeps_the_extension_loaded_across_mutants(tmp_path, monkeypatch):
+        source, target, test_dir, mutant = _make_project(tmp_path, monkeypatch)
+        ext = sys.modules["once_only_ext"]
+
+        run_tests_for_mutant(
+            mutant,
+            {"venv_calc": source},
+            {"venv_calc": str(target)},
+            test_dir=str(test_dir),
+            known_user_modules=precompute_user_modules(),
+        )
+
+        assert sys.modules["once_only_ext"] is ext
+
+
+def describe_run_tests_for_mutant_inner_run_errors():
+    """A mutant whose inner run never exercised a test is an ERROR — neither
+    a kill (nothing caught it) nor a survival (nothing ran)."""
+
+    def it_reports_a_collection_error_as_error_not_survived(tmp_path, monkeypatch):
+        # Add -> Sub makes DIVISOR zero, so importing the module raises and
+        # the test file errors during collection.
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        target = tmp_path / "collect_err_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "collect_err_tests"
+        test_dir.mkdir()
+        (test_dir / "test_collect_err_target.py").write_text(
+            "from collect_err_target import RATIO\n\n"
+            "def test_ratio():\n"
+            "    assert RATIO > 0\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "collect_err_target")
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"collect_err_target": source},
+            {"collect_err_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert result.killed is False
+        assert result.tests_run == 0
+        assert "ZeroDivisionError" in result.error
+
+
+def _isolated_scope_env(monkeypatch, prefix, site_packages=(), user_site="/nowhere"):
+    """Pin every environment root ProjectModuleScope reads."""
+    for attr in ("prefix", "base_prefix", "exec_prefix", "base_exec_prefix"):
+        monkeypatch.setattr(sys, attr, str(prefix))
+    monkeypatch.setattr(
+        "pytest_leela.runner.site.getsitepackages", lambda: list(site_packages)
+    )
+    monkeypatch.setattr(
+        "pytest_leela.runner.site.getusersitepackages", lambda: str(user_site)
+    )
+
+
+def describe_ProjectModuleScope():
+    def it_defaults_cwd_to_the_working_directory(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert ProjectModuleScope().cwd == str(tmp_path) + os.sep
+
+    def it_uses_an_explicit_cwd_over_the_working_directory(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        other = tmp_path / "other"
+        assert ProjectModuleScope(str(other)).cwd == str(other) + os.sep
+
+    def it_contains_project_source_under_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(tmp_path / "app" / "models.py")) is True
+
+    def it_excludes_files_outside_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path / "proj"))
+        assert scope.contains(str(tmp_path / "elsewhere.py")) is False
+
+    def it_excludes_a_sibling_directory_sharing_the_cwd_prefix(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path / "proj"))
+        assert scope.contains(str(tmp_path / "proj2" / "x.py")) is False
+
+    def it_excludes_the_active_venv_inside_cwd(tmp_path, monkeypatch):
+        """sys.prefix under the project (uv's .venv) is not project source,
+        even for a file outside any site-packages directory."""
+        venv = tmp_path / ".venv"
+        _isolated_scope_env(monkeypatch, venv)
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(venv / "lib" / "python3.13" / "x.py")) is False
+
+    def it_excludes_reported_site_packages_dirs(tmp_path, monkeypatch):
+        pkgs = tmp_path / "env" / "pkgs"
+        _isolated_scope_env(monkeypatch, "/opt/py", site_packages=[pkgs])
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(pkgs / "numpy" / "__init__.py")) is False
+
+    def it_excludes_the_user_site_dir(tmp_path, monkeypatch):
+        user = tmp_path / "user-site"
+        _isolated_scope_env(monkeypatch, "/opt/py", user_site=user)
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(user / "requests.py")) is False
+
+    def it_excludes_any_site_packages_segment_below_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path))
+        path = tmp_path / "other-venv" / "lib" / "site-packages" / "np.py"
+        assert scope.contains(str(path)) is False
+
+    def it_excludes_any_dist_packages_segment_below_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path))
+        path = tmp_path / "usr" / "lib" / "dist-packages" / "np.py"
+        assert scope.contains(str(path)) is False
+
+    def it_ignores_package_segments_above_cwd(tmp_path, monkeypatch):
+        """Only the part of the path below cwd is checked for segments."""
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        cwd = tmp_path / "site-packages" / "proj"
+        scope = ProjectModuleScope(str(cwd))
+        assert scope.contains(str(cwd / "app.py")) is True
+
+    def it_ignores_an_environment_root_that_contains_cwd(tmp_path, monkeypatch):
+        """A system Python at /usr with the project in /usr/src/app (or
+        ``python -m venv .``) must not exclude every project file."""
+        _isolated_scope_env(
+            monkeypatch, tmp_path, site_packages=[tmp_path], user_site=tmp_path
+        )
+        scope = ProjectModuleScope(str(tmp_path / "src" / "app"))
+        assert scope.environment_roots == ()
+        assert scope.contains(str(tmp_path / "src" / "app" / "views.py")) is True
+
+    def it_keeps_environment_roots_that_do_not_contain_cwd(tmp_path, monkeypatch):
+        venv = tmp_path / ".venv"
+        _isolated_scope_env(monkeypatch, venv, site_packages=[venv / "sp"])
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.environment_roots == (
+            "/nowhere" + os.sep,
+            str(venv) + os.sep,
+            str(venv / "sp") + os.sep,
+        )
+
+    def describe_module_names():
+        def it_lists_loaded_project_modules(tmp_path, monkeypatch):
+            mod = types.ModuleType("_scope_project_mod")
+            mod.__file__ = str(tmp_path / "proj_mod.py")
+            monkeypatch.setitem(sys.modules, "_scope_project_mod", mod)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "_scope_project_mod" in names
+            assert isinstance(names, frozenset)
+
+        def it_skips_installed_packages_under_cwd(tmp_path, monkeypatch):
+            mod = types.ModuleType("_scope_venv_mod")
+            mod.__file__ = str(tmp_path / ".venv" / "site-packages" / "m.py")
+            monkeypatch.setitem(sys.modules, "_scope_venv_mod", mod)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "_scope_venv_mod" not in names
+
+        def it_skips_keep_prefix_modules(tmp_path, monkeypatch):
+            mod = types.ModuleType("pytest_leela._scope_kept")
+            mod.__file__ = str(tmp_path / "kept.py")
+            monkeypatch.setitem(sys.modules, "pytest_leela._scope_kept", mod)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "pytest_leela._scope_kept" not in names
+
+        def it_skips_none_and_fileless_modules(tmp_path, monkeypatch):
+            fileless = types.ModuleType("_scope_fileless")
+            fileless.__file__ = None
+            monkeypatch.setitem(sys.modules, "_scope_fileless", fileless)
+            monkeypatch.setitem(sys.modules, "_scope_none", None)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "_scope_fileless" not in names
+            assert "_scope_none" not in names
+
+
+def describe_clear_user_modules_with_venv_inside_cwd():
+    def it_keeps_installed_packages_under_cwd(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        mod = types.ModuleType("_venv_pkg_mod")
+        mod.__file__ = str(tmp_path / ".venv" / "lib" / "site-packages" / "p.py")
+        monkeypatch.setitem(sys.modules, "_venv_pkg_mod", mod)
+
+        _clear_user_modules()
+
+        assert "_venv_pkg_mod" in sys.modules
+
+    def it_keeps_installed_packages_out_of_the_precomputed_set(
+        tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        mod = types.ModuleType("_venv_pkg_pre")
+        mod.__file__ = str(tmp_path / ".venv" / "lib" / "site-packages" / "p.py")
+        monkeypatch.setitem(sys.modules, "_venv_pkg_pre", mod)
+
+        assert "_venv_pkg_pre" not in precompute_user_modules()
+
+
+def describe_ResultCollector_collection_errors():
+    def it_records_failed_collection_reports_with_their_summary():
+        collector = _ResultCollector()
+        collector.pytest_collectreport(
+            _FakeCollectReport(
+                "tests/test_x.py", failed=True, longreprtext="trace\nE   ImportError: nope\n"
+            )
+        )
+        assert collector.collection_errors == ["tests/test_x.py: E   ImportError: nope"]
+
+    def it_ignores_successful_collection_reports():
+        collector = _ResultCollector()
+        collector.pytest_collectreport(_FakeCollectReport("tests/test_x.py", False))
+        assert collector.collection_errors == []
+
+
+def describe_last_line():
+    def it_returns_the_last_non_blank_line_stripped():
+        assert _last_line("first\n  second  \n\n   \n") == "second"
+
+    def it_returns_a_placeholder_for_empty_text():
+        assert _last_line("") == "<no details>"
+
+    def it_returns_a_placeholder_for_whitespace_only_text():
+        assert _last_line("  \n \n") == "<no details>"
+
+
+def describe_inner_run_error():
+    def _collector(total=0, collection_errors=()):
+        collector = _ResultCollector()
+        collector.total = total
+        collector.collection_errors = list(collection_errors)
+        return collector
+
+    def it_is_none_when_tests_ran_and_passed():
+        assert _inner_run_error(pytest.ExitCode.OK, _collector(total=2)) is None
+
+    def it_is_none_for_tests_failed_exit_code_with_tests_run():
+        assert _inner_run_error(pytest.ExitCode.TESTS_FAILED, _collector(1)) is None
+
+    def it_names_an_abnormal_exit_code():
+        reason = _inner_run_error(pytest.ExitCode.INTERRUPTED, _collector(total=1))
+        assert reason == "pytest exited with INTERRUPTED"
+
+    def it_accepts_a_plain_int_exit_code():
+        reason = _inner_run_error(4, _collector(total=1))
+        assert reason == "pytest exited with USAGE_ERROR"
+
+    def it_appends_every_collection_error():
+        reason = _inner_run_error(
+            pytest.ExitCode.INTERRUPTED,
+            _collector(collection_errors=["a.py: E1", "b.py: E2"]),
+        )
+        assert reason == "pytest exited with INTERRUPTED (a.py: E1; b.py: E2)"
+
+    def it_reports_zero_tests_run_on_a_clean_exit():
+        assert _inner_run_error(pytest.ExitCode.OK, _collector(total=0)) == (
+            "no tests ran"
+        )
+
+
+def describe_run_tests_for_mutant_classification():
+    """Each branch of the kill / survive / error decision, driven by a fake
+    inner ``pytest.main`` that feeds the result collector directly."""
+
+    def _mutant(tmp_path, monkeypatch, name):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / f"{name}.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), name)
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        return mutant, {name: source}, {name: str(target)}
+
+    def _fake_main(reports, exit_code):
+        def fake(args, plugins=None):
+            for report in reports:
+                plugins[0].pytest_runtest_logreport(report)
+            return exit_code
+
+        return fake
+
+    def _run(tmp_path, monkeypatch, name, reports, exit_code):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, name)
+        with patch(
+            "pytest_leela.runner.pytest.main",
+            side_effect=_fake_main(reports, exit_code),
+        ):
+            return run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+
+    def it_survives_when_tests_ran_and_passed(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_survive",
+            [_FakeReport("t::a", "call", passed=True, failed=False)],
+            pytest.ExitCode.OK,
+        )
+        assert result.status == "survived"
+        assert result.error is None
+        assert result.tests_run == 1
+        assert result.test_ids_run == ["t::a"]
+
+    def it_kills_on_a_failing_test(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_fail",
+            [
+                _FakeReport("t::a", "call", passed=True, failed=False),
+                _FakeReport("t::b", "call", passed=False, failed=True),
+            ],
+            pytest.ExitCode.TESTS_FAILED,
+        )
+        assert result.status == "killed"
+        assert result.killing_test == "t::b"
+        assert result.killing_tests == ["t::b"]
+        assert result.test_ids_run == ["t::a", "t::b"]
+
+    def it_kills_on_a_setup_error_even_with_zero_calls(tmp_path, monkeypatch):
+        """A fixture broken by the mutant is a test catching it."""
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_setup",
+            [_FakeReport("t::c", "setup", passed=False, failed=True)],
+            pytest.ExitCode.TESTS_FAILED,
+        )
+        assert result.status == "killed"
+        assert result.tests_run == 0
+        assert result.killing_test == "t::c"
+
+    def it_lists_failures_before_setup_errors(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_order",
+            [
+                _FakeReport("t::e", "setup", passed=False, failed=True),
+                _FakeReport("t::f", "call", passed=False, failed=True),
+            ],
+            pytest.ExitCode.TESTS_FAILED,
+        )
+        assert result.killing_test == "t::f"
+        assert result.killing_tests == ["t::f", "t::e"]
+
+    def it_errors_when_no_tests_ran(tmp_path, monkeypatch):
+        result = _run(tmp_path, monkeypatch, "cls_none", [], pytest.ExitCode.OK)
+        assert result.status == "error"
+        assert result.killed is False
+        assert result.error == "no tests ran"
+
+    def it_errors_on_no_tests_collected(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path, monkeypatch, "cls_nocoll", [], pytest.ExitCode.NO_TESTS_COLLECTED
+        )
+        assert result.status == "error"
+        assert result.error == "pytest exited with NO_TESTS_COLLECTED"
+
+    def it_errors_on_an_interrupted_run_even_after_passes(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_intr",
+            [_FakeReport("t::a", "call", passed=True, failed=False)],
+            pytest.ExitCode.INTERRUPTED,
+        )
+        assert result.status == "error"
+        assert result.error == "pytest exited with INTERRUPTED"
+
+    def it_errors_when_the_runner_raises_system_exit_without_timeout(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "cls_sysexit")
+        with patch("pytest_leela.runner.pytest.main", side_effect=SystemExit(3)):
+            result = run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+        assert result.status == "error"
+        assert result.error == "pytest crashed: SystemExit: 3"
+        assert result.killing_tests == []
+
+    def it_keeps_packages_the_inner_run_imported_from_a_venv_in_cwd(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "cls_venv_new")
+        pkg_file = str(tmp_path / ".venv" / "lib" / "site-packages" / "fresh.py")
+
+        def fake(args, plugins=None):
+            mod = types.ModuleType("_fresh_venv_pkg")
+            mod.__file__ = pkg_file
+            sys.modules["_fresh_venv_pkg"] = mod
+            return 0
+
+        try:
+            with patch("pytest_leela.runner.pytest.main", side_effect=fake):
+                run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+            assert "_fresh_venv_pkg" in sys.modules
+        finally:
+            sys.modules.pop("_fresh_venv_pkg", None)

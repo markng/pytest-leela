@@ -245,5 +245,5 @@ class LeelaPlugin:
 
             generate_html_report(result, html_path)
 
-        if result.survived:
+        if result.survived or (result.errors and leela_config.fail_on_error):
             session.exitstatus = 1

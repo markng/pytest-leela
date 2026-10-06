@@ -88,6 +88,29 @@ def describe_clean_process_state():
         finally:
             sys.modules.pop("_stale_tmp_fixture_mod", None)
 
+    def it_keeps_installed_packages_from_a_venv_under_the_temp_dir(monkeypatch):
+        """A project whose virtualenv lives under /tmp must keep its packages:
+        evicting them breaks C-extension re-imports in every inner run."""
+        fake_mod = types.ModuleType("_tmp_venv_pkg_mod")
+        fake_mod.__file__ = os.path.join(
+            tempfile.gettempdir(), "proj", ".venv", "site-packages", "pkg.py"
+        )
+        monkeypatch.setitem(sys.modules, "_tmp_venv_pkg_mod", fake_mod)
+
+        _clean_process_state()
+
+        assert sys.modules["_tmp_venv_pkg_mod"] is fake_mod
+
+    def it_keeps_leela_modules_loaded_from_the_temp_dir(monkeypatch):
+        """A leela checkout under /tmp must not lose its own modules."""
+        fake_mod = types.ModuleType("pytest_leela._tmp_checkout_mod")
+        fake_mod.__file__ = os.path.join(tempfile.gettempdir(), "src", "m.py")
+        monkeypatch.setitem(sys.modules, "pytest_leela._tmp_checkout_mod", fake_mod)
+
+        _clean_process_state()
+
+        assert sys.modules["pytest_leela._tmp_checkout_mod"] is fake_mod
+
     def it_keeps_non_temp_modules():
         original_keys = set(sys.modules.keys())
 

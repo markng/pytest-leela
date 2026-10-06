@@ -272,3 +272,61 @@ def describe_enrichment_stats():
         c = a + b
         assert c.from_annotations == 0
         assert c.from_assignment_dataflow == 0
+
+
+def _make_error_result(mutant_id: int = 9) -> MutantResult:
+    mutant = Mutant(point=_make_point(), replacement_op="Sub", mutant_id=mutant_id)
+    return MutantResult(
+        mutant=mutant,
+        killed=False,
+        tests_run=0,
+        killing_test=None,
+        time_seconds=0.1,
+        error="pytest exited with INTERRUPTED",
+    )
+
+
+def _run_of(results: list[MutantResult]) -> RunResult:
+    return RunResult(
+        target_files=["test.py"],
+        total_mutants=len(results),
+        mutants_tested=len(results),
+        mutants_pruned=0,
+        results=results,
+        wall_time_seconds=1.0,
+    )
+
+
+def describe_mutant_result_status():
+    def it_is_killed_when_killed():
+        assert _make_result(True).status == "killed"
+
+    def it_is_survived_when_not_killed_and_no_error():
+        assert _make_result(False).status == "survived"
+
+    def it_is_error_when_an_error_is_recorded():
+        assert _make_error_result().status == "error"
+
+    def it_defaults_error_to_none():
+        assert _make_result(False).error is None
+
+
+def describe_run_result_errors():
+    def it_lists_errored_mutants_separately_from_survivors():
+        errored = _make_error_result(3)
+        survivor = _make_result(False, 2)
+        run = _run_of([_make_result(True, 1), survivor, errored])
+        assert run.errors == [errored]
+        assert run.survived == [survivor]
+
+    def it_counts_only_killed_and_survived_as_scored():
+        run = _run_of([_make_result(True, 1), _make_result(False, 2), _make_error_result()])
+        assert run.mutants_scored == 2
+
+    def it_excludes_errors_from_the_mutation_score():
+        run = _run_of([_make_result(True, 1), _make_result(False, 2), _make_error_result()])
+        assert run.mutation_score == 50.0
+
+    def it_scores_zero_when_every_mutant_errored():
+        run = _run_of([_make_error_result(1), _make_error_result(2)])
+        assert run.mutation_score == 0.0

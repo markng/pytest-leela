@@ -15,6 +15,8 @@ class LeelaConfig:
 
     exclude: tuple[str, ...] = ()
     operators: tuple[str, ...] = field(default_factory=lambda: tuple(DEFAULT_OPERATORS))
+    # Fail the session when any mutant's run errored outside the tests.
+    fail_on_error: bool = True
 
 
 def load_config(rootpath: Path) -> LeelaConfig:
@@ -36,6 +38,7 @@ def load_config(rootpath: Path) -> LeelaConfig:
 
     exclude = leela_config.get("exclude", [])
     operators = leela_config.get("operators", list(DEFAULT_OPERATORS))
+    fail_on_error = leela_config.get("fail_on_error", True)
 
     # Validate types — a bare string silently iterates characters (Guidelines 2:5)
     if not isinstance(exclude, list):
@@ -47,6 +50,12 @@ def load_config(rootpath: Path) -> LeelaConfig:
         raise ValueError(
             f"[tool.pytest-leela] 'operators' must be a list of strings in pyproject.toml, "
             f"got {type(operators).__name__}: {operators!r}"
+        )
+
+    if not isinstance(fail_on_error, bool):
+        raise ValueError(
+            f"[tool.pytest-leela] 'fail_on_error' must be true or false in pyproject.toml, "
+            f"got {type(fail_on_error).__name__}: {fail_on_error!r}"
         )
 
     # Validate inner element types — every element must be a string (Guidelines 2:5)
@@ -76,4 +85,8 @@ def load_config(rootpath: Path) -> LeelaConfig:
     if "all" in operators:
         operators = list(ALL_OPERATORS)
 
-    return LeelaConfig(exclude=tuple(exclude), operators=tuple(operators))
+    return LeelaConfig(
+        exclude=tuple(exclude),
+        operators=tuple(operators),
+        fail_on_error=fail_on_error,
+    )

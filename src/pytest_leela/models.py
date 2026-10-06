@@ -65,6 +65,18 @@ class MutantResult:
     time_seconds: float
     test_ids_run: list[str] = field(default_factory=list)  # all tests executed
     killing_tests: list[str] = field(default_factory=list)  # all failing tests
+    # Why the inner run never exercised a test (collection/import error,
+    # runner crash, zero tests ran).  Set only when ``killed`` is False.
+    error: str | None = None
+
+    @property
+    def status(self) -> str:
+        """``"killed"``, ``"survived"`` or ``"error"``."""
+        if self.killed:
+            return "killed"
+        if self.error is not None:
+            return "error"
+        return "survived"
 
 
 @dataclass
@@ -105,10 +117,20 @@ class RunResult:
 
     @property
     def survived(self) -> list[MutantResult]:
-        return [r for r in self.results if not r.killed]
+        return [r for r in self.results if r.status == "survived"]
+
+    @property
+    def errors(self) -> list[MutantResult]:
+        """Mutants whose run errored outside the tests; never scored."""
+        return [r for r in self.results if r.status == "error"]
+
+    @property
+    def mutants_scored(self) -> int:
+        """Mutants with a real verdict (killed or survived)."""
+        return self.mutants_tested - len(self.errors)
 
     @property
     def mutation_score(self) -> float:
-        if self.mutants_tested == 0:
+        if self.mutants_scored == 0:
             return 0.0
-        return self.killed / self.mutants_tested * 100.0
+        return self.killed / self.mutants_scored * 100.0
