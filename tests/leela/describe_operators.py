@@ -374,14 +374,18 @@ def describe_count_pruned():
         pruned = count_pruned([point], use_types=False)
         assert pruned == 0
 
-    def it_counts_zero_for_non_pruned():
-        # int Add: typed has 3 mutations, untyped has 2 -> pruned = 2 - 3 = -1? No.
-        # Actually untyped Add = ["Sub", "Mult"] (2), typed int Add = ["Sub", "Mult", "FloorDiv"] (3)
-        # pruned = 2 - 3 = -1, but that's expansion not pruning
+    def it_does_not_count_typed_additions_as_negative_pruning():
+        """Regression: int Add gains FloorDiv under typing; the summary used to
+        print "-1 pruned by type analysis"."""
         point = _make_point(node_type="BinOp", original_op="Add", inferred_type="int")
-        pruned = count_pruned([point], use_types=True)
-        # This can be negative (expansion), which is expected behavior
-        assert pruned == -1
+        assert count_pruned([point], use_types=True) == 0
+
+    def it_counts_an_untyped_mutation_the_typed_rule_replaces():
+        # int FloorDiv: untyped [Div, Mult], typed [Mult, Add] -> Div is pruned
+        point = _make_point(
+            node_type="BinOp", original_op="FloorDiv", inferred_type="int"
+        )
+        assert count_pruned([point], use_types=True) == 1
 
     def it_handles_empty_list():
         pruned = count_pruned([], use_types=True)

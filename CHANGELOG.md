@@ -39,6 +39,12 @@
   project module they reference is kept too, so a kept model never ends
   up subclassing a stale copy of a reloaded mixin.
 
+- **The summary no longer reports a negative "pruned by type analysis"
+  count.** A typed rule can add operators the untyped rule lacks (int
+  `+` gains `//`), and `count_pruned` subtracted list lengths, so such
+  points counted as negative pruning ("-1 pruned"). It now counts only
+  untyped mutations the typed rule dropped.
+
 ### Added
 
 - **Clean baseline before any mutant.** The selected tests run once with

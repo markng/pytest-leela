@@ -319,7 +319,12 @@ def count_pruned(
     use_types: bool = True,
     allowed_keys: frozenset[tuple[str, str]] | None = None,
 ) -> int:
-    """Count how many mutations are pruned by type awareness."""
+    """Count the untyped mutations that type awareness removed.
+
+    A typed rule replaces the untyped list rather than narrowing it, and can
+    add operators (int ``+`` gains ``//``).  Additions are not pruning, so
+    only untyped mutations missing from the typed list are counted.
+    """
     if not use_types:
         return 0
 
@@ -327,5 +332,5 @@ def count_pruned(
     for point in points:
         untyped = mutations_for(point, use_types=False, allowed_keys=allowed_keys)
         typed = mutations_for(point, use_types=True, allowed_keys=allowed_keys)
-        pruned += len(untyped) - len(typed)
+        pruned += len(set(untyped) - set(typed))
     return pruned
