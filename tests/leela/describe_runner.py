@@ -1225,7 +1225,7 @@ def describe_run_tests_for_mutant_with_venv_inside_project():
         return source, target, test_dir, mutant, ext
 
     def it_reports_a_weakly_tested_mutant_as_survived(tmp_path, monkeypatch):
-        source, target, test_dir, mutant, ext = _make_project(tmp_path, monkeypatch)
+        source, target, test_dir, mutant, _ = _make_project(tmp_path, monkeypatch)
 
         result = run_tests_for_mutant(
             mutant,
@@ -1241,7 +1241,7 @@ def describe_run_tests_for_mutant_with_venv_inside_project():
         assert result.killing_tests == []
 
     def it_reports_survived_on_the_full_scan_path_too(tmp_path, monkeypatch):
-        source, target, test_dir, mutant, ext = _make_project(tmp_path, monkeypatch)
+        source, target, test_dir, mutant, _ = _make_project(tmp_path, monkeypatch)
 
         result = run_tests_for_mutant(
             mutant,
@@ -1373,10 +1373,9 @@ def describe_run_tests_for_mutant_inner_run_errors():
         )
 
         assert result.status == "killed"
-        assert result.killing_tests == [
-            "<import of conftest_target: ZeroDivisionError: "
-            "integer division or modulo by zero>"
-        ]
+        [killing_test] = result.killing_tests
+        # The exception message differs between Python versions.
+        assert killing_test.startswith("<import of conftest_target: ZeroDivisionError:")
 
 
 def _isolated_scope_env(monkeypatch, prefix, site_packages=(), user_site="/nowhere"):
@@ -1949,6 +1948,46 @@ def describe_run_tests_for_mutant_real_inner_outcomes():
 
         assert result.status == "error"
         assert result.error == "pytest exited with USAGE_ERROR"
+
+    def it_keeps_a_green_run_survived_when_an_import_error_was_caught(
+        tmp_path, monkeypatch
+    ):
+        """Regression: the mutated module raised on import, but the test caught
+        it and the run completed green, so nothing detected the mutant."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        (tmp_path / "caught_calc.py").write_text(source)
+        test_dir = tmp_path / "caught_tests"
+        test_dir.mkdir()
+        (test_dir / "test_caught.py").write_text(
+            "try:\n"
+            "    import caught_calc\n"
+            "except Exception:\n"
+            "    caught_calc = None\n\n\n"
+            "def test_ratio_if_available():\n"
+            "    if caught_calc is None:\n"
+            "        return\n"
+            "    assert caught_calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
+        )
+        points = find_mutation_points(
+            source, str(tmp_path / "caught_calc.py"), "caught_calc"
+        )
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"caught_calc": source},
+            {"caught_calc": str(tmp_path / "caught_calc.py")},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "survived"
+        assert result.tests_run == 1
+        assert result.killing_tests == []
 
     def it_kills_on_a_real_setup_error(tmp_path, monkeypatch):
         mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_setup")

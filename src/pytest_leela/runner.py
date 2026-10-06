@@ -12,7 +12,14 @@ import sys
 import threading
 import time
 import types
-from typing import Any
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from weakref import WeakSet
+
+    from django.apps.registry import Apps
+    from django.contrib.admin.sites import AdminSite
 
 # Save references to stdlib path modules.  During self-mutation the inner
 # pytest.main() may evict these from sys.modules; we need to restore them
@@ -41,13 +48,19 @@ from pytest_leela.models import Mutant, MutantResult
 # sys.modules).  Capturing the reference once at module load avoids the
 # problem entirely.
 try:
-    from django.urls import clear_url_caches as _django_clear_url_caches
+    from django.urls import clear_url_caches
+
+    _django_clear_url_caches: Callable[[], None] | None = clear_url_caches
 except ImportError:
+    # Django is optional.
     _django_clear_url_caches = None
 
 try:
-    from django.apps import apps as _django_apps
+    from django.apps import apps
+
+    _django_apps: Apps | None = apps
 except ImportError:
+    # Django is optional.
     _django_apps = None
 
 # Prefixes for modules that should never be evicted between mutation runs.
@@ -170,7 +183,8 @@ def _django_registry_module_names() -> frozenset[str]:
     admin_sites = sys.modules.get("django.contrib.admin.sites")
     if admin_sites is not None:
         # None when django.contrib.admin was never imported: no ModelAdmins.
-        for admin_site in list(admin_sites.all_sites):
+        all_sites = cast("WeakSet[AdminSite]", admin_sites.all_sites)
+        for admin_site in list(all_sites):
             for model_admin in list(admin_site._registry.values()):
                 roots.append(type(model_admin).__module__)
     packages = tuple(f"{root}." for root in roots)
@@ -489,9 +503,12 @@ class InnerSession:
             )
         if self.crash is None:
             killing_tests = self.failures()
-            if not killing_tests and self.import_errors:
-                # The mutated module itself raised on import, so every test
-                # importing it errored at collection: the suite went red.
+            run_error = _inner_run_error(self.exit_code, collector)
+            if not killing_tests and run_error is not None and self.import_errors:
+                # The run did not complete, and the mutated module itself
+                # raised on import: the tests importing it errored at
+                # collection, so the suite went red.  A run that completed
+                # green stays a survivor even if some import caught the error.
                 killing_tests = collector.collection_error_ids or [
                     f"<import of {self.import_errors[0]}>"
                 ]

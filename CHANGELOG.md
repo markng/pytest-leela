@@ -57,14 +57,23 @@
   `"survived"` or `"error"`; `RunResult` gains `errors` and
   `mutants_scored`. Timeouts remain kills.
 
-- **A mutant that makes the target module raise on import is killed.**
-  `MutatingLoader` records exceptions raised by the mutated source; when
-  one occurred, the collection errors it caused are the killing tests.
-  Previously such a mutant was reported SURVIVED with `tests_run: 0`.
+- **A mutant that makes the target module raise on import is killed,
+  for a reason.** `MutatingLoader` records exceptions raised by the
+  mutated source. When one occurred *and* the inner run did not complete
+  (abnormal exit or zero tests run), the collection errors it caused are
+  the killing tests. A run that completed with every test passing stays
+  SURVIVED even if some code caught the import error. 0.8.0 already
+  reported these mutants as KILLED, but only as `<crashed>` with
+  `tests_run: 0`, the same verdict it gave any crash, so a kill could
+  not be told apart from leela failing to test the mutant.
 
 - **`--leela-benchmark` no longer raises `TypeError`.** It called the
   target-discovery helpers without the `python_files` patterns they
   require.
+
+- **The `django` extra requires `pytest-django>=4.10`.** 4.10 is the
+  first release whose `pytest_unconfigure` restores the session's
+  database block, which leela's nested sessions depend on.
 
 - **`fail_on_error` option** in `[tool.pytest-leela]` (default `true`).
   Set it to `false` to keep errored mutants from failing the session.
