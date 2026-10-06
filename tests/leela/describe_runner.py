@@ -2379,6 +2379,123 @@ def describe_collection_failures():
         assert result.error == "pytest crashed: Skipped: unavailable"
         assert result.killing_tests == []
 
+    def _exit_conftest(name):
+        return (
+            "import pytest\n\n"
+            "try:\n"
+            f"    import {name}  # noqa: F401\n"
+            "except ZeroDivisionError:\n"
+            "    pytest.exit('calc unavailable')\n"
+        )
+
+    def it_reports_a_conftest_exit_at_import_as_an_error(tmp_path, monkeypatch):
+        """The judge's confexit probe: pytest reports it as a conftest import
+        failure, like a broken target import, but the conftest exited on
+        purpose, as a conftest skip does: an error, not a kill."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "confexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "confexit_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(_exit_conftest("confexit_calc"))
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "conftest called pytest.exit() at import (calc unavailable)"
+        )
+        assert result.killing_tests == []
+
+    def it_reports_a_subdirectory_conftest_exit_as_an_error(tmp_path, monkeypatch):
+        """The judge's subexit probe, selected by node id as coverage does:
+        pytest loads the subdirectory conftest before the session starts."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "subexit_calc", "Add", "Sub"
+        )
+        sub = tmp_path / "subexit_tests" / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text(_exit_conftest("subexit_calc"))
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(
+            mutant, sources, files, test_ids=["subexit_tests/sub/test_c.py::test_c"]
+        )
+
+        assert result.status == "error"
+        assert result.error == (
+            "conftest called pytest.exit() at import (calc unavailable)"
+        )
+
+    def it_reports_a_conftest_exit_during_collection_as_an_error(
+        tmp_path, monkeypatch
+    ):
+        """With a directory argument the subdirectory conftest loads during
+        collection, where the session turns pytest.exit() into INTERRUPTED."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "collexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "collexit_tests"
+        sub = test_dir / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text(_exit_conftest("collexit_calc"))
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "conftest called pytest.exit() at import (calc unavailable)"
+        )
+
+    def it_reports_a_conftest_check_failing_during_collection_as_an_error(
+        tmp_path, monkeypatch
+    ):
+        """The conftest's own check, not the target, raised: an error, as it
+        is when the conftest loads before the session (confassert)."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "collcheck_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "collcheck_tests"
+        sub = test_dir / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text(
+            "import collcheck_calc\n\n"
+            "if collcheck_calc.RATIO != 5:\n"
+            "    raise RuntimeError('ratio changed')\n"
+        )
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.killing_tests == []
+        assert "RuntimeError: ratio changed" in result.error
+
+    def it_kills_when_the_target_breaks_a_conftest_loaded_during_collection(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "collimport_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "collimport_tests"
+        sub = test_dir / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text("import collimport_calc  # noqa: F401\n")
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "killed"
+        # pytest 8+ reports the directory; pytest 7 the Session, so leela
+        # names the conftest instead.
+        [killing_test] = result.killing_tests
+        assert killing_test in (
+            "collimport_tests/sub",
+            os.path.join("collimport_tests", "sub", "conftest.py"),
+        )
+
     def it_reports_an_exit_from_a_conftest_addoption_hook_as_an_error(
         tmp_path, monkeypatch
     ):

@@ -173,7 +173,7 @@ Each mutant ends in exactly one of three states:
 |---|---|---|
 | **killed** | At least one test failed or errored in setup/teardown, a test module failed to collect, the run timed out (an infinite loop introduced by the mutant), or a conftest failed to import because the mutated module raised while being imported. A setup error or a collection failure caused by the environment or by nondeterminism rather than the mutant (a flaky fixture, a module that sometimes fails to import) also counts as a kill ([#13](https://github.com/markng/pytest-leela/issues/13)) | yes |
 | **survived** | Tests ran and all of them passed | yes |
-| **error** | The inner run never tested the mutant: pytest crashed (for example a conftest that raised `Skipped` at import, or called `pytest.exit()` from `pytest_addoption`), exited abnormally with no test failure or collection failure (usage error, nothing collected, interrupted), or ran zero tests (everything skipped) | no |
+| **error** | The inner run never tested the mutant: pytest crashed (for example a conftest that raised `Skipped` at import, or called `pytest.exit()` from `pytest_addoption`), a conftest called `pytest.exit()` at import, a conftest's own check failed, the run exited abnormally with no test failure or collection failure (usage error, nothing collected, interrupted), or ran zero tests (everything skipped) | no |
 
 The mutation score is `killed / (killed + survived)`. Errors are listed separately, with their
 reason, in the terminal report, the HTML report and the JSON output, and they fail the session
@@ -183,14 +183,18 @@ mutant, so it is reported as neither a kill nor a survival.
 A test module that fails to collect under the mutant is a kill: the clean baseline has already
 shown it collects unmutated, so the mutant broke it. That covers the *target module itself*
 raising at import time (module-level code) and a test module's own module-level check, such as
-`assert calc.RATIO == 5`. The killing tests are the files that failed to collect. A conftest
-that fails to import because the mutated module raised is a kill too. The same failing check
+`assert calc.RATIO == 5`. The killing tests are the files that failed to collect.
+
+A conftest that fails to import counts as a kill only when the mutated module itself raised
+during that import. A conftest's own check does not count, nor does a conftest that catches the
+error and calls `pytest.exit()` or `pytest.skip()`: those are errors. So the same failing check
 is deliberately treated differently by location: `assert calc.RATIO == 5` at module level in a
 test module is a kill, but in a conftest it is an error, because a conftest failure is not
-attributed to the mutant. If a test caught the
-import error and the suite completed green, the mutant **survived**: no test noticed it. If the
-mutant made the tests skip themselves (a module-level `pytest.skip`, a `skipif` marker, or a
-conftest that skips), the mutant is an **error**: no test ran.
+attributed to the mutant.
+
+If a test caught the import error and the suite completed green, the mutant **survived**: no
+test noticed it. If the mutant made the tests skip themselves (a module-level `pytest.skip`, a
+`skipif` marker, or a conftest that skips or exits), the mutant is an **error**: no test ran.
 
 ### Clean baseline before any mutant
 

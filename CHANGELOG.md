@@ -68,7 +68,9 @@
   mutant's doing: the target raising at import, or a test module's own
   module-level check failing. Those modules are the killing tests.
   `MutatingLoader` records exceptions raised by the mutated source, and a
-  conftest that fails to import because of one is a kill too. A run that
+  conftest that fails to import because of one is a kill too. A
+  conftest's own failing check, or a conftest that calls `pytest.exit()`
+  at import, is an `error`: it is not attributed to the mutant. A run that
   stays green or empty is not a kill: an import caught by the test is
   SURVIVED, and a module-level skip, a skip marker or a conftest that
   skips is an `error`, because no test ran. A conftest raising `Skipped`

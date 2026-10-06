@@ -162,6 +162,36 @@ def describe_collection_failures():
         assert "Traceback" not in result.stdout.str() + result.stderr.str()
         assert result.ret == 1
 
+    def it_reports_a_conftest_that_exits_on_a_failed_import_as_an_error(pytester):
+        """The judge's confexit probe, while a conftest the target itself
+        breaks stays a kill."""
+        pytester.makepyfile(
+            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
+            conftest=(
+                "import pytest\n\n"
+                "try:\n"
+                "    import calc  # noqa: F401\n"
+                "except Exception:\n"
+                "    pytest.exit('calc unavailable')\n"
+            ),
+            test_calc=(
+                "import calc\n\n\n"
+                "def test_ratio():\n"
+                "    assert calc.RATIO in (5, 10, 0, 20, 5.0)\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        result.stdout.fnmatch_lines(
+            [
+                "*line 1: + → - * ERROR",
+                "*conftest called pytest.exit() at import (calc unavailable)",
+            ]
+        )
+        assert "KILLED" not in result.stdout.str()
+        assert result.ret == 1
+
 
 def describe_error_mutants():
     def _project(pytester, fail_on_error=None):

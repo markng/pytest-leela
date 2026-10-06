@@ -12,7 +12,7 @@ import sys
 import threading
 import time
 import types
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
@@ -31,6 +31,7 @@ _STDLIB_PATH_MODULES = {
 }
 
 import pytest
+from _pytest.config import ConftestImportFailure
 
 from pytest_leela.import_hook import (
     MutatingFinder,
@@ -258,9 +259,39 @@ class _ResultCollector:
         self.collection_error_ids: list[str] = []
         self.total = 0
         self.session_started = False
+        self.conftest_exit: str | None = None  # pytest.exit() reason
+        # Collection reports caused by a conftest that failed to import.
+        self.conftest_failure_ids: set[str] = set()
+        # pytest 7 reports such a failure on the Session (empty nodeid); it
+        # is then recorded under the conftest's path.
+        self._session_conftest_failure: str | None = None
 
     def pytest_sessionstart(self, session: Any) -> None:
         self.session_started = True
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_load_initial_conftests(self) -> Generator[None, Any, None]:
+        # pytest wraps a conftest's import error as ConftestImportFailure,
+        # raised ``from`` the original (_pytest/config/__init__.py, pytest
+        # 7.0 to 9: "raise ConftestImportFailure(...) from e").
+        outcome = yield
+        if outcome.excinfo is not None:
+            cause = outcome.excinfo[1].__cause__
+            if isinstance(cause, pytest.exit.Exception):
+                self.conftest_exit = str(cause)
+
+    def pytest_exception_interact(self, call: Any, report: Any) -> None:
+        # A conftest first loaded during collection fails as a collection
+        # error; pytest passes the exception here before the collect report.
+        exc = call.excinfo.value
+        if isinstance(exc, ConftestImportFailure):
+            nodeid = report.nodeid
+            if not nodeid:
+                nodeid = os.path.relpath(exc.path)
+                self._session_conftest_failure = nodeid
+            self.conftest_failure_ids.add(nodeid)
+            if isinstance(exc.__cause__, pytest.exit.Exception):
+                self.conftest_exit = str(exc.__cause__)
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         if report.when == "call":
@@ -273,13 +304,14 @@ class _ResultCollector:
             self.errors.append(report.nodeid)
 
     def pytest_collectreport(self, report: Any) -> None:
-        # The Session's own report (empty nodeid) only echoes an earlier
-        # module's failure ("stopping after 1 failures" under -x).
-        if report.failed and report.nodeid:
+        # The Session's own report (empty nodeid) otherwise only echoes an
+        # earlier module's failure ("stopping after 1 failures" under -x).
+        nodeid = report.nodeid or self._session_conftest_failure
+        if report.failed and nodeid:
             summary = _last_line(report.longreprtext)
-            self.collection_error_ids.append(report.nodeid)
+            self.collection_error_ids.append(nodeid)
             self.collection_errors.append(
-                report.nodeid if summary is None else f"{report.nodeid}: {summary}"
+                nodeid if summary is None else f"{nodeid}: {summary}"
             )
 
 
@@ -494,6 +526,11 @@ class InnerSession:
         """Why the run did not test anything, or None if tests completed."""
         if self.crash is not None:
             return self.crash
+        if self.collector.conftest_exit is not None:
+            return (
+                "conftest called pytest.exit() at import"
+                f" ({self.collector.conftest_exit})"
+            )
         return _inner_run_error(self.exit_code, self.collector)
 
     def _conftest_import_failed(self) -> bool:
@@ -507,6 +544,12 @@ class InnerSession:
             self.exit_code == pytest.ExitCode.USAGE_ERROR
             and not self.collector.session_started
         )
+
+    def _conftest_failure_is_a_kill(self) -> bool:
+        """A conftest import failure is the mutant's doing only when the
+        mutated module raised during it.  A conftest's own check, or one
+        that calls pytest.exit() at import as a skip does, is not."""
+        return bool(self.import_errors) and self.collector.conftest_exit is None
 
     def result_for(self, mutant: Mutant) -> MutantResult:
         """Classify this run as a kill, a survival or an error for *mutant*."""
@@ -527,12 +570,13 @@ class InnerSession:
         if self.crash is None:
             # A test module failing to collect under the mutant, after a green
             # baseline, is a detection.  Skips and empty runs are not.
-            killing_tests = self.failures() + collector.collection_error_ids
-            if (
-                not killing_tests
-                and self.import_errors
-                and self._conftest_import_failed()
-            ):
+            conftest_kill = self._conftest_failure_is_a_kill()
+            killing_tests = self.failures() + [
+                nodeid
+                for nodeid in collector.collection_error_ids
+                if conftest_kill or nodeid not in collector.conftest_failure_ids
+            ]
+            if not killing_tests and conftest_kill and self._conftest_import_failed():
                 killing_tests = [f"<import of {self.import_errors[0]}>"]
             if killing_tests:
                 return MutantResult(
