@@ -39,7 +39,9 @@ jobs:
         pip install -e ".[dev,django]" "pytest==7.0.0"
     - name: Test with pytest
       run: |
-        pytest -W ignore
+        # pytest 7.0's helpconfig hookwrapper warns when a conftest fails to
+        # import, which several tests provoke on purpose.
+        pytest -W "ignore::pluggy.PluggyTeardownRaisedWarning"
 
   build:
 
