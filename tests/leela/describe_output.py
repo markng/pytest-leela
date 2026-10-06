@@ -488,8 +488,8 @@ def describe_terminal_report_with_errors():
             _make_run_result([_make_result(killed=True), _make_error_result()])
         )
         assert (
-            "  1 mutants errored outside the tests (collection/import error, "
-            "crash, or no tests ran) and are excluded from the score"
+            "  1 mutants errored outside the tests (crash, usage error, "
+            "or no tests ran) and are excluded from the score"
         ) in report
 
     def it_omits_the_error_summary_when_nothing_errored():

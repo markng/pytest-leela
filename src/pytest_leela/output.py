@@ -150,7 +150,7 @@ def format_terminal_report(result: RunResult) -> str:
     if result.errors:
         lines.append(
             f"  {len(result.errors)} mutants errored outside the tests "
-            "(collection/import error, crash, or no tests ran) and are "
+            "(crash, usage error, or no tests ran) and are "
             "excluded from the score"
         )
     if result.mutants_pruned > 0:

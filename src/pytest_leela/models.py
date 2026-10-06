@@ -68,8 +68,8 @@ class MutantResult:
     time_seconds: float
     test_ids_run: list[str] = field(default_factory=list)  # all tests executed
     killing_tests: list[str] = field(default_factory=list)  # all failing tests
-    # Why the inner run never exercised a test (collection/import error,
-    # runner crash, zero tests ran).  Set only when ``killed`` is False.
+    # Why the inner run never exercised a test (runner crash, usage error,
+    # zero tests ran).  Set only when ``killed`` is False.
     error: str | None = None
 
     def __post_init__(self) -> None:
