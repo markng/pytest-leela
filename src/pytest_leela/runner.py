@@ -286,14 +286,14 @@ class _ResultCollector:
             return
         cause = exc.__cause__
         if isinstance(cause, pytest.exit.Exception):
-            self.deliberate_exit = f"conftest called pytest.exit() at import ({cause})"
+            self.deliberate_exit = _conftest_exit_label(cause)
         else:
             # No collect report exists for it: name the cause in the error.
             self.collection_errors.append(
                 f"{os.path.relpath(exc.path)}: {type(cause).__name__}: {cause}"
             )
 
-    def pytest_exception_interact(self, call: Any, report: Any) -> None:
+    def pytest_exception_interact(self, node: Any, call: Any, report: Any) -> None:
         # A conftest first loaded during collection fails as a collection
         # error; pytest passes the exception here before the collect report.
         exc = call.excinfo.value
@@ -305,13 +305,12 @@ class _ResultCollector:
             self.conftest_failure_ids.add(nodeid)
             if isinstance(exc.__cause__, pytest.exit.Exception):
                 self.exit_ids.add(nodeid)
-                self.deliberate_exit = (
-                    f"conftest called pytest.exit() at import ({exc.__cause__})"
-                )
+                self.deliberate_exit = _conftest_exit_label(exc.__cause__)
         elif isinstance(exc, pytest.exit.Exception):
-            # A test module that exits at import, as one that skips: no kill.
+            # A test module that exits at import, as one that skips, or a
+            # conftest collection hook that exits: no kill.
             self.exit_ids.add(report.nodeid)
-            self.deliberate_exit = f"test module called pytest.exit() at import ({exc})"
+            self.deliberate_exit = _collection_exit_label(node, exc)
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         if report.when == "call":
@@ -328,17 +327,33 @@ class _ResultCollector:
         # earlier module's failure ("stopping after 1 failures" under -x).
         nodeid = report.nodeid or self._session_conftest_failure
         if report.failed and nodeid:
-            summary = _last_line(report.longreprtext)
+            summary = _exception_summary(report.longreprtext)
             self.collection_error_ids.append(nodeid)
             self.collection_errors.append(
                 nodeid if summary is None else f"{nodeid}: {summary}"
             )
 
 
-def _last_line(text: str) -> str | None:
-    """Return the last non-blank line of *text* (the exception summary)."""
+def _conftest_exit_label(cause: BaseException) -> str:
+    return f"conftest called pytest.exit() at import ({cause})"
+
+
+def _collection_exit_label(node: Any, exc: BaseException) -> str:
+    """Name what called pytest.exit() during collection by its node kind."""
+    if isinstance(node, pytest.Module):
+        return f"test module {node.nodeid} called pytest.exit() at import ({exc})"
+    kind = type(node).__name__
+    return f"pytest.exit() while collecting {kind} {node.name} ({exc})"
+
+
+def _exception_summary(text: str) -> str | None:
+    """Return the last non-blank line of *text* without pytest's "E" marker.
+
+    That line is the exception summary, rendered "Type: message" as a
+    conftest's pre-session failure is.
+    """
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return lines[-1] if lines else None
+    return lines[-1].removeprefix("E   ") if lines else None
 
 
 # Exit codes meaning the inner pytest run actually executed the tests.

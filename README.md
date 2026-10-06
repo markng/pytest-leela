@@ -173,7 +173,7 @@ Each mutant ends in exactly one of three states:
 |---|---|---|
 | **killed** | At least one test failed or errored in setup/teardown, a test module failed to collect, the run timed out (an infinite loop introduced by the mutant), or a conftest failed to import because the mutated module raised while being imported. A setup error or a collection failure caused by the environment or by nondeterminism rather than the mutant (a flaky fixture, a module that sometimes fails to import) also counts as a kill ([#13](https://github.com/markng/pytest-leela/issues/13)) | yes |
 | **survived** | Tests ran and all of them passed | yes |
-| **error** | The inner run never tested the mutant: pytest crashed (for example a conftest that raised `Skipped` at import, or called `pytest.exit()` from `pytest_addoption`), a conftest called `pytest.exit()` at import, a conftest's own check failed, the run exited abnormally with no test failure or collection failure (usage error, nothing collected, interrupted), or ran zero tests (everything skipped) | no |
+| **error** | The inner run never tested the mutant: pytest crashed (for example a conftest that raised `Skipped` at import, or called `pytest.exit()` from `pytest_addoption`), a conftest called `pytest.exit()` at import or from a collection hook, a conftest's own check failed, the run exited abnormally with no test failure or collection failure (usage error, nothing collected, interrupted), or ran zero tests (everything skipped) | no |
 
 The mutation score is `killed / (killed + survived)`. Errors are listed separately, with their
 reason, in the terminal report, the HTML report and the JSON output, and they fail the session
@@ -206,10 +206,12 @@ Known limits of these rules:
   directly with `use_coverage=False` and a test directory, the baseline is the first import and
   passes, and every mutant is then scored KILLED with `tests_run: 0`
   ([#13](https://github.com/markng/pytest-leela/issues/13)).
-- **A deliberate exit hides a sibling's kill.** Inner runs stop at the first failure (`-x`).
-  If a subdirectory conftest catches the target's import error and calls `pytest.exit()` before
-  a sibling test module's genuine collection failure is reported, the mutant is an **error**
-  rather than a kill.
+- **A deliberate exit hides every kill not yet reported.** When a conftest or a test module
+  catches the target's import error and calls `pytest.exit()`, the inner run ends there and the
+  mutant is an **error**. Tests run only after collection, so no test failure is ever reported,
+  including a test that imports the target inside its body; nor is a sibling module's collection
+  failure that pytest would have reached after the exit. Only a module that already failed to
+  collect before the exit stops the run first (`-x`) and still kills.
 
 ### Clean baseline before any mutant
 

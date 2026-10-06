@@ -214,7 +214,7 @@ def describe_collection_failures():
         result.stdout.fnmatch_lines(
             [
                 "*line 1: + → - * ERROR",
-                "*test module called pytest.exit() at import (calc unavailable)",
+                "*test module test_calc.py called pytest.exit() at import (calc unavailable)",
             ]
         )
         assert "KILLED" not in result.stdout.str()

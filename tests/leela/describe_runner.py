@@ -19,7 +19,7 @@ from pytest_leela.runner import (
     _clear_framework_caches,
     _django_registry_module_names,
     _inner_run_error,
-    _last_line,
+    _exception_summary,
     InnerSession,
     install_hook,
     _referenced_closure,
@@ -377,9 +377,7 @@ def describe_run_tests_for_mutant():
             return 0
 
         try:
-            with patch(
-                "pytest_leela.runner.pytest.main", side_effect=mock_pytest_main
-            ):
+            with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
                 run_tests_for_mutant(
                     mutant,
                     {"outside_cwd_target": source},
@@ -1536,7 +1534,7 @@ def describe_ResultCollector_collection_errors():
                 longreprtext="trace\nE   ImportError: nope\n",
             )
         )
-        assert collector.collection_errors == ["tests/test_x.py: E   ImportError: nope"]
+        assert collector.collection_errors == ["tests/test_x.py: ImportError: nope"]
         assert collector.collection_error_ids == ["tests/test_x.py"]
 
     def it_records_just_the_nodeid_when_the_report_has_no_text():
@@ -1552,15 +1550,21 @@ def describe_ResultCollector_collection_errors():
         assert collector.collection_errors == []
 
 
-def describe_last_line():
+def describe_exception_summary():
     def it_returns_the_last_non_blank_line_stripped():
-        assert _last_line("first\n  second  \n\n   \n") == "second"
+        assert _exception_summary("first\n  second  \n\n   \n") == "second"
+
+    def it_drops_pytests_error_marker():
+        assert _exception_summary("trace\nE   ValueError: x\n") == "ValueError: x"
+
+    def it_keeps_a_summary_that_only_starts_with_e():
+        assert _exception_summary("Exit: done") == "Exit: done"
 
     def it_returns_none_for_empty_text():
-        assert _last_line("") is None
+        assert _exception_summary("") is None
 
     def it_returns_none_for_whitespace_only_text():
-        assert _last_line("  \n \n") is None
+        assert _exception_summary("  \n \n") is None
 
 
 def describe_inner_run_error():
@@ -2444,9 +2448,41 @@ def describe_collection_failures():
 
         assert result.status == "error"
         assert result.error == (
-            "test module called pytest.exit() at import (calc unavailable)"
+            "test module modexit_tests/test_m.py called pytest.exit() at import"
+            " (calc unavailable)"
         )
         assert result.killing_tests == []
+
+    def it_names_a_collection_hook_exit_by_the_node_collecting(tmp_path, monkeypatch):
+        """The judge's hookcollectexit probe: a conftest pytest_collect_file
+        hook exits while the directory, not a test module, is collecting."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "hookexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "hookexit_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import pytest\n\n\n"
+            "def pytest_collect_file(file_path, parent):\n"
+            "    try:\n"
+            "        import hookexit_calc  # noqa: F401\n"
+            "    except ZeroDivisionError:\n"
+            "        pytest.exit('calc unavailable')\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        # pytest 8 added the Dir node; pytest 7 collects files on the Session.
+        if hasattr(pytest, "Dir"):
+            node = "Dir hookexit_tests"
+        else:
+            node = f"Session {tmp_path.name}"
+        assert result.status == "error"
+        assert result.killing_tests == []
+        assert result.error == (
+            f"pytest.exit() while collecting {node} (calc unavailable)"
+        )
 
     def it_names_a_conftest_check_failing_before_the_session(tmp_path, monkeypatch):
         """The judge's confassert probe: the error names the conftest's own
@@ -2580,7 +2616,9 @@ def describe_collection_failures():
             collector = _ResultCollector()
 
             collector.pytest_collectreport(
-                _FakeCollectReport("test_a.py", failed=True, longreprtext="E   boom")
+                _FakeCollectReport(
+                    "test_a.py", failed=True, longreprtext="E   RuntimeError: boom"
+                )
             )
             collector.pytest_collectreport(
                 _FakeCollectReport(
@@ -2591,25 +2629,29 @@ def describe_collection_failures():
             )
 
             assert collector.collection_error_ids == ["test_a.py"]
-            assert collector.collection_errors == ["test_a.py: E   boom"]
+            assert collector.collection_errors == ["test_a.py: RuntimeError: boom"]
 
     def describe_inner_run_error():
         def it_names_collection_errors_when_no_tests_ran_on_a_completed_exit():
             collector = _ResultCollector()
             collector.pytest_collectreport(
-                _FakeCollectReport("test_a.py", failed=True, longreprtext="E   boom")
+                _FakeCollectReport(
+                    "test_a.py", failed=True, longreprtext="E   RuntimeError: boom"
+                )
             )
 
             assert _inner_run_error(pytest.ExitCode.TESTS_FAILED, collector) == (
-                "no tests ran (test_a.py: E   boom)"
+                "no tests ran (test_a.py: RuntimeError: boom)"
             )
 
         def it_names_collection_errors_on_an_abnormal_exit():
             collector = _ResultCollector()
             collector.pytest_collectreport(
-                _FakeCollectReport("test_a.py", failed=True, longreprtext="E   boom")
+                _FakeCollectReport(
+                    "test_a.py", failed=True, longreprtext="E   RuntimeError: boom"
+                )
             )
 
             assert _inner_run_error(pytest.ExitCode.INTERRUPTED, collector) == (
-                "pytest exited with INTERRUPTED (test_a.py: E   boom)"
+                "pytest exited with INTERRUPTED (test_a.py: RuntimeError: boom)"
             )

@@ -77,7 +77,9 @@
   conftest that fails to import because of one is a kill too. A
   conftest's own failing check, or a conftest or test module that calls
   `pytest.exit()` at import, is an `error`: it is not attributed to the
-  mutant. A run that
+  mutant. So is a conftest collection hook that calls `pytest.exit()`;
+  the error names the node being collected. Error text renders each
+  collection failure as `path: Type: message`. A run that
   stays green or empty is not a kill: an import caught by the test is
   SURVIVED, and a module-level skip, a skip marker or a conftest that
   skips is an `error`, because no test ran. A conftest raising `Skipped`

@@ -437,7 +437,7 @@ def _make_error_result(
         tests_run=0,
         killing_test=None,
         time_seconds=0.1,
-        error="pytest exited with INTERRUPTED (t.py: E   ImportError: x)",
+        error="pytest exited with INTERRUPTED (t.py: ImportError: x)",
     )
 
 
@@ -452,9 +452,7 @@ def describe_terminal_report_with_errors():
 
     def it_prints_the_error_reason_under_the_mutant():
         report = format_terminal_report(_make_run_result([_make_error_result()]))
-        assert (
-            "      pytest exited with INTERRUPTED (t.py: E   ImportError: x)" in report
-        )
+        assert "      pytest exited with INTERRUPTED (t.py: ImportError: x)" in report
 
     def it_excludes_errors_from_the_per_file_score_and_counts_them():
         report = format_terminal_report(
@@ -525,6 +523,6 @@ def describe_json_report_with_errors():
                 "original": "Add",
                 "replacement": "Sub",
                 "description": "+ \u2192 -",
-                "error": "pytest exited with INTERRUPTED (t.py: E   ImportError: x)",
+                "error": "pytest exited with INTERRUPTED (t.py: ImportError: x)",
             }
         ]
