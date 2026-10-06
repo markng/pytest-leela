@@ -137,6 +137,10 @@ class Engine:
         total_enrichment_stats = EnrichmentStats()
         mutant_id = 0
 
+        # In diff mode only changed lines are mutated, so candidates and the
+        # pruned count are taken over those lines too.
+        diff_lines = changed_lines(diff_base) if diff_base is not None else None
+
         for file_path in target_files:
             abs_path = os.path.abspath(file_path)
             with open(abs_path) as f:
@@ -152,6 +156,10 @@ class Engine:
             # Type extraction
             points, file_stats = enrich_mutation_points(source, points)
             total_enrichment_stats = total_enrichment_stats + file_stats
+
+            if diff_lines is not None:
+                file_lines = diff_lines.get(abs_path, set())
+                points = [p for p in points if p.lineno in file_lines]
 
             # Track pruned count
             total_pruned += count_pruned(
@@ -173,16 +181,6 @@ class Engine:
                     mutant_id += 1
 
         total_mutants = len(all_mutants) + total_pruned
-
-        # 6. If diff_base: filter to only changed lines
-        if diff_base is not None:
-            diff_lines = changed_lines(diff_base)
-            all_mutants = [
-                m
-                for m in all_mutants
-                if m.point.file_path in diff_lines
-                and m.point.lineno in diff_lines[m.point.file_path]
-            ]
 
         # 7. Collect per-test coverage if enabled.
         # If a pre-built coverage map was provided (from the outer session),

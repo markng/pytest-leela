@@ -2428,11 +2428,9 @@ def describe_collection_failures():
             "conftest called pytest.exit() at import (calc unavailable)"
         )
 
-    def it_reports_a_conftest_exit_during_collection_as_an_error(
-        tmp_path, monkeypatch
-    ):
+    def it_reports_a_conftest_exit_during_collection_as_an_error(tmp_path, monkeypatch):
         """With a directory argument the subdirectory conftest loads during
-        collection, where the session turns pytest.exit() into INTERRUPTED."""
+        collection and fails as a collection error, not a kill."""
         mutant, sources, files = _mutant(
             tmp_path, monkeypatch, "collexit_calc", "Add", "Sub"
         )

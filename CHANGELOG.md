@@ -45,6 +45,11 @@
   points counted as negative pruning ("-1 pruned"). It now counts only
   untyped mutations the typed rule dropped.
 
+- **Under `--diff`, the summary's candidate and pruned counts cover only
+  the changed lines.** They counted every mutation point in the target
+  files while only changed-line mutants ran ("159 candidates" for 88
+  tested). The diff filter now applies before counting and generation.
+
 ### Added
 
 - **Clean baseline before any mutant.** The selected tests run once with

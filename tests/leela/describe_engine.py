@@ -304,6 +304,43 @@ def describe_Engine_run():
         tested_lines = {r.mutant.point.lineno for r in result_diff.results}
         assert tested_lines == {2}
 
+    def it_counts_candidates_and_pruned_over_changed_lines_only(
+        tmp_path, monkeypatch
+    ):
+        """Regression: under --diff the summary counted every mutation point
+        in the file as a candidate ("159 candidates" for 88 run)."""
+        target = tmp_path / "t_diffcount.py"
+        target.write_text(
+            "def join(a: str, b: str) -> str:\n    return a + b\n\n"
+            "def add(a: int, b: int) -> int:\n    return a + b\n"
+        )
+        abs_target = os.path.abspath(str(target))
+        test_dir = tmp_path / "t_diffcount_tests"
+        test_dir.mkdir()
+        (test_dir / "test_diffcount.py").write_text(
+            "from t_diffcount import add, join\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n\n"
+            "def test_join():\n"
+            "    assert join('a', 'b') == 'ab'\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        engine = Engine(use_types=True, use_coverage=False)
+
+        result_all = engine.run([str(target)], str(test_dir))
+        with patch("pytest_leela.engine.changed_lines") as mock_cl:
+            mock_cl.return_value = {abs_target: {5}}
+            result_diff = engine.run([str(target)], str(test_dir), diff_base="main")
+
+        # Whole file: str + on line 2 loses Sub and Mult, and the int return
+        # on line 5 loses return None.  Line 5 alone: only the latter.
+        assert result_all.mutants_pruned == 3
+        assert result_diff.mutants_pruned == 1
+        assert result_diff.total_mutants == result_diff.mutants_tested + 1
+        assert {r.mutant.point.lineno for r in result_diff.results} == {5}
+        mock_cl.assert_called_once_with("main")
+
     def it_stops_testing_when_memory_limit_exceeded(tmp_path, monkeypatch):
         """Engine breaks when is_memory_ok returns False.
 
