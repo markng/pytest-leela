@@ -304,9 +304,7 @@ def describe_Engine_run():
         tested_lines = {r.mutant.point.lineno for r in result_diff.results}
         assert tested_lines == {2}
 
-    def it_counts_candidates_and_pruned_over_changed_lines_only(
-        tmp_path, monkeypatch
-    ):
+    def it_counts_candidates_and_pruned_over_changed_lines_only(tmp_path, monkeypatch):
         """Regression: under --diff the summary counted every mutation point
         in the file as a candidate ("159 candidates" for 88 run)."""
         target = tmp_path / "t_diffcount.py"
@@ -338,6 +336,9 @@ def describe_Engine_run():
         assert result_all.mutants_pruned == 3
         assert result_diff.mutants_pruned == 1
         assert result_diff.total_mutants == result_diff.mutants_tested + 1
+        # Enrichment covers the same lines: + and return on each of 2 lines.
+        assert result_all.enrichment_stats.from_annotations == 4
+        assert result_diff.enrichment_stats.from_annotations == 2
         assert {r.mutant.point.lineno for r in result_diff.results} == {5}
         mock_cl.assert_called_once_with("main")
 

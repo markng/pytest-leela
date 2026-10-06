@@ -45,10 +45,11 @@
   points counted as negative pruning ("-1 pruned"). It now counts only
   untyped mutations the typed rule dropped.
 
-- **Under `--diff`, the summary's candidate and pruned counts cover only
-  the changed lines.** They counted every mutation point in the target
-  files while only changed-line mutants ran ("159 candidates" for 88
-  tested). The diff filter now applies before counting and generation.
+- **Under `--diff`, the summary's candidate, pruned and type-enrichment
+  counts cover only the changed lines.** They counted every mutation
+  point in the target files while only changed-line mutants ran ("159
+  candidates" for 88 tested). The diff filter now applies before type
+  enrichment, counting and generation.
 
 ### Added
 
@@ -74,8 +75,9 @@
   module-level check failing. Those modules are the killing tests.
   `MutatingLoader` records exceptions raised by the mutated source, and a
   conftest that fails to import because of one is a kill too. A
-  conftest's own failing check, or a conftest that calls `pytest.exit()`
-  at import, is an `error`: it is not attributed to the mutant. A run that
+  conftest's own failing check, or a conftest or test module that calls
+  `pytest.exit()` at import, is an `error`: it is not attributed to the
+  mutant. A run that
   stays green or empty is not a kill: an import caught by the test is
   SURVIVED, and a module-level skip, a skip marker or a conftest that
   skips is an `error`, because no test ran. A conftest raising `Skipped`

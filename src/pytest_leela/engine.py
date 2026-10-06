@@ -137,8 +137,8 @@ class Engine:
         total_enrichment_stats = EnrichmentStats()
         mutant_id = 0
 
-        # In diff mode only changed lines are mutated, so candidates and the
-        # pruned count are taken over those lines too.
+        # In diff mode only changed lines are mutated, so candidates, the
+        # pruned count and enrichment stats are taken over those lines too.
         diff_lines = changed_lines(diff_base) if diff_base is not None else None
 
         for file_path in target_files:
@@ -153,13 +153,13 @@ class Engine:
             # AST analysis
             points = find_mutation_points(source, abs_path, module_name)
 
-            # Type extraction
-            points, file_stats = enrich_mutation_points(source, points)
-            total_enrichment_stats = total_enrichment_stats + file_stats
-
             if diff_lines is not None:
                 file_lines = diff_lines.get(abs_path, set())
                 points = [p for p in points if p.lineno in file_lines]
+
+            # Type extraction
+            points, file_stats = enrich_mutation_points(source, points)
+            total_enrichment_stats = total_enrichment_stats + file_stats
 
             # Track pruned count
             total_pruned += count_pruned(
