@@ -19,6 +19,7 @@ from pytest_leela.runner import (
     _django_registry_module_names,
     _inner_run_error,
     _last_line,
+    _referenced_closure,
     _clear_user_modules,
     _clear_user_modules_fast,
     precompute_user_modules,
@@ -1718,3 +1719,64 @@ def describe_django_registry_module_names():
         assert "_shop.models" not in names
         assert "_shop.admin" not in names
         assert "_shop.views" in names
+
+
+def describe_referenced_closure():
+    def _install(monkeypatch, name, **attrs):
+        mod = types.ModuleType(name)
+        for key, value in attrs.items():
+            setattr(mod, key, value)
+        monkeypatch.setitem(sys.modules, name, mod)
+        return mod
+
+    def it_pins_modules_referenced_through_classes_and_module_objects(monkeypatch):
+        """models -> (class from) mixins -> (module object) helpers."""
+        helpers = _install(monkeypatch, "_rc_helpers")
+        mixin = type("Mixin", (), {"__module__": "_rc_mixins"})
+        _install(monkeypatch, "_rc_mixins", helpers=helpers)
+        _install(monkeypatch, "_rc_models", Mixin=mixin)
+        _install(monkeypatch, "_rc_views")
+
+        pinned = _referenced_closure(
+            frozenset({"_rc_models"}),
+            {"_rc_mixins", "_rc_helpers", "_rc_views"},
+        )
+
+        assert pinned == {"_rc_models", "_rc_mixins", "_rc_helpers"}
+
+    def it_ignores_references_outside_the_candidates(monkeypatch):
+        _install(monkeypatch, "_rc_only_root", path=os.path, ref=os.path.join)
+
+        pinned = _referenced_closure(frozenset({"_rc_only_root"}), {"_rc_other"})
+
+        assert pinned == {"_rc_only_root"}
+
+    def it_terminates_on_reference_cycles(monkeypatch):
+        a = _install(monkeypatch, "_rc_cycle_a")
+        b = _install(monkeypatch, "_rc_cycle_b", a=a)
+        a.b = b
+
+        pinned = _referenced_closure(frozenset({"_rc_cycle_a"}), {"_rc_cycle_b"})
+
+        assert pinned == {"_rc_cycle_a", "_rc_cycle_b"}
+
+    def it_keeps_a_registry_modules_dependency_out_of_the_eviction_set(
+        tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(True, {"_dep": "_dep.models"}),
+        )
+        mixin = type("Mixin", (), {"__module__": "_dep.mixins"})
+        for name, attrs in (
+            ("_dep.models", {"Mixin": mixin}),
+            ("_dep.mixins", {}),
+            ("_dep.views", {}),
+        ):
+            mod = _install(monkeypatch, name, **attrs)
+            mod.__file__ = str(tmp_path / f"{name}.py")
+
+        names = ProjectModuleScope(str(tmp_path)).module_names()
+
+        assert "_dep.mixins" not in names
+        assert "_dep.views" in names
