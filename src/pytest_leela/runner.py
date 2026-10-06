@@ -11,6 +11,7 @@ import site
 import sys
 import threading
 import time
+import types
 from typing import Any
 
 # Save references to stdlib path modules.  During self-mutation the inner
@@ -43,6 +44,11 @@ try:
     from django.urls import clear_url_caches as _django_clear_url_caches
 except ImportError:
     _django_clear_url_caches = None
+
+try:
+    from django.apps import apps as _django_apps
+except ImportError:
+    _django_apps = None
 
 # Prefixes for modules that should never be evicted between mutation runs.
 _KEEP_PREFIXES = (
@@ -99,15 +105,68 @@ class ProjectModuleScope:
         return _PACKAGE_DIR_NAMES.isdisjoint(relative_parts)
 
     def module_names(self) -> frozenset[str]:
-        """Names of loaded project modules, excluding leela/pytest internals."""
-        return frozenset(
+        """Names of loaded project modules, excluding leela/pytest internals.
+
+        Django's model and admin modules are excluded too, with every project
+        module they reference: re-executing them re-registers into
+        process-global registries, which Django rejects, and re-importing a
+        module they reference would split class identity (a kept model
+        subclassing the old copy of a re-imported mixin).
+        """
+        project = {
             name
             for name, mod in list(sys.modules.items())
             if mod is not None
             and (f := getattr(mod, "__file__", None)) is not None
             and self.contains(f)
             and not name.startswith(_KEEP_PREFIXES)
-        )
+        }
+        pinned = _referenced_closure(_django_registry_module_names(), project)
+        return frozenset(project - pinned)
+
+
+def _referenced_closure(roots: frozenset[str], candidates: set[str]) -> set[str]:
+    """*roots* plus every candidate module they reference, transitively.
+
+    A module references another when its namespace holds that module or an
+    object (class, function) whose ``__module__`` names it.
+    """
+    pinned = set(roots)
+    frontier = list(roots)
+    while frontier:
+        for value in list(vars(sys.modules[frontier.pop()]).values()):
+            dep: object = (
+                value.__name__
+                if isinstance(value, types.ModuleType)
+                else getattr(value, "__module__", None)
+            )
+            if dep in candidates and dep not in pinned:
+                pinned.add(dep)
+                frontier.append(dep)
+    return pinned
+
+
+def _django_registry_module_names() -> frozenset[str]:
+    """Loaded Django model and admin modules (and submodules), once set up.
+
+    Re-executing either registers into a process-global registry a second
+    time: models warn "Reloading models is not advised" (django/apps/
+    registry.py, ``register_model``) and admin raises ``AlreadyRegistered``
+    (django/contrib/admin/sites.py, ``register``).  A re-import can also
+    re-enter cycles that only resolve in Django's own app-loading order.
+    """
+    if _django_apps is None or not _django_apps.ready:
+        # Django absent, or installed but never set up: nothing registered.
+        return frozenset()
+    roots: list[str] = []
+    for config in _django_apps.get_app_configs():
+        roots.append(f"{config.name}.admin")
+        if config.models_module is not None:
+            roots.append(config.models_module.__name__)
+    packages = tuple(f"{root}." for root in roots)
+    return frozenset(
+        name for name in sys.modules if name in roots or name.startswith(packages)
+    )
 
 
 def precompute_user_modules() -> frozenset[str]:

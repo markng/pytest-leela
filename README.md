@@ -103,7 +103,7 @@ pytest --leela-benchmark
 - **Framework-aware** — clears Django URL caches between mutants so view reloads work correctly
 - **Resource limits** — `--max-cores N` caps parallelism; `--max-memory MB` guards memory
 - **HTML report** — `--leela-html` generates an interactive single-file report with source viewer, survivor navigation, and test source overlay
-- **CI exit codes** — exits non-zero when mutants survive, so CI pipelines fail on incomplete kill rates
+- **CI exit codes** — exits non-zero when mutants survive or error, so CI pipelines fail on incomplete kill rates
 - **Benchmark mode** — `--leela-benchmark` measures the speedup from each optimization layer
 
 ---
@@ -125,6 +125,7 @@ operators = [
     "boolean",
     "return",
 ]
+fail_on_error = true
 ```
 
 ### `exclude`
@@ -154,6 +155,64 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 | `ternary` | `x if cond else y` branch swaps | off |
 | `control_flow` | `break` / `continue` swaps | off |
 | `exception` | `except` handler broadening, body-to-raise | off |
+
+### `fail_on_error`
+
+Whether errored mutants fail the session (non-zero exit). Default: `true`.
+
+See [Mutant statuses](#mutant-statuses). Set it to `false` only when you accept that some
+mutants go untested, for example while fixing a known collection problem.
+
+---
+
+## Mutant statuses
+
+Each mutant ends in exactly one of three states:
+
+| Status | Meaning | Counts toward the score |
+|---|---|---|
+| **killed** | At least one test failed or errored in setup/teardown, or the run timed out (an infinite loop introduced by the mutant) | yes |
+| **survived** | Tests ran and all of them passed | yes |
+| **error** | The inner run never tested the mutant: pytest crashed, exited abnormally (collection or import error, usage error, nothing collected), or ran zero tests | no |
+
+The mutation score is `killed / (killed + survived)`. Errors are listed separately, with their
+reason, in the terminal report, the HTML report and the JSON output, and they fail the session
+unless `fail_on_error = false`. An error means leela could not tell whether your tests catch the
+mutant, so it is reported as neither a kill nor a survival.
+
+A mutant that makes the *target module itself* raise at import time (module-level code) is
+also reported as an error, because no test ever ran against it.
+
+### Clean baseline before any mutant
+
+Before the first mutant, leela runs the selected tests once with no mutation applied, through
+the same in-process path every mutant uses. If anything fails or errors there, the run aborts
+with `leela: aborted: tests do not pass with no mutation applied (...)` and a non-zero exit,
+and no mutants are scored. Without this check, a test that fails for an unrelated reason (a
+fixture that cannot run in-process, a missing service) would score every mutant as killed.
+
+### pytest-django
+
+pytest-django blocks database access for the whole session and only restores it at
+unconfigure, after leela has run. Leela lifts that outer block for the duration of its run
+(through pytest-django's own `django_db_blocker.unblock()`), so database tests in the inner
+sessions can open connections as they do in a normal run.
+
+Django model and admin modules are never reloaded between mutants (unless one is itself a
+`--target`), and neither is any project module they reference. Re-executing them registers
+models and admin classes a second time, which Django rejects, and re-importing a module they
+reference would split class identity (a kept model subclassing the old copy of a reloaded
+mixin). The trade-off: if a model or admin module imports a function from your target at
+module level, calls through that reference run the unmutated code, which shows up as a
+survivor, never as a fake kill.
+
+### Installed packages are never reloaded
+
+Between mutants leela evicts the project's own modules so that mutated code is re-imported.
+Installed packages are left loaded, even when the virtualenv sits inside the project directory
+(uv's default `.venv`): anything under `sys.prefix`, `sys.base_prefix`, `site.getsitepackages()`,
+`site.getusersitepackages()`, or a `site-packages` / `dist-packages` directory. Re-importing them
+would break C extensions such as numpy, which CPython can load only once per process.
 
 ---
 
@@ -186,7 +245,7 @@ not string literals or docstrings that happen to contain the text.
 
 **What it shows:**
 - Overall mutation score badge
-- Per-file breakdown with kill/survive/timeout counts
+- Per-file breakdown with kill/survive/error counts
 - Source code viewer with syntax highlighting
 
 **Interactive features:**

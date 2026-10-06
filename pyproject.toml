@@ -64,5 +64,9 @@ module = "django.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
+module = "pytest_django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "pytest_leela.coverage_tracker"
 disable_error_code = ["arg-type"]

@@ -320,11 +320,15 @@ def describe_run_result_errors():
         assert run.survived == [survivor]
 
     def it_counts_only_killed_and_survived_as_scored():
-        run = _run_of([_make_result(True, 1), _make_result(False, 2), _make_error_result()])
+        run = _run_of(
+            [_make_result(True, 1), _make_result(False, 2), _make_error_result()]
+        )
         assert run.mutants_scored == 2
 
     def it_excludes_errors_from_the_mutation_score():
-        run = _run_of([_make_result(True, 1), _make_result(False, 2), _make_error_result()])
+        run = _run_of(
+            [_make_result(True, 1), _make_result(False, 2), _make_error_result()]
+        )
         assert run.mutation_score == 50.0
 
     def it_scores_zero_when_every_mutant_errored():

@@ -89,6 +89,15 @@ def _clean_process_state() -> None:
         sys.modules.pop(name, None)
 
 
+class BaselineFailure(Exception):
+    """The tests fail with no mutation applied.
+
+    Every mutant result would then be untrustworthy: a test failing for a
+    reason unrelated to the mutant (a fixture that cannot run in-process,
+    a broken import) would score every mutant as killed.
+    """
+
+
 class Engine:
     """Orchestrates a full mutation testing run."""
 
@@ -191,25 +200,25 @@ class Engine:
         known_user_modules = precompute_user_modules()
         test_times = coverage_map.test_times if coverage_map is not None else None
 
-        # 9. Run each mutant
+        mutant_test_ids = [
+            self._tests_for(mutant, coverage_map, test_node_ids)
+            for mutant in all_mutants
+        ]
+
+        # 9. Prove the tests pass with no mutation applied, through the same
+        # in-process path every mutant uses.  Otherwise a test that fails
+        # for an unrelated reason would score every mutant as killed.
+        if all_mutants:
+            self._check_baseline(
+                all_mutants[0], mutant_test_ids, test_dir, known_user_modules
+            )
+
+        # 10. Run each mutant
         results: list[MutantResult] = []
-        for mutant in all_mutants:
+        for mutant, test_ids in zip(all_mutants, mutant_test_ids):
             # Check memory limits
             if limits is not None and not is_memory_ok(limits):
                 break
-
-            # Look up relevant tests from coverage map
-            test_ids: list[str] | None = None
-            if coverage_map is not None:
-                covered = coverage_map.tests_for(
-                    mutant.point.file_path, mutant.point.lineno
-                )
-                if covered:
-                    test_ids = sorted(covered)
-
-            # Fallback: use all session tests when no coverage info available
-            if test_ids is None and test_node_ids is not None:
-                test_ids = test_node_ids
 
             result = run_tests_for_mutant(
                 mutant,
@@ -237,4 +246,55 @@ class Engine:
             },
             enrichment_stats=total_enrichment_stats,
             diff_base=diff_base,
+        )
+
+    @staticmethod
+    def _tests_for(
+        mutant: Mutant,
+        coverage_map: CoverageMap | None,
+        test_node_ids: list[str] | None,
+    ) -> list[str] | None:
+        """Tests to run against *mutant*; None means the whole ``test_dir``."""
+        if coverage_map is not None:
+            covered = coverage_map.tests_for(
+                mutant.point.file_path, mutant.point.lineno
+            )
+            if covered:
+                return sorted(covered)
+        # Fallback: use all session tests when no coverage info available
+        return test_node_ids
+
+    @staticmethod
+    def _check_baseline(
+        probe: Mutant,
+        mutant_test_ids: list[list[str] | None],
+        test_dir: str | None,
+        known_user_modules: frozenset[str],
+    ) -> None:
+        """Raise BaselineFailure unless every selected test passes unmutated.
+
+        Runs the union of all mutants' tests once with no target sources, so
+        the import hook never applies *probe* and the code under test loads
+        unmodified.
+        """
+        baseline_ids: list[str] | None = None
+        if all(ids is not None for ids in mutant_test_ids):
+            baseline_ids = sorted({t for ids in mutant_test_ids for t in ids or ()})
+        result = run_tests_for_mutant(
+            probe,
+            {},
+            {},
+            test_ids=baseline_ids,
+            test_dir=test_dir,
+            known_user_modules=known_user_modules,
+        )
+        if result.status == "survived":
+            return
+        if result.status == "error":
+            reason = f"{result.error}"
+        else:
+            reason = f"failed: {', '.join(result.killing_tests)}"
+        raise BaselineFailure(
+            f"tests do not pass with no mutation applied ({reason}); "
+            "mutant results would be meaningless, so no mutants were run"
         )

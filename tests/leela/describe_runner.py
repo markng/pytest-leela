@@ -16,6 +16,7 @@ from pytest_leela.runner import (
     ProjectModuleScope,
     _ResultCollector,
     _clear_framework_caches,
+    _django_registry_module_names,
     _inner_run_error,
     _last_line,
     _clear_user_modules,
@@ -1413,9 +1414,7 @@ def describe_clear_user_modules_with_venv_inside_cwd():
 
         assert "_venv_pkg_mod" in sys.modules
 
-    def it_keeps_installed_packages_out_of_the_precomputed_set(
-        tmp_path, monkeypatch
-    ):
+    def it_keeps_installed_packages_out_of_the_precomputed_set(tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         mod = types.ModuleType("_venv_pkg_pre")
         mod.__file__ = str(tmp_path / ".venv" / "lib" / "site-packages" / "p.py")
@@ -1429,7 +1428,9 @@ def describe_ResultCollector_collection_errors():
         collector = _ResultCollector()
         collector.pytest_collectreport(
             _FakeCollectReport(
-                "tests/test_x.py", failed=True, longreprtext="trace\nE   ImportError: nope\n"
+                "tests/test_x.py",
+                failed=True,
+                longreprtext="trace\nE   ImportError: nope\n",
             )
         )
         assert collector.collection_errors == ["tests/test_x.py: E   ImportError: nope"]
@@ -1601,7 +1602,9 @@ def describe_run_tests_for_mutant_classification():
     ):
         mutant, sources, files = _mutant(tmp_path, monkeypatch, "cls_sysexit")
         with patch("pytest_leela.runner.pytest.main", side_effect=SystemExit(3)):
-            result = run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+            result = run_tests_for_mutant(
+                mutant, sources, files, test_dir=str(tmp_path)
+            )
         assert result.status == "error"
         assert result.error == "pytest crashed: SystemExit: 3"
         assert result.killing_tests == []
@@ -1624,3 +1627,94 @@ def describe_run_tests_for_mutant_classification():
             assert "_fresh_venv_pkg" in sys.modules
         finally:
             sys.modules.pop("_fresh_venv_pkg", None)
+
+
+class _FakeAppConfig:
+    def __init__(self, name, models_module):
+        self.name = name
+        self.models_module = models_module
+
+
+class _FakeApps:
+    """Stand-in for ``django.apps.apps`` (the app registry)."""
+
+    def __init__(self, ready, app_models):
+        # app_models: {app name: models module name, or None}
+        self.ready = ready
+        self._configs = [
+            _FakeAppConfig(app, types.ModuleType(models) if models else None)
+            for app, models in app_models.items()
+        ]
+
+    def get_app_configs(self):
+        return self._configs
+
+
+def describe_django_registry_module_names():
+    def it_is_empty_without_django(monkeypatch):
+        monkeypatch.setattr("pytest_leela.runner._django_apps", None)
+        assert _django_registry_module_names() == frozenset()
+
+    def it_is_empty_before_django_is_set_up(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(False, {"shop": "shop.models"}),
+        )
+        monkeypatch.setitem(sys.modules, "shop.models", types.ModuleType("x"))
+        assert _django_registry_module_names() == frozenset()
+
+    def it_lists_loaded_model_and_admin_modules_with_submodules(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(
+                True,
+                {"shop": "shop.models", "pages": None, "blog": "blog.models"},
+            ),
+        )
+        for name in (
+            "shop.models",
+            "shop.models.order",
+            "shop.models_extra",
+            "shop.admin",
+            "shop.admin.inlines",
+            "shop.admin_utils",
+            "shop.views",
+            "pages.admin",
+            "blog.models",
+        ):
+            monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+
+        names = _django_registry_module_names()
+
+        assert {
+            "shop.models",
+            "shop.models.order",
+            "shop.admin",
+            "shop.admin.inlines",
+            "pages.admin",
+            "blog.models",
+        } <= names
+        assert names.isdisjoint({"shop.models_extra", "shop.admin_utils", "shop.views"})
+
+    def it_lists_only_modules_that_are_loaded(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(True, {"_unloaded_app": "_unloaded_app.models"}),
+        )
+        assert _django_registry_module_names() == frozenset()
+
+    def it_keeps_registry_modules_out_of_the_eviction_set(tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(True, {"_shop": "_shop.models"}),
+        )
+        for name in ("_shop.models", "_shop.admin", "_shop.views"):
+            mod = types.ModuleType(name)
+            mod.__file__ = str(tmp_path / f"{name}.py")
+            monkeypatch.setitem(sys.modules, name, mod)
+
+        names = ProjectModuleScope(str(tmp_path)).module_names()
+
+        assert "_shop.models" not in names
+        assert "_shop.admin" not in names
+        assert "_shop.views" in names
