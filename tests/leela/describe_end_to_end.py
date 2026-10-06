@@ -107,16 +107,73 @@ def describe_import_breaking_mutant():
         assert result.ret == 1
 
 
+def describe_collection_failures():
+    def it_kills_when_a_module_level_assert_fails_under_the_mutant(pytester):
+        """The judge's modassert probe: the test module fails to collect under
+        the mutant, after a green baseline, so the suite detected it."""
+        pytester.makepyfile(
+            calc=(
+                "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n\n\n"
+                "def ratio():\n    return RATIO\n"
+            ),
+            test_calc=(
+                "import calc\n\n"
+                "assert calc.RATIO == 5\n\n\n"
+                "def test_ratio():\n"
+                "    assert calc.ratio() == 5\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        result.stdout.fnmatch_lines(
+            ["*line 2: // → / * SURVIVED", "Overall: 4/5 killed (80.0%)*"]
+        )
+        assert "ERROR" not in result.stdout.str()
+        assert result.ret == 1
+
+    def it_reports_a_conftest_that_skips_itself_as_an_error(pytester):
+        """The judge's confskip probe: the conftest's module-level skip used
+        to escape pytest.main and crash the whole run."""
+        pytester.makepyfile(
+            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
+            conftest=(
+                "import pytest\n\n"
+                "try:\n"
+                "    import calc  # noqa: F401\n"
+                "except Exception:\n"
+                "    pytest.skip('calc unavailable', allow_module_level=True)\n"
+            ),
+            test_calc=(
+                "import calc\n\n\n"
+                "def test_ratio():\n"
+                "    assert calc.RATIO in (5, 10, 0, 20, 5.0)\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        result.stdout.fnmatch_lines(
+            [
+                "*line 1: + → - * ERROR",
+                "*pytest crashed: Skipped: calc unavailable",
+            ]
+        )
+        assert "Traceback" not in result.stdout.str() + result.stderr.str()
+        assert result.ret == 1
+
+
 def describe_error_mutants():
     def _project(pytester, fail_on_error=None):
-        # Every mutant of LIMIT trips the test module's own import-time
-        # guard: the error comes from the test file, not from the target.
+        # Every mutant of LIMIT makes the test module skip itself, so no
+        # test runs against it: an error, neither a kill nor a survival.
         pytester.makepyfile(
             calc="LIMIT = 1 + 1\n\n\n" + _DOUBLE,
             test_calc=(
+                "import pytest\n\n"
                 "import calc\n\n"
                 "if calc.LIMIT != 2:\n"
-                "    raise RuntimeError('limit changed')\n\n\n"
+                "    pytest.skip('limit changed', allow_module_level=True)\n\n\n"
                 "def test_double():\n"
                 "    assert calc.double(3) == 6\n"
             ),
@@ -136,10 +193,7 @@ def describe_error_mutants():
         result.stdout.fnmatch_lines(
             [
                 "*line 1: + * ERROR",
-                (
-                    "*pytest exited with USAGE_ERROR (test_calc.py: E   RuntimeError:"
-                    " limit changed)"
-                ),
+                "*pytest exited with USAGE_ERROR",
                 "*mutants errored outside the tests*",
             ]
         )

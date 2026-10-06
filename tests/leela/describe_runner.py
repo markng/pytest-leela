@@ -21,6 +21,7 @@ from pytest_leela.runner import (
     _inner_run_error,
     _last_line,
     InnerSession,
+    install_hook,
     _referenced_closure,
     _clear_user_modules,
     _clear_user_modules_fast,
@@ -1311,10 +1312,11 @@ def describe_run_tests_for_mutant_inner_run_errors():
         assert result.killing_test == "collect_err_tests/test_collect_err_target.py"
         assert result.killing_tests == ["collect_err_tests/test_collect_err_target.py"]
 
-    def it_reports_a_collection_error_raised_outside_the_target_as_error(
+    def it_kills_when_a_test_module_fails_to_collect_under_the_mutant(
         tmp_path, monkeypatch
     ):
-        """The target imports fine; the *test* module raises at import."""
+        """The target imports fine; the *test* module raises at import, which
+        the green baseline rules out without the mutant: a detection."""
         source = "LIMIT = 1 + 1\n"
         target = tmp_path / "coll_outside_target.py"
         target.write_text(source)
@@ -1340,11 +1342,9 @@ def describe_run_tests_for_mutant_inner_run_errors():
             test_dir=str(test_dir),
         )
 
-        assert result.status == "error"
-        assert result.error == (
-            "pytest exited with INTERRUPTED (coll_outside_tests/"
-            "test_coll_outside.py: E   RuntimeError: limit changed)"
-        )
+        assert result.status == "killed"
+        assert result.killing_tests == ["coll_outside_tests/test_coll_outside.py"]
+        assert result.tests_run == 0
 
     def it_names_the_failed_import_when_no_collection_report_exists(
         tmp_path, monkeypatch
@@ -2279,3 +2279,171 @@ def describe_import_error_kill_rule():
             if not collection_failed:
                 [killing] = result.killing_tests
                 assert killing.startswith(f"<import of {name}: ZeroDivisionError:")
+
+
+def describe_collection_failures():
+    """A test module that fails to collect under the mutant is a detection;
+    a conftest that skips or exits at import is an error, not a crash."""
+
+    calc_source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+
+    def _mutant(tmp_path, monkeypatch, name, op, replacement, source=calc_source):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        (tmp_path / f"{name}.py").write_text(source)
+        points = find_mutation_points(source, str(tmp_path / f"{name}.py"), name)
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == op
+        )
+        mutant = Mutant(point=point, replacement_op=replacement, mutant_id=0)
+        return mutant, {name: source}, {name: str(tmp_path / f"{name}.py")}
+
+    def it_kills_through_tests_failed_when_two_modules_fail_to_collect(
+        tmp_path, monkeypatch
+    ):
+        """With -x and a directory, the first module's collection error makes
+        pytest stop and exit TESTS_FAILED: the path the judge's twoassert probe
+        takes.  The Session's own echo of that failure is not a killing test."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "two_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "two_tests"
+        test_dir.mkdir()
+        for letter in "ab":
+            (test_dir / f"test_{letter}.py").write_text(
+                "import two_calc\n\n"
+                "assert two_calc.RATIO == 5\n\n\n"
+                f"def test_{letter}():\n"
+                "    assert two_calc.RATIO == 5\n"
+            )
+        finder = install_hook(sources, mutant, files)
+
+        session = InnerSession(
+            finder, None, str(test_dir), ProjectModuleScope(str(tmp_path))
+        ).run()
+        result = session.result_for(mutant)
+
+        assert session.exit_code == pytest.ExitCode.TESTS_FAILED
+        assert session.collector.collection_error_ids == ["two_tests/test_a.py"]
+        assert result.status == "killed"
+        assert result.killing_tests == ["two_tests/test_a.py"]
+        assert result.tests_run == 0
+
+    def it_kills_when_a_module_level_assert_fails_under_a_non_import_mutant(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "assert_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "assert_tests"
+        test_dir.mkdir()
+        (test_dir / "test_assert.py").write_text(
+            "import assert_calc\n\n"
+            "assert assert_calc.RATIO == 5\n\n\n"
+            "def test_ratio():\n"
+            "    assert assert_calc.RATIO == 5\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "killed"
+        assert result.killing_tests == ["assert_tests/test_assert.py"]
+        assert result.tests_run == 0
+
+    def it_reports_a_conftest_skip_at_import_as_an_error(tmp_path, monkeypatch):
+        """pytest.main lets a conftest's module-level Skipped escape; leela
+        records it instead of crashing the outer run."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "confskip_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "confskip_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import pytest\n\n"
+            "try:\n"
+            "    import confskip_calc  # noqa: F401\n"
+            "except ZeroDivisionError:\n"
+            "    pytest.skip('unavailable', allow_module_level=True)\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        try:
+            result = run_tests_for_mutant(
+                mutant, sources, files, test_dir=str(test_dir)
+            )
+        except pytest.skip.Exception as exc:
+            # Escaping, it would skip this test instead of failing it.
+            pytest.fail(f"Skipped escaped run_tests_for_mutant: {exc}")
+
+        assert result.status == "error"
+        assert result.error == "pytest crashed: Skipped: unavailable"
+        assert result.killing_tests == []
+
+    def it_reports_an_escaping_exit_as_an_error(tmp_path, monkeypatch):
+        """pytest.main handles every real pytest.exit path tried (conftest
+        import: USAGE_ERROR; configure or sessionstart hook: INTERRUPTED), so
+        an escaping Exit is simulated."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "confexit_calc", "Add", "Sub"
+        )
+
+        with patch(
+            "pytest_leela.runner.pytest.main",
+            side_effect=pytest.exit.Exception("ratio changed"),
+        ):
+            result = run_tests_for_mutant(
+                mutant, sources, files, test_dir=str(tmp_path)
+            )
+
+        assert result.status == "error"
+        assert result.error == "pytest crashed: Exit: ratio changed"
+
+    def it_lets_a_keyboard_interrupt_stop_the_run(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "kbd_calc", "Add", "Sub"
+        )
+
+        with (
+            patch("pytest_leela.runner.pytest.main", side_effect=KeyboardInterrupt),
+            pytest.raises(KeyboardInterrupt),
+        ):
+            run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+
+    def describe_result_collector():
+        def it_ignores_the_session_report_that_echoes_a_module_failure():
+            collector = _ResultCollector()
+
+            collector.pytest_collectreport(
+                _FakeCollectReport("test_a.py", failed=True, longreprtext="E   boom")
+            )
+            collector.pytest_collectreport(
+                _FakeCollectReport(
+                    "",
+                    failed=True,
+                    longreprtext="E   _pytest.main.Failed: stopping after 1 failures",
+                )
+            )
+
+            assert collector.collection_error_ids == ["test_a.py"]
+            assert collector.collection_errors == ["test_a.py: E   boom"]
+
+    def describe_inner_run_error():
+        def it_names_collection_errors_when_no_tests_ran_on_a_completed_exit():
+            collector = _ResultCollector()
+            collector.pytest_collectreport(
+                _FakeCollectReport("test_a.py", failed=True, longreprtext="E   boom")
+            )
+
+            assert _inner_run_error(pytest.ExitCode.TESTS_FAILED, collector) == (
+                "no tests ran (test_a.py: E   boom)"
+            )
+
+        def it_names_collection_errors_on_an_abnormal_exit():
+            collector = _ResultCollector()
+            collector.pytest_collectreport(
+                _FakeCollectReport("test_a.py", failed=True, longreprtext="E   boom")
+            )
+
+            assert _inner_run_error(pytest.ExitCode.INTERRUPTED, collector) == (
+                "pytest exited with INTERRUPTED (test_a.py: E   boom)"
+            )

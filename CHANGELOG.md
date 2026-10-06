@@ -48,29 +48,31 @@
   killed.
 
 - **A third mutant status, `error`.** A mutant whose inner run crashed,
-  exited abnormally (collection error, usage error, nothing collected) or
-  ran zero tests was previously reported as killed (crash) or
-  **SURVIVED** (collection error, `tests_run: 0`). It is now an error:
-  reported with its reason in the terminal, HTML and JSON reports,
-  excluded from the mutation score, and failing the session by default.
-  `MutantResult` gains `error` and a `status` of `"killed"`,
+  exited abnormally (usage error, nothing collected, interrupted) with no
+  test failure or collection failure, or ran zero tests, was previously
+  reported as killed (crash) or **SURVIVED** (`tests_run: 0`). It is now
+  an error: reported with its reason in the terminal, HTML and JSON
+  reports, excluded from the mutation score, and failing the session by
+  default. `MutantResult` gains `error` and a `status` of `"killed"`,
   `"survived"` or `"error"`; `RunResult` gains `errors` and
   `mutants_scored`. Timeouts remain kills.
 
-- **A mutant that makes the target module raise on import is killed
-  only when pytest reports the failure.** `MutatingLoader` records
-  exceptions raised by the mutated source. The mutant is killed when a
-  test module then fails to collect (those modules are the killing
-  tests) or a conftest fails to import before the session starts. A run
-  that stays green or empty is not a kill: an import caught by the test
-  is SURVIVED, and a module-level skip or a skip marker triggered by the
-  failed import is an `error`, because no test ran.
-  0.8.0's verdict for such a mutant depended on the layout. With the
-  virtualenv and the temp dir outside the project, it was SURVIVED with
-  `tests_run: 0`. With the virtualenv inside the project, re-importing
-  installed packages could crash the inner run, and the mutant was
-  KILLED as `<crashed>`, a verdict indistinguishable from leela failing
-  to test it.
+- **A test module that fails to collect under the mutant is a kill.**
+  The clean baseline shows it collects unmutated, so the failure is the
+  mutant's doing: the target raising at import, or a test module's own
+  module-level check failing. Those modules are the killing tests.
+  `MutatingLoader` records exceptions raised by the mutated source, and a
+  conftest that fails to import because of one is a kill too. A run that
+  stays green or empty is not a kill: an import caught by the test is
+  SURVIVED, and a module-level skip, a skip marker or a conftest that
+  skips is an `error`, because no test ran. A conftest raising `Skipped`
+  or `Exit` no longer crashes the whole leela run.
+  0.8.0's verdict for a mutant that broke the target's import depended
+  on the layout. With the virtualenv and the temp dir outside the
+  project, it was SURVIVED with `tests_run: 0`. With the virtualenv
+  inside the project, re-importing installed packages could crash the
+  inner run, and the mutant was KILLED as `<crashed>`, a verdict
+  indistinguishable from leela failing to test it.
 
 - **`--leela-benchmark` no longer raises `TypeError`.** It called the
   target-discovery helpers without the `python_files` patterns they

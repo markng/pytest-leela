@@ -273,7 +273,9 @@ class _ResultCollector:
             self.errors.append(report.nodeid)
 
     def pytest_collectreport(self, report: Any) -> None:
-        if report.failed:
+        # The Session's own report (empty nodeid) only echoes an earlier
+        # module's failure ("stopping after 1 failures" under -x).
+        if report.failed and report.nodeid:
             summary = _last_line(report.longreprtext)
             self.collection_error_ids.append(report.nodeid)
             self.collection_errors.append(
@@ -310,12 +312,13 @@ def _inner_run_error(exit_code: int, collector: _ResultCollector) -> str | None:
     """
     if exit_code not in _COMPLETED_EXIT_CODES:
         reason = f"pytest exited with {_exit_code_label(exit_code)}"
-        if collector.collection_errors:
-            reason += f" ({'; '.join(collector.collection_errors)})"
-        return reason
-    if collector.total == 0:
-        return "no tests ran"
-    return None
+    elif collector.total == 0:
+        reason = "no tests ran"
+    else:
+        return None
+    if collector.collection_errors:
+        reason += f" ({'; '.join(collector.collection_errors)})"
+    return reason
 
 
 class InnerSession:
@@ -452,9 +455,13 @@ class InnerSession:
                 contextlib.redirect_stderr(io.StringIO()),
             ):
                 self.exit_code = pytest.main(self._args(), plugins=plugins)
-        except (Exception, SystemExit) as exc:
+        except KeyboardInterrupt:
+            raise
+        except BaseException as exc:
             # Recorded, not raised: a crash is a verdict about this mutant
             # (see result_for), and the outer session must keep running.
+            # BaseException covers pytest's Skipped and Exit, which a
+            # conftest can raise at import and pytest.main does not catch.
             self.crash = f"pytest crashed: {type(exc).__name__}: {exc}"
         finally:
             if timer is not None:
@@ -489,17 +496,13 @@ class InnerSession:
             return self.crash
         return _inner_run_error(self.exit_code, self.collector)
 
-    def _import_failed(self) -> bool:
-        """Whether pytest reported a failure for the mutated module's import.
+    def _conftest_import_failed(self) -> bool:
+        """Whether a conftest failed to import before the session started.
 
-        Only a failed collection report, or a conftest import failure (pytest
-        returns USAGE_ERROR before any session starts: _pytest/config/
-        __init__.py, ``main``: "except ConftestImportFailure"), makes the
-        suite red.  A caught import, a module-level skip or a skip marker
-        leave it green or empty, so they are no kill.
+        pytest returns USAGE_ERROR then (_pytest/config/__init__.py, ``main``:
+        "except ConftestImportFailure"); an unmatched node id also gives
+        USAGE_ERROR, but only after the session started.
         """
-        if self.collector.collection_error_ids:
-            return True
         return (
             self.exit_code == pytest.ExitCode.USAGE_ERROR
             and not self.collector.session_started
@@ -522,11 +525,15 @@ class InnerSession:
                 killing_tests=["<timeout>"],
             )
         if self.crash is None:
-            killing_tests = self.failures()
-            if not killing_tests and self.import_errors and self._import_failed():
-                killing_tests = collector.collection_error_ids or [
-                    f"<import of {self.import_errors[0]}>"
-                ]
+            # A test module failing to collect under the mutant, after a green
+            # baseline, is a detection.  Skips and empty runs are not.
+            killing_tests = self.failures() + collector.collection_error_ids
+            if (
+                not killing_tests
+                and self.import_errors
+                and self._conftest_import_failed()
+            ):
+                killing_tests = [f"<import of {self.import_errors[0]}>"]
             if killing_tests:
                 return MutantResult(
                     mutant=mutant,
