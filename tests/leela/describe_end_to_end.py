@@ -192,6 +192,34 @@ def describe_collection_failures():
         assert "KILLED" not in result.stdout.str()
         assert result.ret == 1
 
+    def it_reports_a_test_module_that_exits_on_a_failed_import_as_an_error(
+        pytester,
+    ):
+        """The judge's modexit probe."""
+        pytester.makepyfile(
+            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
+            test_calc=(
+                "import pytest\n\n"
+                "try:\n"
+                "    import calc\n"
+                "except Exception:\n"
+                "    pytest.exit('calc unavailable')\n\n\n"
+                "def test_ratio():\n"
+                "    assert calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        result.stdout.fnmatch_lines(
+            [
+                "*line 1: + → - * ERROR",
+                "*test module called pytest.exit() at import (calc unavailable)",
+            ]
+        )
+        assert "KILLED" not in result.stdout.str()
+        assert result.ret == 1
+
 
 def describe_error_mutants():
     def _project(pytester, fail_on_error=None):

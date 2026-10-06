@@ -194,7 +194,22 @@ attributed to the mutant.
 
 If a test caught the import error and the suite completed green, the mutant **survived**: no
 test noticed it. If the mutant made the tests skip themselves (a module-level `pytest.skip`, a
-`skipif` marker, or a conftest that skips or exits), the mutant is an **error**: no test ran.
+`skipif` marker, or a conftest or test module that skips or calls `pytest.exit()` at import),
+the mutant is an **error**: no test ran.
+
+Known limits of these rules:
+
+- **A module that can only be imported once per process.** If a test module imports something
+  that refuses to load twice (for example it raises when a process-global registry is already
+  installed), every re-import fails to collect. Through `pytest --leela` the outer session has
+  already imported it, so the clean baseline fails and the run aborts. When `Engine.run` is called
+  directly with `use_coverage=False` and a test directory, the baseline is the first import and
+  passes, and every mutant is then scored KILLED with `tests_run: 0`
+  ([#13](https://github.com/markng/pytest-leela/issues/13)).
+- **A deliberate exit hides a sibling's kill.** Inner runs stop at the first failure (`-x`).
+  If a subdirectory conftest catches the target's import error and calls `pytest.exit()` before
+  a sibling test module's genuine collection failure is reported, the mutant is an **error**
+  rather than a kill.
 
 ### Clean baseline before any mutant
 

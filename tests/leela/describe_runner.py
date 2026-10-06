@@ -2428,6 +2428,50 @@ def describe_collection_failures():
             "conftest called pytest.exit() at import (calc unavailable)"
         )
 
+    def it_reports_a_test_module_exit_at_import_as_an_error(tmp_path, monkeypatch):
+        """The judge's modexit probe: the test module catches the target's
+        import error and exits, as modskip skips: an error, not a kill."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "modexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "modexit_tests"
+        test_dir.mkdir()
+        (test_dir / "test_m.py").write_text(
+            _exit_conftest("modexit_calc") + "\n\ndef test_m():\n    pass\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "test module called pytest.exit() at import (calc unavailable)"
+        )
+        assert result.killing_tests == []
+
+    def it_names_a_conftest_check_failing_before_the_session(tmp_path, monkeypatch):
+        """The judge's confassert probe: the error names the conftest's own
+        exception instead of a bare USAGE_ERROR."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "precheck_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "precheck_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import precheck_calc\n\n"
+            "if precheck_calc.RATIO != 5:\n"
+            "    raise RuntimeError('ratio changed')\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "pytest exited with USAGE_ERROR"
+            f" ({os.path.join('precheck_tests', 'conftest.py')}:"
+            " RuntimeError: ratio changed)"
+        )
+
     def it_reports_a_conftest_exit_during_collection_as_an_error(tmp_path, monkeypatch):
         """With a directory argument the subdirectory conftest loads during
         collection and fails as a collection error, not a kill."""

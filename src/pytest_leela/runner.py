@@ -15,6 +15,8 @@ import types
 from collections.abc import Callable, Generator
 from typing import TYPE_CHECKING, Any, cast
 
+from _pytest.config import ConftestImportFailure
+
 if TYPE_CHECKING:
     from weakref import WeakSet
 
@@ -31,7 +33,6 @@ _STDLIB_PATH_MODULES = {
 }
 
 import pytest
-from _pytest.config import ConftestImportFailure
 
 from pytest_leela.import_hook import (
     MutatingFinder,
@@ -259,9 +260,12 @@ class _ResultCollector:
         self.collection_error_ids: list[str] = []
         self.total = 0
         self.session_started = False
-        self.conftest_exit: str | None = None  # pytest.exit() reason
-        # Collection reports caused by a conftest that failed to import.
+        # Why a conftest or test module called pytest.exit() at import.
+        self.deliberate_exit: str | None = None
+        # Collection reports caused by a conftest that failed to import, or
+        # by a module that called pytest.exit() at import.
         self.conftest_failure_ids: set[str] = set()
+        self.exit_ids: set[str] = set()
         # pytest 7 reports such a failure on the Session (empty nodeid); it
         # is then recorded under the conftest's path.
         self._session_conftest_failure: str | None = None
@@ -275,10 +279,19 @@ class _ResultCollector:
         # raised ``from`` the original (_pytest/config/__init__.py, pytest
         # 7.0 to 9: "raise ConftestImportFailure(...) from e").
         outcome = yield
-        if outcome.excinfo is not None:
-            cause = outcome.excinfo[1].__cause__
-            if isinstance(cause, pytest.exit.Exception):
-                self.conftest_exit = str(cause)
+        if outcome.excinfo is None:
+            return
+        exc = outcome.excinfo[1]
+        if not isinstance(exc, ConftestImportFailure):
+            return
+        cause = exc.__cause__
+        if isinstance(cause, pytest.exit.Exception):
+            self.deliberate_exit = f"conftest called pytest.exit() at import ({cause})"
+        else:
+            # No collect report exists for it: name the cause in the error.
+            self.collection_errors.append(
+                f"{os.path.relpath(exc.path)}: {type(cause).__name__}: {cause}"
+            )
 
     def pytest_exception_interact(self, call: Any, report: Any) -> None:
         # A conftest first loaded during collection fails as a collection
@@ -291,7 +304,14 @@ class _ResultCollector:
                 self._session_conftest_failure = nodeid
             self.conftest_failure_ids.add(nodeid)
             if isinstance(exc.__cause__, pytest.exit.Exception):
-                self.conftest_exit = str(exc.__cause__)
+                self.exit_ids.add(nodeid)
+                self.deliberate_exit = (
+                    f"conftest called pytest.exit() at import ({exc.__cause__})"
+                )
+        elif isinstance(exc, pytest.exit.Exception):
+            # A test module that exits at import, as one that skips: no kill.
+            self.exit_ids.add(report.nodeid)
+            self.deliberate_exit = f"test module called pytest.exit() at import ({exc})"
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         if report.when == "call":
@@ -526,11 +546,8 @@ class InnerSession:
         """Why the run did not test anything, or None if tests completed."""
         if self.crash is not None:
             return self.crash
-        if self.collector.conftest_exit is not None:
-            return (
-                "conftest called pytest.exit() at import"
-                f" ({self.collector.conftest_exit})"
-            )
+        if self.collector.deliberate_exit is not None:
+            return self.collector.deliberate_exit
         return _inner_run_error(self.exit_code, self.collector)
 
     def _conftest_import_failed(self) -> bool:
@@ -549,7 +566,7 @@ class InnerSession:
         """A conftest import failure is the mutant's doing only when the
         mutated module raised during it.  A conftest's own check, or one
         that calls pytest.exit() at import as a skip does, is not."""
-        return bool(self.import_errors) and self.collector.conftest_exit is None
+        return bool(self.import_errors) and self.collector.deliberate_exit is None
 
     def result_for(self, mutant: Mutant) -> MutantResult:
         """Classify this run as a kill, a survival or an error for *mutant*."""
@@ -574,7 +591,8 @@ class InnerSession:
             killing_tests = self.failures() + [
                 nodeid
                 for nodeid in collector.collection_error_ids
-                if conftest_kill or nodeid not in collector.conftest_failure_ids
+                if nodeid not in collector.exit_ids
+                and (conftest_kill or nodeid not in collector.conftest_failure_ids)
             ]
             if not killing_tests and conftest_kill and self._conftest_import_failed():
                 killing_tests = [f"<import of {self.import_errors[0]}>"]
