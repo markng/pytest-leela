@@ -1988,6 +1988,103 @@ def describe_run_tests_for_mutant_real_inner_outcomes():
         assert result.tests_run == 1
         assert result.killing_tests == []
 
+    def _import_skip_run(tmp_path, monkeypatch, name, test_source, by_id=False):
+        """Run Add -> Sub on ``DIVISOR = 1 + 1``, whose import then raises.
+
+        *by_id* passes the test's node id, as coverage-based selection does.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        (tmp_path / f"{name}.py").write_text(source)
+        test_dir = tmp_path / f"{name}_tests"
+        test_dir.mkdir()
+        (test_dir / f"test_{name}.py").write_text(test_source)
+        points = find_mutation_points(source, str(tmp_path / f"{name}.py"), name)
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        if by_id:
+            return run_tests_for_mutant(
+                mutant,
+                {name: source},
+                {name: str(tmp_path / f"{name}.py")},
+                test_ids=[f"{name}_tests/test_{name}.py::test_ratio"],
+            )
+        return run_tests_for_mutant(
+            mutant,
+            {name: source},
+            {name: str(tmp_path / f"{name}.py")},
+            test_dir=str(test_dir),
+        )
+
+    def it_errors_when_a_module_level_skip_hides_an_import_error(tmp_path, monkeypatch):
+        """Regression: the import error turns into a module-level skip, pytest
+        exits NO_TESTS_COLLECTED, a green outcome: no kill, nothing tested."""
+        result = _import_skip_run(
+            tmp_path,
+            monkeypatch,
+            "modskip_calc",
+            "import pytest\n\n"
+            "try:\n"
+            "    import modskip_calc\n"
+            "except Exception:\n"
+            "    pytest.skip('unavailable', allow_module_level=True)\n\n\n"
+            "def test_ratio():\n"
+            "    assert modskip_calc.RATIO == 5\n",
+        )
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with NO_TESTS_COLLECTED"
+        assert result.killing_tests == []
+        assert result.tests_run == 0
+
+    def it_errors_when_a_module_level_skip_hides_a_selected_test(tmp_path, monkeypatch):
+        """Regression: with the test selected by node id, the skipped module
+        leaves the id unmatched and pytest exits USAGE_ERROR after the session
+        started.  Still green: no kill."""
+        result = _import_skip_run(
+            tmp_path,
+            monkeypatch,
+            "idskip_calc",
+            "import pytest\n\n"
+            "try:\n"
+            "    import idskip_calc\n"
+            "except Exception:\n"
+            "    pytest.skip('unavailable', allow_module_level=True)\n\n\n"
+            "def test_ratio():\n"
+            "    assert idskip_calc.RATIO == 5\n",
+            by_id=True,
+        )
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with USAGE_ERROR"
+        assert result.killing_tests == []
+        assert result.tests_run == 0
+
+    def it_errors_when_a_skip_marker_hides_an_import_error(tmp_path, monkeypatch):
+        """Regression: every test skips at setup, pytest exits OK with zero
+        tests run, a green outcome: no kill, nothing tested."""
+        result = _import_skip_run(
+            tmp_path,
+            monkeypatch,
+            "markskip_calc",
+            "import pytest\n\n"
+            "try:\n"
+            "    import markskip_calc\n"
+            "except Exception:\n"
+            "    markskip_calc = None\n\n\n"
+            "@pytest.mark.skipif(markskip_calc is None, reason='unavailable')\n"
+            "def test_ratio():\n"
+            "    assert markskip_calc.RATIO == 5\n",
+        )
+
+        assert result.status == "error"
+        assert result.error == "no tests ran"
+        assert result.killing_tests == []
+        assert result.tests_run == 0
+
     def it_kills_on_a_real_setup_error(tmp_path, monkeypatch):
         mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_setup")
         test_dir = tmp_path / "real_setup_tests"
@@ -2099,3 +2196,86 @@ def describe_django_registry_admin_site_walk():
         )
 
         assert _django_registry_module_names() == frozenset({"_noadmin.admin"})
+
+
+def describe_import_error_kill_rule():
+    """The mutated module raised on import: a kill only if pytest reported it
+    as a failure, for every exit code an inner run can return."""
+
+    _EC = pytest.ExitCode
+
+    @pytest.mark.parametrize(
+        ("exit_code", "session_started", "collection_failed", "status", "error"),
+        [
+            (_EC.OK, True, False, "error", "no tests ran"),
+            (_EC.TESTS_FAILED, True, True, "killed", None),
+            (_EC.INTERRUPTED, True, True, "killed", None),
+            (_EC.INTERRUPTED, True, False, "error", "pytest exited with INTERRUPTED"),
+            (
+                _EC.INTERNAL_ERROR,
+                True,
+                False,
+                "error",
+                "pytest exited with INTERNAL_ERROR",
+            ),
+            (_EC.USAGE_ERROR, False, False, "killed", None),
+            (_EC.USAGE_ERROR, True, True, "killed", None),
+            (_EC.USAGE_ERROR, True, False, "error", "pytest exited with USAGE_ERROR"),
+            (
+                _EC.NO_TESTS_COLLECTED,
+                True,
+                False,
+                "error",
+                "pytest exited with NO_TESTS_COLLECTED",
+            ),
+            (99, True, False, "error", "pytest exited with exit code 99"),
+        ],
+    )
+    def it_applies_the_rule(
+        tmp_path,
+        monkeypatch,
+        exit_code,
+        session_started,
+        collection_failed,
+        status,
+        error,
+    ):
+        name = f"rule_calc_{int(exit_code)}_{session_started}_{collection_failed}"
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        (tmp_path / f"{name}.py").write_text(source)
+        points = find_mutation_points(source, str(tmp_path / f"{name}.py"), name)
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        def fake_main(args, plugins=None):
+            collector = plugins[0]
+            if session_started:
+                collector.pytest_sessionstart(None)
+            with pytest.raises(ZeroDivisionError):
+                importlib.import_module(name)
+            if collection_failed:
+                collector.pytest_collectreport(
+                    _FakeCollectReport("test_x.py", failed=True, longreprtext="E")
+                )
+            return exit_code
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=fake_main):
+            result = run_tests_for_mutant(
+                mutant,
+                {name: source},
+                {name: str(tmp_path / f"{name}.py")},
+                test_dir=str(tmp_path),
+            )
+
+        assert result.status == status
+        assert result.error == error
+        if status == "killed":
+            expected = ["test_x.py"] if collection_failed else []
+            assert result.killing_tests[: len(expected)] == expected
+            if not collection_failed:
+                [killing] = result.killing_tests
+                assert killing.startswith(f"<import of {name}: ZeroDivisionError:")

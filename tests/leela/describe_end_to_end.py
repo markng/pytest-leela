@@ -56,6 +56,56 @@ def describe_import_breaking_mutant():
         assert "ERROR" not in result.stdout.str()
         assert result.ret == 1
 
+    def it_reports_a_module_level_skip_on_import_error_as_an_error(pytester):
+        """Regression: the test module skips itself when the import fails, so
+        pytest reports "1 skipped" and no test saw the mutant."""
+        pytester.makepyfile(
+            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
+            test_calc=(
+                "import pytest\n\n"
+                "try:\n"
+                "    import calc\n"
+                "except Exception:\n"
+                "    pytest.skip('calc unavailable', allow_module_level=True)\n\n\n"
+                "def test_ratio():\n"
+                "    assert calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        result.stdout.fnmatch_lines(
+            [
+                "*line 1: + → - * ERROR",
+                "*pytest exited with USAGE_ERROR",
+            ]
+        )
+        assert "KILLED" not in result.stdout.str()
+        assert result.ret == 1
+
+    def it_reports_a_skip_marker_on_import_error_as_an_error(pytester):
+        """Regression: every test skips at setup when the import fails, pytest
+        exits OK with zero tests run."""
+        pytester.makepyfile(
+            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
+            test_calc=(
+                "import pytest\n\n"
+                "try:\n"
+                "    import calc\n"
+                "except Exception:\n"
+                "    calc = None\n\n\n"
+                "@pytest.mark.skipif(calc is None, reason='calc unavailable')\n"
+                "def test_ratio():\n"
+                "    assert calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        result.stdout.fnmatch_lines(["*line 1: + → - * ERROR", "*no tests ran"])
+        assert "KILLED" not in result.stdout.str()
+        assert result.ret == 1
+
 
 def describe_error_mutants():
     def _project(pytester, fail_on_error=None):

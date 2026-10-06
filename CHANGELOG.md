@@ -57,15 +57,20 @@
   `"survived"` or `"error"`; `RunResult` gains `errors` and
   `mutants_scored`. Timeouts remain kills.
 
-- **A mutant that makes the target module raise on import is killed,
-  for a reason.** `MutatingLoader` records exceptions raised by the
-  mutated source. When one occurred *and* the inner run did not complete
-  (abnormal exit or zero tests run), the collection errors it caused are
-  the killing tests. A run that completed with every test passing stays
-  SURVIVED even if some code caught the import error. 0.8.0 already
-  reported these mutants as KILLED, but only as `<crashed>` with
-  `tests_run: 0`, the same verdict it gave any crash, so a kill could
-  not be told apart from leela failing to test the mutant.
+- **A mutant that makes the target module raise on import is killed
+  only when pytest reports the failure.** `MutatingLoader` records
+  exceptions raised by the mutated source. The mutant is killed when a
+  test module then fails to collect (those modules are the killing
+  tests) or a conftest fails to import before the session starts. A run
+  that stays green or empty is not a kill: an import caught by the test
+  is SURVIVED, and a module-level skip or a skip marker triggered by the
+  failed import is an `error`, because no test ran.
+  0.8.0's verdict for such a mutant depended on the layout. With the
+  virtualenv and the temp dir outside the project, it was SURVIVED with
+  `tests_run: 0`. With the virtualenv inside the project, re-importing
+  installed packages could crash the inner run, and the mutant was
+  KILLED as `<crashed>`, a verdict indistinguishable from leela failing
+  to test it.
 
 - **`--leela-benchmark` no longer raises `TypeError`.** It called the
   target-discovery helpers without the `python_files` patterns they

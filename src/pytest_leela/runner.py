@@ -257,6 +257,10 @@ class _ResultCollector:
         self.collection_errors: list[str] = []  # "nodeid: summary" entries
         self.collection_error_ids: list[str] = []
         self.total = 0
+        self.session_started = False
+
+    def pytest_sessionstart(self, session: Any) -> None:
+        self.session_started = True
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         if report.when == "call":
@@ -485,6 +489,22 @@ class InnerSession:
             return self.crash
         return _inner_run_error(self.exit_code, self.collector)
 
+    def _import_failed(self) -> bool:
+        """Whether pytest reported a failure for the mutated module's import.
+
+        Only a failed collection report, or a conftest import failure (pytest
+        returns USAGE_ERROR before any session starts: _pytest/config/
+        __init__.py, ``main``: "except ConftestImportFailure"), makes the
+        suite red.  A caught import, a module-level skip or a skip marker
+        leave it green or empty, so they are no kill.
+        """
+        if self.collector.collection_error_ids:
+            return True
+        return (
+            self.exit_code == pytest.ExitCode.USAGE_ERROR
+            and not self.collector.session_started
+        )
+
     def result_for(self, mutant: Mutant) -> MutantResult:
         """Classify this run as a kill, a survival or an error for *mutant*."""
         collector = self.collector
@@ -503,12 +523,7 @@ class InnerSession:
             )
         if self.crash is None:
             killing_tests = self.failures()
-            run_error = _inner_run_error(self.exit_code, collector)
-            if not killing_tests and run_error is not None and self.import_errors:
-                # The run did not complete, and the mutated module itself
-                # raised on import: the tests importing it errored at
-                # collection, so the suite went red.  A run that completed
-                # green stays a survivor even if some import caught the error.
+            if not killing_tests and self.import_errors and self._import_failed():
                 killing_tests = collector.collection_error_ids or [
                     f"<import of {self.import_errors[0]}>"
                 ]
