@@ -744,7 +744,11 @@ def describe_run_tests_for_mutant_timeout():
         source, mutant = _make_mutant_fixture(tmp_path)
 
         def mock_pytest_main(args, plugins=None):
-            # Simulate: timeout fires, but pytest swallows the SystemExit
+            # Simulate: one test passes, then the timeout fires and pytest
+            # swallows the SystemExit
+            plugins[0].pytest_runtest_logreport(
+                _FakeReport("test_a", "call", passed=True, failed=False)
+            )
             for p in plugins or []:
                 if hasattr(p, "event"):
                     p.event.set()  # Set the timed_out event
@@ -762,8 +766,36 @@ def describe_run_tests_for_mutant_timeout():
         assert result.killed is True
         assert result.killing_test == "<timeout>"
         assert "<timeout>" in result.killing_tests
+        # The run did not crash, so the tests it ran are still reported.
+        assert result.test_ids_run == ["test_a"]
         # Elapsed should be reasonable (not a huge value from wrong arithmetic)
         assert 0 <= result.time_seconds < 60
+
+    def it_reports_no_tests_run_when_the_timeout_escapes_as_a_crash(
+        tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        def mock_pytest_main(args, plugins=None):
+            plugins[0].pytest_runtest_logreport(
+                _FakeReport("test_a", "call", passed=True, failed=False)
+            )
+            plugins[1].event.set()
+            raise SystemExit("leela: mutant timeout")
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        assert result.killing_test == "<timeout>"
+        assert result.test_ids_run == []
 
     def it_returns_timeout_result_when_system_exit_is_raised(tmp_path, monkeypatch):
         """When timeout causes SystemExit to propagate, result should be killed."""
