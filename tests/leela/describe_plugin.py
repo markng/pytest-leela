@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from pytest_leela.plugin import (
     _SKIP_DIRS,
@@ -1138,7 +1138,6 @@ def describe_apply_excludes():
     def it_normalizes_backslash_paths(monkeypatch):
         """When os.sep is backslash, relpath uses backslashes but
         patterns use forward slashes — normalization handles this."""
-        import pytest_leela.plugin as plugin_mod
 
         original_relpath = os.path.relpath
 

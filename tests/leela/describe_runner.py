@@ -359,9 +359,7 @@ def describe_run_tests_for_mutant():
             return 0
 
         try:
-            with patch(
-                "pytest_leela.runner.pytest.main", side_effect=mock_pytest_main
-            ):
+            with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
                 run_tests_for_mutant(
                     mutant,
                     {"outside_cwd_target": source},

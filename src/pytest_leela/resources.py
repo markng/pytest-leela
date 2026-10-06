@@ -1,6 +1,13 @@
 """CPU and memory resource limiting."""
 
-from __future__ import annotations
+# NOTE: Do NOT add from __future__ import annotations here.
+# Without that flag, every annotation is evaluated at function
+# def time, so a BitOr->BitAnd mutation on a type annotation
+# (e.g. "int | None" -> "int & None") raises TypeError at
+# import — which is exactly the test-killing signal mutation
+# testing depends on. See the top-of-file note in
+# pytest_leela.import_hook for the full reasoning.
+#
 
 import os
 from dataclasses import dataclass
@@ -26,10 +33,18 @@ def apply_cpu_limit(max_cores: int) -> None:
     """Restrict this process to a set of CPU cores."""
     available = os.cpu_count() or 4
     cores = min(max_cores, available)
-    try:
-        os.sched_setaffinity(0, set(range(cores)))
-    except (AttributeError, OSError):
+    setaffinity = getattr(os, "sched_setaffinity", None)
+    if setaffinity is None:
         # Not available on all platforms (e.g., macOS)
+        return
+    try:
+        setaffinity(0, set(range(cores)))
+    except (AttributeError, OSError):
+        # ``AttributeError`` covers platforms where the attribute
+        # disappears between the ``getattr`` lookup and the call
+        # (e.g. mocked test environments that remove the attr on
+        # call). ``OSError`` covers kernels that refuse affinity
+        # changes (containers, seccomp, etc.).
         pass
 
 

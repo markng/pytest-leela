@@ -1,6 +1,14 @@
 """Import hook for in-memory AST mutation — zero file I/O."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` to this module.
+# When present, Python inherits ``CO_FUTURE_ANNOTATIONS`` (0x1000000) into
+# every ``compile()`` call made from this file's compiled code — including
+# the ``compile(tree, ...)`` inside ``MutatingLoader.exec_module``. That
+# flag tells the target module to defer ALL annotations to strings, so a
+# ``BitOr -> BitAnd`` mutation like ``int | None`` -> ``int & None`` would
+# be stored as the literal string ``'int & None'`` on the function and
+# never raise ``TypeError`` at import time. The mutant would then SURVIVE
+# even though it should crash on function definition.
 
 import ast
 import importlib

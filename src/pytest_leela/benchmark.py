@@ -1,8 +1,14 @@
 """Benchmark mode — attribute speedup to each optimisation layer."""
 
-from __future__ import annotations
+# NOTE: Do NOT add from __future__ import annotations here.
+# Without that flag, every annotation is evaluated at function
+# def time, so a BitOr->BitAnd mutation on a type annotation
+# (e.g. "int | None" -> "int & None") raises TypeError at
+# import — which is exactly the test-killing signal mutation
+# testing depends on. See the top-of-file note in
+# pytest_leela.import_hook for the full reasoning.
+#
 
-import time
 from dataclasses import dataclass
 
 import pytest
@@ -30,13 +36,14 @@ class BenchmarkPlugin:
             return
 
         targets = self.config.getoption("target", default=[])
+        python_files = self.config.getini("python_files")
         if targets:
             target_files: list[str] = []
             for t in targets:
-                target_files.extend(_find_target_files(t))
+                target_files.extend(_find_target_files(t, python_files))
             target_files = sorted(set(target_files))
         else:
-            target_files = _find_default_targets(session.config.rootpath)
+            target_files = _find_default_targets(session.config.rootpath, python_files)
 
         if not target_files:
             return
