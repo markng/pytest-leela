@@ -12,10 +12,11 @@ from pathlib import Path
 
 import pytest
 
-from pytest_leela.config import ALL_OPERATORS, load_config
+from pytest_leela.config import load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import BaselineFailure, Engine
 from pytest_leela.git_diff import changed_files
+from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
 
