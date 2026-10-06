@@ -39,9 +39,13 @@ jobs:
         pip install -e ".[dev,django]" "pytest==7.0.0"
     - name: Test with pytest
       run: |
-        # pytest 7.0's helpconfig hookwrapper warns when a conftest fails to
-        # import, which several tests provoke on purpose.
-        pytest -W "ignore::pluggy.PluggyTeardownRaisedWarning"
+        # Every warning is an error except two that pytest 7.0 itself raises:
+        # its helpconfig hookwrapper warns when a conftest fails to import
+        # (several tests do that on purpose), and on Python 3.12 its assertion
+        # rewriter uses ast.Str/ast.Num, which warn whenever a test module has
+        # no cached rewrite yet (every module on a fresh checkout).
+        pytest -W error -W "ignore::pluggy.PluggyTeardownRaisedWarning" \
+          -W "ignore::DeprecationWarning:_pytest.assertion.rewrite"
 
   build:
 
