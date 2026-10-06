@@ -53,7 +53,7 @@ def load_config(rootpath: Path) -> LeelaConfig:
         )
 
     if not isinstance(fail_on_error, bool):
-        raise ValueError(
+        raise TypeError(
             f"[tool.pytest-leela] 'fail_on_error' must be true or false in pyproject.toml, "
             f"got {type(fail_on_error).__name__}: {fail_on_error!r}"
         )

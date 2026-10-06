@@ -215,7 +215,7 @@ def describe_fail_on_error():
             '[tool.pytest-leela]\nfail_on_error = "false"\n'
         )
         with pytest.raises(
-            ValueError, match="'fail_on_error' must be true or false.*got str: 'false'"
+            TypeError, match=r"'fail_on_error' must be true or false.*got str: 'false'"
         ):
             load_config(tmp_path)
 
@@ -223,5 +223,5 @@ def describe_fail_on_error():
         (tmp_path / "pyproject.toml").write_text(
             "[tool.pytest-leela]\nfail_on_error = 0\n"
         )
-        with pytest.raises(ValueError, match="got int: 0"):
+        with pytest.raises(TypeError, match="got int: 0"):
             load_config(tmp_path)

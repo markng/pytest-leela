@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 
+import pytest
+
 from pytest_leela.html_report import (
     _build_html_viewer,
     _build_report_data,
@@ -926,7 +928,7 @@ def describe_report_data_with_errors():
         data = _build_report_data(
             _make_run_result(results=[_make_error_mutant_result(1)])
         )
-        assert data["files"]["app.py"]["stats"]["score"] == 0.0
+        assert data["files"]["app.py"]["stats"]["score"] == pytest.approx(0.0)
 
     def it_leaves_errored_mutants_out_of_the_survivor_index():
         index = _data()["survived_index"]
@@ -936,7 +938,7 @@ def describe_report_data_with_errors():
         summary = _data()["summary"]
         assert summary["errors"] == 1
         assert summary["survived"] == 1
-        assert summary["mutation_score"] == 50.0
+        assert summary["mutation_score"] == pytest.approx(50.0)
 
 
 def describe_html_viewer_error_rendering():

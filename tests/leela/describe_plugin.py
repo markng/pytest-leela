@@ -1283,8 +1283,10 @@ def describe_outer_django_db_unblocked():
             @contextlib.contextmanager
             def unblock(self):
                 events.append("unblock")
-                yield
-                events.append("restore")
+                try:
+                    yield
+                finally:
+                    events.append("restore")
 
         fake = types.ModuleType("pytest_django.plugin")
         fake.blocking_manager_key = pytest.StashKey()

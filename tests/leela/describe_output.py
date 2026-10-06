@@ -513,7 +513,7 @@ def describe_json_report_with_errors():
         assert data["killed"] == 1
         assert data["survived"] == 1
         assert data["errors"] == 1
-        assert data["mutation_score"] == 50.0
+        assert data["mutation_score"] == pytest.approx(50.0)
         assert len(data["survived_mutants"]) == 1
 
     def it_lists_errored_mutants_with_their_reason():

@@ -331,11 +331,11 @@ def describe_run_result_errors():
         run = _run_of(
             [_make_result(True, 1), _make_result(False, 2), _make_error_result()]
         )
-        assert run.mutation_score == 50.0
+        assert run.mutation_score == pytest.approx(50.0)
 
     def it_scores_zero_when_every_mutant_errored():
         run = _run_of([_make_error_result(1), _make_error_result(2)])
-        assert run.mutation_score == 0.0
+        assert run.mutation_score == pytest.approx(0.0)
 
 
 def describe_mutant_result_invariant():

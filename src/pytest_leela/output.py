@@ -131,8 +131,12 @@ def format_terminal_report(result: RunResult) -> str:
             m = r.mutant
             desc = _op_display(m.point.original_op, m.replacement_op)
             if r.status == "error":
-                lines.append(f"    line {m.point.lineno}: {desc:<45s} ERROR")
-                lines.append(f"      {r.error}")
+                lines.extend(
+                    [
+                        f"    line {m.point.lineno}: {desc:<45s} ERROR",
+                        f"      {r.error}",
+                    ]
+                )
             else:
                 lines.append(f"    line {m.point.lineno}: {desc:<45s} SURVIVED")
 

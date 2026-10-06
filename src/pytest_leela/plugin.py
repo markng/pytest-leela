@@ -7,7 +7,7 @@ import fnmatch
 import glob as _glob
 import os
 import sys
-from collections.abc import Iterator
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -187,7 +187,7 @@ class LeelaPlugin:
         return _apply_excludes(target_files, leela_config.exclude, rootpath)
 
     @contextlib.contextmanager
-    def _outer_django_db_unblocked(self) -> Iterator[None]:
+    def _outer_django_db_unblocked(self) -> Generator[None]:
         """Lift the outer session's pytest-django DB block for leela's run.
 
         pytest-django blocks DB access at configure time and only restores it
