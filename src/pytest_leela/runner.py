@@ -460,8 +460,8 @@ class InnerSession:
         except BaseException as exc:
             # Recorded, not raised: a crash is a verdict about this mutant
             # (see result_for), and the outer session must keep running.
-            # BaseException covers pytest's Skipped and Exit, which a
-            # conftest can raise at import and pytest.main does not catch.
+            # BaseException adds pytest's Skipped, which a conftest can
+            # raise at import and pytest.main does not catch.
             self.crash = f"pytest crashed: {type(exc).__name__}: {exc}"
         finally:
             if timer is not None:

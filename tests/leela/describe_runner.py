@@ -2379,24 +2379,31 @@ def describe_collection_failures():
         assert result.error == "pytest crashed: Skipped: unavailable"
         assert result.killing_tests == []
 
-    def it_reports_an_escaping_exit_as_an_error(tmp_path, monkeypatch):
-        """pytest.main handles every real pytest.exit path tried (conftest
-        import: USAGE_ERROR; configure or sessionstart hook: INTERRUPTED), so
-        an escaping Exit is simulated."""
+    def it_reports_an_exit_from_a_conftest_addoption_hook_as_an_error(
+        tmp_path, monkeypatch
+    ):
+        """pytest_addoption runs while pytest.main prepares its config, before
+        the session catches outcomes, so this Exit escapes pytest.main (the
+        judge's addoptexit probe)."""
         mutant, sources, files = _mutant(
-            tmp_path, monkeypatch, "confexit_calc", "Add", "Sub"
+            tmp_path, monkeypatch, "addopt_calc", "Add", "Sub"
         )
+        test_dir = tmp_path / "addopt_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import pytest\n\n\n"
+            "def pytest_addoption(parser):\n"
+            "    try:\n"
+            "        import addopt_calc  # noqa: F401\n"
+            "    except ZeroDivisionError:\n"
+            "        pytest.exit('calc unavailable')\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
 
-        with patch(
-            "pytest_leela.runner.pytest.main",
-            side_effect=pytest.exit.Exception("ratio changed"),
-        ):
-            result = run_tests_for_mutant(
-                mutant, sources, files, test_dir=str(tmp_path)
-            )
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
 
         assert result.status == "error"
-        assert result.error == "pytest crashed: Exit: ratio changed"
+        assert result.error == "pytest crashed: Exit: calc unavailable"
 
     def it_lets_a_keyboard_interrupt_stop_the_run(tmp_path, monkeypatch):
         mutant, sources, files = _mutant(

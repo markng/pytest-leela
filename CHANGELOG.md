@@ -72,7 +72,8 @@
   stays green or empty is not a kill: an import caught by the test is
   SURVIVED, and a module-level skip, a skip marker or a conftest that
   skips is an `error`, because no test ran. A conftest raising `Skipped`
-  or `Exit` no longer crashes the whole leela run.
+  at import no longer crashes the whole leela run: `Skipped` is a
+  `BaseException`, outside what inner runs caught.
   0.8.0's verdict for a mutant that broke the target's import depended
   on the layout. With the virtualenv and the temp dir outside the
   project, it was SURVIVED with `tests_run: 0`. With the virtualenv
