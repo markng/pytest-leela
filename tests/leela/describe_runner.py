@@ -2202,27 +2202,27 @@ def describe_import_error_kill_rule():
     """The mutated module raised on import: a kill only if pytest reported it
     as a failure, for every exit code an inner run can return."""
 
-    _EC = pytest.ExitCode
+    codes = pytest.ExitCode
 
     @pytest.mark.parametrize(
         ("exit_code", "session_started", "collection_failed", "status", "error"),
         [
-            (_EC.OK, True, False, "error", "no tests ran"),
-            (_EC.TESTS_FAILED, True, True, "killed", None),
-            (_EC.INTERRUPTED, True, True, "killed", None),
-            (_EC.INTERRUPTED, True, False, "error", "pytest exited with INTERRUPTED"),
+            (codes.OK, True, False, "error", "no tests ran"),
+            (codes.TESTS_FAILED, True, True, "killed", None),
+            (codes.INTERRUPTED, True, True, "killed", None),
+            (codes.INTERRUPTED, True, False, "error", "pytest exited with INTERRUPTED"),
             (
-                _EC.INTERNAL_ERROR,
+                codes.INTERNAL_ERROR,
                 True,
                 False,
                 "error",
                 "pytest exited with INTERNAL_ERROR",
             ),
-            (_EC.USAGE_ERROR, False, False, "killed", None),
-            (_EC.USAGE_ERROR, True, True, "killed", None),
-            (_EC.USAGE_ERROR, True, False, "error", "pytest exited with USAGE_ERROR"),
+            (codes.USAGE_ERROR, False, False, "killed", None),
+            (codes.USAGE_ERROR, True, True, "killed", None),
+            (codes.USAGE_ERROR, True, False, "error", "pytest exited with USAGE_ERROR"),
             (
-                _EC.NO_TESTS_COLLECTED,
+                codes.NO_TESTS_COLLECTED,
                 True,
                 False,
                 "error",
