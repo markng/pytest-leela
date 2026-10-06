@@ -24,6 +24,7 @@ from pytest_leela.models import (
 )
 from pytest_leela.operators import build_allowed_keys
 from pytest_leela.resources import ResourceLimits
+from pytest_leela.runner import ProjectModuleScope
 
 
 def describe_engine():
@@ -919,75 +920,99 @@ def describe_Engine_run_baseline():
 
 
 def describe_Engine_check_baseline():
-    def _probe():
-        point = MutationPoint(
-            file_path="/p/m.py",
-            module_name="m",
-            lineno=1,
-            col_offset=0,
-            node_type="BinOp",
-            original_op="Add",
-            inferred_type=None,
-        )
-        return Mutant(point=point, replacement_op="Sub", mutant_id=0)
-
-    def _result(probe, **fields):
-        defaults = dict(
-            mutant=probe,
-            killed=False,
-            tests_run=1,
-            killing_test=None,
-            time_seconds=0.0,
-        )
-        defaults.update(fields)
-        return MutantResult(**defaults)
+    def _clean_session():
+        session = MagicMock()
+        session.failures.return_value = []
+        session.error.return_value = None
+        return session
 
     def it_runs_the_sorted_union_of_all_mutants_tests_unmutated():
-        probe = _probe()
+        scope = ProjectModuleScope("/p")
         with patch(
-            "pytest_leela.engine.run_tests_for_mutant",
-            return_value=_result(probe),
+            "pytest_leela.engine.run_baseline", return_value=_clean_session()
         ) as mock_run:
             Engine._check_baseline(
-                probe, [["t::b", "t::a"], ["t::a", "t::c"]], "tests", frozenset({"m"})
+                [["t::b", "t::a"], ["t::a", "t::c"]], "tests", frozenset({"m"}), scope
             )
 
         mock_run.assert_called_once_with(
-            probe,
-            {},
-            {},
-            test_ids=["t::a", "t::b", "t::c"],
-            test_dir="tests",
-            known_user_modules=frozenset({"m"}),
+            ["t::a", "t::b", "t::c"], "tests", frozenset({"m"}), scope
         )
 
     def it_runs_the_whole_test_dir_when_any_mutant_has_no_test_ids():
-        probe = _probe()
         with patch(
-            "pytest_leela.engine.run_tests_for_mutant",
-            return_value=_result(probe),
+            "pytest_leela.engine.run_baseline", return_value=_clean_session()
         ) as mock_run:
-            Engine._check_baseline(probe, [["t::a"], None], "tests", frozenset())
+            Engine._check_baseline(
+                [["t::a"], None], "tests", frozenset(), ProjectModuleScope("/p")
+            )
 
-        assert mock_run.call_args.kwargs["test_ids"] is None
+        assert mock_run.call_args.args[0] is None
 
-    def it_names_every_failing_test():
-        probe = _probe()
-        failed = _result(probe, killed=True, killing_tests=["t::a", "t::b"])
-        with (
-            patch("pytest_leela.engine.run_tests_for_mutant", return_value=failed),
-            pytest.raises(BaselineFailure, match=r"\(failed: t::a, t::b\)"),
+    def it_names_every_failing_test_from_a_real_run(tmp_path, monkeypatch):
+        """No ``-x``: both failures are reported, not just the first."""
+        test_dir = tmp_path / "bl_two_tests"
+        test_dir.mkdir()
+        (test_dir / "test_bl_two.py").write_text(
+            "def test_a_fails():\n    assert False\n\n"
+            "def test_b_passes():\n    pass\n\n"
+            "def test_c_fails():\n    assert False\n"
+        )
+        monkeypatch.chdir(tmp_path)
+
+        with pytest.raises(BaselineFailure) as excinfo:
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
+
+        assert "(failed: bl_two_tests/test_bl_two.py::test_a_fails, " in str(
+            excinfo.value
+        )
+        assert "bl_two_tests/test_bl_two.py::test_c_fails);" in str(excinfo.value)
+
+    def it_reports_the_error_reason_from_a_real_run(tmp_path, monkeypatch):
+        test_dir = tmp_path / "bl_empty_dir"
+        test_dir.mkdir()
+        monkeypatch.chdir(tmp_path)
+
+        with pytest.raises(
+            BaselineFailure, match=r"\(pytest exited with NO_TESTS_COLLECTED\);"
         ):
-            Engine._check_baseline(probe, [["t::a"]], None, frozenset())
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
 
-    def it_reports_the_error_reason():
-        probe = _probe()
-        errored = _result(probe, tests_run=0, error="no tests ran")
-        with (
-            patch("pytest_leela.engine.run_tests_for_mutant", return_value=errored),
-            pytest.raises(BaselineFailure, match=r"\(no tests ran\);"),
-        ):
-            Engine._check_baseline(probe, [["t::a"]], None, frozenset())
+    def it_returns_quietly_for_a_clean_real_run(tmp_path, monkeypatch):
+        test_dir = tmp_path / "bl_ok"
+        test_dir.mkdir()
+        (test_dir / "test_ok.py").write_text("def test_ok():\n    pass\n")
+        monkeypatch.chdir(tmp_path)
+
+        assert (
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
+            is None
+        )
+
+    def it_never_installs_an_import_hook(tmp_path, monkeypatch):
+        """The baseline cannot mutate: no MutatingFinder is ever on meta_path."""
+        test_dir = tmp_path / "bl_hook"
+        test_dir.mkdir()
+        (test_dir / "test_hook.py").write_text(
+            "import sys\n\n"
+            "def test_no_mutating_finder():\n"
+            "    names = [type(f).__name__ for f in sys.meta_path]\n"
+            "    assert 'MutatingFinder' not in names\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        with patch(
+            "pytest_leela.runner.install_hook", side_effect=AssertionError
+        ) as mock_install:
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
+        mock_install.assert_not_called()
 
 
 def describe_Engine_tests_for():
@@ -1017,3 +1042,45 @@ def describe_Engine_tests_for():
 
     def it_returns_none_with_neither():
         assert Engine._tests_for(_mutant(), None, None) is None
+
+
+def describe_Engine_run_scope():
+    def it_builds_one_scope_and_hands_it_to_every_mutant(tmp_path, monkeypatch):
+        target, test_dir = _write_project(
+            tmp_path,
+            monkeypatch,
+            "one_scope",
+            "from one_scope import add\n\ndef test_add():\n    assert add(1, 2) == 3\n",
+        )
+        scopes = []
+        real = ProjectModuleScope
+
+        def counting_scope(*args, **kwargs):
+            scope = real(*args, **kwargs)
+            scopes.append(scope)
+            return scope
+
+        captured = []
+
+        def fake_run(*args, **kwargs):
+            captured.append(kwargs["scope"])
+            return MutantResult(
+                mutant=args[0],
+                killed=True,
+                tests_run=1,
+                killing_test="t",
+                time_seconds=0.0,
+            )
+
+        with (
+            patch("pytest_leela.engine.ProjectModuleScope", side_effect=counting_scope),
+            patch("pytest_leela.engine.run_tests_for_mutant", side_effect=fake_run),
+        ):
+            Engine(use_types=False, use_coverage=False).run(
+                [str(target)], test_dir=str(test_dir)
+            )
+
+        # _clean_process_state builds its own scope for the temp dir.
+        project_scopes = [s for s in scopes if s.cwd == str(tmp_path) + os.sep]
+        assert len(project_scopes) == 1
+        assert captured and all(s is project_scopes[0] for s in captured)

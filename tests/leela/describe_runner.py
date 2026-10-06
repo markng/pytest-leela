@@ -1,5 +1,6 @@
 """Tests for pytest_leela.runner — test execution against mutants."""
 
+import importlib
 import os
 import sys
 import threading
@@ -19,6 +20,7 @@ from pytest_leela.runner import (
     _django_registry_module_names,
     _inner_run_error,
     _last_line,
+    InnerSession,
     _referenced_closure,
     _clear_user_modules,
     _clear_user_modules_fast,
@@ -1181,17 +1183,17 @@ def describe_run_tests_for_mutant_with_venv_inside_project():
             monkeypatch.delitem(sys.modules, name, raising=False)
 
         # Prime the extension as the outer pytest session would have.
-        import once_only_ext  # noqa: F401
+        ext = importlib.import_module("once_only_ext")
 
         points = find_mutation_points(source, str(target), "venv_calc")
         point = next(
             p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
         )
         mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
-        return source, target, test_dir, mutant
+        return source, target, test_dir, mutant, ext
 
     def it_reports_a_weakly_tested_mutant_as_survived(tmp_path, monkeypatch):
-        source, target, test_dir, mutant = _make_project(tmp_path, monkeypatch)
+        source, target, test_dir, mutant, ext = _make_project(tmp_path, monkeypatch)
 
         result = run_tests_for_mutant(
             mutant,
@@ -1207,7 +1209,7 @@ def describe_run_tests_for_mutant_with_venv_inside_project():
         assert result.killing_tests == []
 
     def it_reports_survived_on_the_full_scan_path_too(tmp_path, monkeypatch):
-        source, target, test_dir, mutant = _make_project(tmp_path, monkeypatch)
+        source, target, test_dir, mutant, ext = _make_project(tmp_path, monkeypatch)
 
         result = run_tests_for_mutant(
             mutant,
@@ -1220,8 +1222,7 @@ def describe_run_tests_for_mutant_with_venv_inside_project():
         assert result.killed is False
 
     def it_keeps_the_extension_loaded_across_mutants(tmp_path, monkeypatch):
-        source, target, test_dir, mutant = _make_project(tmp_path, monkeypatch)
-        ext = sys.modules["once_only_ext"]
+        source, target, test_dir, mutant, ext = _make_project(tmp_path, monkeypatch)
 
         run_tests_for_mutant(
             mutant,
@@ -1238,9 +1239,12 @@ def describe_run_tests_for_mutant_inner_run_errors():
     """A mutant whose inner run never exercised a test is an ERROR — neither
     a kill (nothing caught it) nor a survival (nothing ran)."""
 
-    def it_reports_a_collection_error_as_error_not_survived(tmp_path, monkeypatch):
-        # Add -> Sub makes DIVISOR zero, so importing the module raises and
-        # the test file errors during collection.
+    def it_kills_a_mutant_that_makes_the_target_raise_on_import(tmp_path, monkeypatch):
+        """The suite went red: every test importing the target errored.
+
+        Add -> Sub makes DIVISOR zero, so executing the mutated module raises
+        and the test file errors during collection.
+        """
         source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
         target = tmp_path / "collect_err_target.py"
         target.write_text(source)
@@ -1269,10 +1273,78 @@ def describe_run_tests_for_mutant_inner_run_errors():
             test_dir=str(test_dir),
         )
 
-        assert result.status == "error"
-        assert result.killed is False
+        assert result.status == "killed"
+        assert result.error is None
         assert result.tests_run == 0
-        assert "ZeroDivisionError" in result.error
+        assert result.killing_test == "collect_err_tests/test_collect_err_target.py"
+        assert result.killing_tests == ["collect_err_tests/test_collect_err_target.py"]
+
+    def it_reports_a_collection_error_raised_outside_the_target_as_error(
+        tmp_path, monkeypatch
+    ):
+        """The target imports fine; the *test* module raises at import."""
+        source = "LIMIT = 1 + 1\n"
+        target = tmp_path / "coll_outside_target.py"
+        target.write_text(source)
+        test_dir = tmp_path / "coll_outside_tests"
+        test_dir.mkdir()
+        (test_dir / "test_coll_outside.py").write_text(
+            "from coll_outside_target import LIMIT\n\n"
+            "if LIMIT != 2:\n"
+            "    raise RuntimeError('limit changed')\n\n"
+            "def test_limit():\n"
+            "    assert True\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        points = find_mutation_points(source, str(target), "coll_outside_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"coll_outside_target": source},
+            {"coll_outside_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert result.error == (
+            "pytest exited with INTERRUPTED (coll_outside_tests/"
+            "test_coll_outside.py: E   RuntimeError: limit changed)"
+        )
+
+    def it_names_the_failed_import_when_no_collection_report_exists(
+        tmp_path, monkeypatch
+    ):
+        """A conftest importing the broken target yields no collect report."""
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        target = tmp_path / "conftest_target.py"
+        target.write_text(source)
+        test_dir = tmp_path / "conftest_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text("import conftest_target\n")
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        points = find_mutation_points(source, str(target), "conftest_target")
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"conftest_target": source},
+            {"conftest_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        assert result.killing_tests == [
+            "<import of conftest_target: ZeroDivisionError: "
+            "integer division or modulo by zero>"
+        ]
 
 
 def _isolated_scope_env(monkeypatch, prefix, site_packages=(), user_site="/nowhere"):
@@ -1435,6 +1507,14 @@ def describe_ResultCollector_collection_errors():
             )
         )
         assert collector.collection_errors == ["tests/test_x.py: E   ImportError: nope"]
+        assert collector.collection_error_ids == ["tests/test_x.py"]
+
+    def it_records_just_the_nodeid_when_the_report_has_no_text():
+        collector = _ResultCollector()
+        collector.pytest_collectreport(
+            _FakeCollectReport("tests/test_y.py", failed=True, longreprtext="")
+        )
+        assert collector.collection_errors == ["tests/test_y.py"]
 
     def it_ignores_successful_collection_reports():
         collector = _ResultCollector()
@@ -1446,11 +1526,11 @@ def describe_last_line():
     def it_returns_the_last_non_blank_line_stripped():
         assert _last_line("first\n  second  \n\n   \n") == "second"
 
-    def it_returns_a_placeholder_for_empty_text():
-        assert _last_line("") == "<no details>"
+    def it_returns_none_for_empty_text():
+        assert _last_line("") is None
 
-    def it_returns_a_placeholder_for_whitespace_only_text():
-        assert _last_line("  \n \n") == "<no details>"
+    def it_returns_none_for_whitespace_only_text():
+        assert _last_line("  \n \n") is None
 
 
 def describe_inner_run_error():
@@ -1473,6 +1553,11 @@ def describe_inner_run_error():
     def it_accepts_a_plain_int_exit_code():
         reason = _inner_run_error(4, _collector(total=1))
         assert reason == "pytest exited with USAGE_ERROR"
+
+    def it_labels_an_exit_code_pytest_does_not_define():
+        """A plugin can set any int as the session exit status."""
+        reason = _inner_run_error(42, _collector(total=1))
+        assert reason == "pytest exited with exit code 42"
 
     def it_appends_every_collection_error():
         reason = _inner_run_error(
@@ -1780,3 +1865,167 @@ def describe_referenced_closure():
 
         assert "_dep.mixins" not in names
         assert "_dep.views" in names
+
+
+def describe_run_tests_for_mutant_real_inner_outcomes():
+    """The kill / error branches, each driven by a real inner pytest run."""
+
+    def _mutant(tmp_path, monkeypatch, name):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / f"{name}.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), name)
+        point = next(p for p in points if p.node_type == "BinOp")
+        return (
+            Mutant(point=point, replacement_op="Sub", mutant_id=0),
+            {name: source},
+            {name: str(target)},
+        )
+
+    def it_errors_when_every_test_is_skipped(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_skip")
+        test_dir = tmp_path / "real_skip_tests"
+        test_dir.mkdir()
+        (test_dir / "test_skip.py").write_text(
+            "import pytest\n\n"
+            "@pytest.mark.skip(reason='off')\n"
+            "def test_off():\n"
+            "    pass\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == "no tests ran"
+
+    def it_errors_when_nothing_is_collected(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_empty")
+        test_dir = tmp_path / "real_empty_tests"
+        test_dir.mkdir()
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with NO_TESTS_COLLECTED"
+
+    def it_errors_when_a_test_id_does_not_exist(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_nope")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_ids=["nope.py::x"])
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with USAGE_ERROR"
+
+    def it_kills_on_a_real_setup_error(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_setup")
+        test_dir = tmp_path / "real_setup_tests"
+        test_dir.mkdir()
+        (test_dir / "test_setup.py").write_text(
+            "import pytest\n"
+            "from real_setup import add\n\n"
+            "@pytest.fixture\n"
+            "def three():\n"
+            "    assert add(1, 2) == 3\n"
+            "    return 3\n\n"
+            "def test_uses_fixture(three):\n"
+            "    assert three\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "killed"
+        assert result.tests_run == 0
+        assert result.killing_test == (
+            "real_setup_tests/test_setup.py::test_uses_fixture"
+        )
+
+
+def describe_scope_is_passed_down():
+    def it_uses_the_given_scope_instead_of_building_one(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "scope_down.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), "scope_down")
+        mutant = Mutant(point=points[0], replacement_op="Sub", mutant_id=0)
+        scope = ProjectModuleScope(str(tmp_path))
+
+        with (
+            patch("pytest_leela.runner.ProjectModuleScope", side_effect=AssertionError),
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"scope_down": source},
+                {"scope_down": str(target)},
+                test_dir=str(tmp_path),
+                scope=scope,
+            )
+
+        assert result.status == "error"
+
+
+def describe_InnerSession():
+    def it_has_no_import_errors_without_a_finder():
+        session = InnerSession(None, None, None, ProjectModuleScope("/p"))
+        assert session.import_errors == []
+
+    def it_reports_the_finders_import_errors():
+        finder = MutatingFinder({"m": "x = 1"}, _probe_mutant())
+        finder.import_errors.append("m: ValueError: boom")
+        session = InnerSession(finder, None, None, ProjectModuleScope("/p"))
+        assert session.import_errors == ["m: ValueError: boom"]
+
+    def it_stops_at_the_first_failure_by_default():
+        session = InnerSession(None, ["t::a"], None, ProjectModuleScope("/p"))
+        assert "-x" in session._args()
+
+    def it_runs_everything_when_exitfirst_is_off():
+        session = InnerSession(
+            None, ["t::a"], None, ProjectModuleScope("/p"), exitfirst=False
+        )
+        assert "-x" not in session._args()
+        assert session._args()[-1] == "t::a"
+
+
+def _probe_mutant():
+    point = find_mutation_points("x = 1 + 1\n", "/p/m.py", "m")[0]
+    return Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+
+class _FakeAdminSite:
+    def __init__(self, admins):
+        self._registry = {object(): admin for admin in admins}
+
+
+def describe_django_registry_admin_site_walk():
+    def it_pins_the_module_of_every_registered_model_admin(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps", _FakeApps(True, {"shop": None})
+        )
+        admin_cls = type("ItemAdmin", (), {"__module__": "_shop.site_admin"})
+        other_cls = type("PageAdmin", (), {"__module__": "_pages.custom"})
+        sites = types.ModuleType("django.contrib.admin.sites")
+        sites.all_sites = [_FakeAdminSite([admin_cls()]), _FakeAdminSite([other_cls()])]
+        monkeypatch.setitem(sys.modules, "django.contrib.admin.sites", sites)
+        for name in ("_shop.site_admin", "_pages.custom", "_shop.views"):
+            monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+
+        names = _django_registry_module_names()
+
+        assert {"_shop.site_admin", "_pages.custom"} <= names
+        assert "_shop.views" not in names
+
+    def it_skips_the_admin_walk_when_admin_was_never_imported(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps", _FakeApps(True, {"_noadmin": None})
+        )
+        monkeypatch.delitem(sys.modules, "django.contrib.admin.sites", raising=False)
+        monkeypatch.setitem(
+            sys.modules, "_noadmin.admin", types.ModuleType("_noadmin.admin")
+        )
+
+        assert _django_registry_module_names() == frozenset({"_noadmin.admin"})

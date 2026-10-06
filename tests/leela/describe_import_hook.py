@@ -1331,3 +1331,41 @@ def describe_clear_target_modules():
         finally:
             sys.modules.pop("fake_target", None)
             sys.modules.pop("fake_target.sub", None)
+
+
+def describe_import_error_recording():
+    """MutatingLoader reports exceptions raised by the mutated source."""
+
+    def _exec(source, import_errors=None):
+        from pytest_leela.import_hook import MutatingLoader
+
+        loader = MutatingLoader(source, _make_mutant(), "rec.py", import_errors)
+        module = types.ModuleType("rec_mod")
+        loader.exec_module(module)
+        return loader
+
+    def it_records_and_reraises_an_exception_from_the_module_body():
+        sink: list[str] = []
+        try:
+            _exec("raise ValueError('boom')\n", sink)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("exec_module swallowed the exception")
+        assert sink == ["rec_mod: ValueError: boom"]
+
+    def it_records_nothing_for_a_module_that_imports_cleanly():
+        sink: list[str] = []
+        _exec("x = 1\n", sink)
+        assert sink == []
+
+    def it_owns_a_fresh_list_when_none_is_given():
+        loader = _exec("x = 1\n")
+        assert loader.import_errors == []
+
+    def it_shares_the_finders_list_with_every_loader_it_creates():
+        from pytest_leela.import_hook import MutatingFinder
+
+        finder = MutatingFinder({"rec_target": "x = 1\n"}, _make_mutant())
+        spec = finder.find_spec("rec_target")
+        assert spec.loader.import_errors is finder.import_errors

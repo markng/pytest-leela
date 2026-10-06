@@ -171,17 +171,19 @@ Each mutant ends in exactly one of three states:
 
 | Status | Meaning | Counts toward the score |
 |---|---|---|
-| **killed** | At least one test failed or errored in setup/teardown, or the run timed out (an infinite loop introduced by the mutant) | yes |
+| **killed** | At least one test failed or errored in setup/teardown, the mutated module raised while being imported (so every test importing it errored at collection), or the run timed out (an infinite loop introduced by the mutant) | yes |
 | **survived** | Tests ran and all of them passed | yes |
-| **error** | The inner run never tested the mutant: pytest crashed, exited abnormally (collection or import error, usage error, nothing collected), or ran zero tests | no |
+| **error** | The inner run never tested the mutant: pytest crashed, exited abnormally for a reason outside the mutated module (collection error, usage error, nothing collected), or ran zero tests | no |
 
 The mutation score is `killed / (killed + survived)`. Errors are listed separately, with their
 reason, in the terminal report, the HTML report and the JSON output, and they fail the session
 unless `fail_on_error = false`. An error means leela could not tell whether your tests catch the
 mutant, so it is reported as neither a kill nor a survival.
 
-A mutant that makes the *target module itself* raise at import time (module-level code) is
-also reported as an error, because no test ever ran against it.
+A mutant that makes the *target module itself* raise at import time (module-level code) is a
+kill: leela's import hook sees the exception leave the mutated module, and the clean baseline
+has already shown the same tests import it fine unmutated. The killing tests are the files that
+failed to collect.
 
 ### Clean baseline before any mutant
 

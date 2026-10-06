@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
+
+MutantStatus = Literal["killed", "survived", "error"]
 
 
 @dataclass
@@ -69,8 +72,14 @@ class MutantResult:
     # runner crash, zero tests ran).  Set only when ``killed`` is False.
     error: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.killed and self.error is not None:
+            raise ValueError(
+                f"a killed mutant cannot also carry an error: {self.error!r}"
+            )
+
     @property
-    def status(self) -> str:
+    def status(self) -> MutantStatus:
         """``"killed"``, ``"survived"`` or ``"error"``."""
         if self.killed:
             return "killed"

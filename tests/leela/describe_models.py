@@ -1,5 +1,7 @@
 """Tests for pytest_leela.models — data models for mutation testing."""
 
+import pytest
+
 from pytest_leela.models import (
     CoverageMap,
     EnrichmentStats,
@@ -334,3 +336,20 @@ def describe_run_result_errors():
     def it_scores_zero_when_every_mutant_errored():
         run = _run_of([_make_error_result(1), _make_error_result(2)])
         assert run.mutation_score == 0.0
+
+
+def describe_mutant_result_invariant():
+    def it_rejects_a_killed_result_that_also_carries_an_error():
+        mutant = Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1)
+        with pytest.raises(ValueError, match="cannot also carry an error: 'x'"):
+            MutantResult(
+                mutant=mutant,
+                killed=True,
+                tests_run=1,
+                killing_test="t",
+                time_seconds=0.1,
+                error="x",
+            )
+
+    def it_accepts_an_errored_result_that_was_not_killed():
+        assert _make_error_result().error == "pytest exited with INTERRUPTED"

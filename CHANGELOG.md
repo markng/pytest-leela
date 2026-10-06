@@ -48,13 +48,23 @@
   killed.
 
 - **A third mutant status, `error`.** A mutant whose inner run crashed,
-  exited abnormally (collection or import error, usage error, nothing
-  collected) or ran zero tests was previously reported as killed (crash)
-  or **SURVIVED** (collection error, `tests_run: 0`). It is now an
-  error: reported with its reason in the terminal, HTML and JSON
-  reports, excluded from the mutation score, and failing the session by
-  default. `MutantResult` gains `error` and `status`; `RunResult` gains
-  `errors` and `mutants_scored`. Timeouts remain kills.
+  exited abnormally (collection error, usage error, nothing collected) or
+  ran zero tests was previously reported as killed (crash) or
+  **SURVIVED** (collection error, `tests_run: 0`). It is now an error:
+  reported with its reason in the terminal, HTML and JSON reports,
+  excluded from the mutation score, and failing the session by default.
+  `MutantResult` gains `error` and a `status` of `"killed"`,
+  `"survived"` or `"error"`; `RunResult` gains `errors` and
+  `mutants_scored`. Timeouts remain kills.
+
+- **A mutant that makes the target module raise on import is killed.**
+  `MutatingLoader` records exceptions raised by the mutated source; when
+  one occurred, the collection errors it caused are the killing tests.
+  Previously such a mutant was reported SURVIVED with `tests_run: 0`.
+
+- **`--leela-benchmark` no longer raises `TypeError`.** It called the
+  target-discovery helpers without the `python_files` patterns they
+  require.
 
 - **`fail_on_error` option** in `[tool.pytest-leela]` (default `true`).
   Set it to `false` to keep errored mutants from failing the session.

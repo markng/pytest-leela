@@ -135,12 +135,13 @@ def _referenced_closure(roots: frozenset[str], candidates: set[str]) -> set[str]
     frontier = list(roots)
     while frontier:
         for value in list(vars(sys.modules[frontier.pop()]).values()):
-            dep: object = (
+            dep = (
                 value.__name__
                 if isinstance(value, types.ModuleType)
                 else getattr(value, "__module__", None)
             )
-            if dep in candidates and dep not in pinned:
+            # Any object may carry a ``__module__`` attribute of any type.
+            if isinstance(dep, str) and dep in candidates and dep not in pinned:
                 pinned.add(dep)
                 frontier.append(dep)
     return pinned
@@ -154,6 +155,9 @@ def _django_registry_module_names() -> frozenset[str]:
     registry.py, ``register_model``) and admin raises ``AlreadyRegistered``
     (django/contrib/admin/sites.py, ``register``).  A re-import can also
     re-enter cycles that only resolve in Django's own app-loading order.
+    Admin modules are every ``<app>.admin`` plus the module of every
+    ModelAdmin registered on any AdminSite (django/contrib/admin/sites.py:
+    "all_sites = WeakSet()", each site's ``_registry``).
     """
     if _django_apps is None or not _django_apps.ready:
         # Django absent, or installed but never set up: nothing registered.
@@ -163,20 +167,26 @@ def _django_registry_module_names() -> frozenset[str]:
         roots.append(f"{config.name}.admin")
         if config.models_module is not None:
             roots.append(config.models_module.__name__)
+    admin_sites = sys.modules.get("django.contrib.admin.sites")
+    if admin_sites is not None:
+        # None when django.contrib.admin was never imported: no ModelAdmins.
+        for admin_site in list(admin_sites.all_sites):
+            for model_admin in list(admin_site._registry.values()):
+                roots.append(type(model_admin).__module__)
     packages = tuple(f"{root}." for root in roots)
     return frozenset(
         name for name in sys.modules if name in roots or name.startswith(packages)
     )
 
 
-def precompute_user_modules() -> frozenset[str]:
+def precompute_user_modules(scope: ProjectModuleScope | None = None) -> frozenset[str]:
     """Scan sys.modules once and return the project's own module names.
 
     This precomputes the set of user modules so that the mutation loop can
     use targeted O(K) operations instead of scanning all ~500-1000 entries
     in sys.modules on every mutant run.
     """
-    return ProjectModuleScope().module_names()
+    return (scope or ProjectModuleScope()).module_names()
 
 
 def _clear_user_modules_fast(known_user_modules: frozenset[str]) -> None:
@@ -200,7 +210,7 @@ def _clear_framework_caches() -> None:
         _django_clear_url_caches()
 
 
-def _clear_user_modules() -> None:
+def _clear_user_modules(scope: ProjectModuleScope | None = None) -> None:
     """Remove the project's own modules (tests + targets) from sys.modules.
 
     Keeps stdlib, installed packages (even a virtualenv inside the project)
@@ -208,7 +218,7 @@ def _clear_user_modules() -> None:
     files on every mutation run so they pick up the current mutant's code
     via the import hook.
     """
-    for name in ProjectModuleScope().module_names():
+    for name in (scope or ProjectModuleScope()).module_names():
         sys.modules.pop(name, None)
 
 
@@ -230,7 +240,8 @@ class _ResultCollector:
         self.passed: list[str] = []
         self.failed: list[str] = []
         self.errors: list[str] = []
-        self.collection_errors: list[str] = []
+        self.collection_errors: list[str] = []  # "nodeid: summary" entries
+        self.collection_error_ids: list[str] = []
         self.total = 0
 
     def pytest_runtest_logreport(self, report: Any) -> None:
@@ -245,31 +256,42 @@ class _ResultCollector:
 
     def pytest_collectreport(self, report: Any) -> None:
         if report.failed:
+            summary = _last_line(report.longreprtext)
+            self.collection_error_ids.append(report.nodeid)
             self.collection_errors.append(
-                f"{report.nodeid}: {_last_line(report.longreprtext)}"
+                report.nodeid if summary is None else f"{report.nodeid}: {summary}"
             )
 
 
-def _last_line(text: str) -> str:
+def _last_line(text: str) -> str | None:
     """Return the last non-blank line of *text* (the exception summary)."""
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return lines[-1] if lines else "<no details>"
+    return lines[-1] if lines else None
 
 
 # Exit codes meaning the inner pytest run actually executed the tests.
 _COMPLETED_EXIT_CODES = (pytest.ExitCode.OK, pytest.ExitCode.TESTS_FAILED)
+_KNOWN_EXIT_CODES = frozenset(code.value for code in pytest.ExitCode)
 
 
-def _inner_run_error(
-    exit_code: int | pytest.ExitCode, collector: _ResultCollector
-) -> str | None:
+def _exit_code_label(exit_code: int) -> str:
+    """``INTERRUPTED`` for a pytest exit code, the number for anything else.
+
+    A plugin can set any integer as the session exit status.
+    """
+    if exit_code in _KNOWN_EXIT_CODES:
+        return pytest.ExitCode(exit_code).name
+    return f"exit code {exit_code}"
+
+
+def _inner_run_error(exit_code: int, collector: _ResultCollector) -> str | None:
     """Explain why an inner run that no test failed did not test the mutant.
 
     Returns None when the run completed and executed at least one test, i.e.
     the mutant genuinely survived.
     """
     if exit_code not in _COMPLETED_EXIT_CODES:
-        reason = f"pytest exited with {pytest.ExitCode(exit_code).name}"
+        reason = f"pytest exited with {_exit_code_label(exit_code)}"
         if collector.collection_errors:
             reason += f" ({'; '.join(collector.collection_errors)})"
         return reason
@@ -278,43 +300,64 @@ def _inner_run_error(
     return None
 
 
-def run_tests_for_mutant(
-    mutant: Mutant,
-    target_sources: dict[str, str],
-    module_to_file: dict[str, str],
-    test_ids: list[str] | None = None,
-    test_dir: str | None = None,
-    known_user_modules: frozenset[str] | None = None,
-    test_times: dict[str, float] | None = None,
-) -> MutantResult:
-    """Run tests against a single mutant, return the result."""
-    start = time.monotonic()
+class InnerSession:
+    """One in-process pytest run against the current import state.
 
-    module_names = list(target_sources.keys())
+    ``finder`` is the mutating import hook, or None for a run that must not
+    mutate anything (the baseline).  ``exitfirst`` stops at the first
+    failure, which is all a mutant needs; the baseline runs everything so
+    it can name every failing test.
+    """
 
-    # Install mutating import hook
-    finder = install_hook(target_sources, mutant, module_to_file)
+    def __init__(
+        self,
+        finder: MutatingFinder | None,
+        test_ids: list[str] | None,
+        test_dir: str | None,
+        scope: ProjectModuleScope,
+        known_user_modules: frozenset[str] | None = None,
+        test_times: dict[str, float] | None = None,
+        exitfirst: bool = True,
+    ) -> None:
+        self.finder = finder
+        self.test_ids = test_ids
+        self.test_dir = test_dir
+        self.scope = scope
+        self.known_user_modules = known_user_modules
+        self.test_times = test_times
+        self.exitfirst = exitfirst
+        self.collector = _ResultCollector()
+        self.timed_out = threading.Event()
+        self.exit_code: int = pytest.ExitCode.OK
+        self.crash: str | None = None
+        self.elapsed = 0.0
 
-    # Clear target modules by name (they may lack __file__ when loaded
-    # through the mutating import hook) and test modules by file path
-    # (they cache direct references to target functions via
-    # ``from target.X import func``).
-    clear_target_modules(module_names)
-    if known_user_modules is not None:
-        _clear_user_modules_fast(known_user_modules)
-    else:
-        _clear_user_modules()
-    _clear_framework_caches()
+    @property
+    def import_errors(self) -> list[str]:
+        """Exceptions raised while executing mutated source in this run."""
+        return [] if self.finder is None else self.finder.import_errors
 
-    try:
-        collector = _ResultCollector()
+    def _target_module_names(self) -> list[str]:
+        return [] if self.finder is None else list(self.finder.target_modules)
 
-        # Build pytest args — disable leela plugin to prevent recursion
+    def _evict(self) -> None:
+        # Clear target modules by name (they may lack __file__ when loaded
+        # through the mutating import hook) and test modules by file path
+        # (they cache direct references to target functions via
+        # ``from target.X import func``).
+        clear_target_modules(self._target_module_names())
+        if self.known_user_modules is not None:
+            _clear_user_modules_fast(self.known_user_modules)
+        else:
+            _clear_user_modules(self.scope)
+        _clear_framework_caches()
+
+    def _args(self) -> list[str]:
+        # Disable the leela plugin to prevent recursion.
         args: list[str] = [
             "--tb=no",
             "-q",
             "--no-header",
-            "-x",
             "--override-ini=addopts=",
             "-p",
             "no:leela",
@@ -322,12 +365,41 @@ def run_tests_for_mutant(
             "no:leela-benchmark",
             "--capture=sys",
         ]
+        if self.exitfirst:
+            args.append("-x")
+        if self.test_ids:
+            args.extend(self.test_ids)
+        elif self.test_dir:
+            args.append(self.test_dir)
+        return args
 
-        if test_ids:
-            args.extend(test_ids)
-        elif test_dir:
-            args.append(test_dir)
+    def run(self) -> InnerSession:
+        """Evict, run pytest in-process, restore interpreter state."""
+        start = time.monotonic()
+        self._evict()
+        try:
+            self._run_pytest()
+        finally:
+            if self.finder is not None:
+                remove_hook(self.finder)
+            self._evict()
 
+            # Safety net: remove any stale MutatingFinders left on
+            # sys.meta_path from crashed previous runs.
+            sys.meta_path[:] = [
+                f for f in sys.meta_path if not isinstance(f, MutatingFinder)
+            ]
+
+            # Restore stdlib path modules that may have been evicted during
+            # cleanup.  Must use direct dict assignment — ``import ntpath``
+            # would go through the import machinery, hitting pytest's
+            # assertion rewriter → PurePath → import ntpath → recursion.
+            for mod_name, mod_obj in _STDLIB_PATH_MODULES.items():
+                sys.modules.setdefault(mod_name, mod_obj)
+        self.elapsed = time.monotonic() - start
+        return self
+
+    def _run_pytest(self) -> None:
         # Snapshot sys.meta_path and sys.modules right BEFORE the inner
         # pytest.main() call.  Each inner run adds its own hooks
         # (AssertionRewritingHook, etc.) and imports modules.  Without
@@ -343,18 +415,17 @@ def run_tests_for_mutant(
 
         # Set up per-mutant timeout to prevent infinite loops from
         # control-flow mutations (e.g. break→continue).
-        timed_out = threading.Event()
         timer: threading.Timer | None = None
-        if test_times is not None and test_ids:
-            total_expected = sum(test_times.get(t, 1.0) for t in test_ids)
+        if self.test_times is not None and self.test_ids:
+            total_expected = sum(self.test_times.get(t, 1.0) for t in self.test_ids)
             timeout_seconds = max(2 * total_expected + 1.0, 5.0)
-            timer = threading.Timer(timeout_seconds, timed_out.set)
+            timer = threading.Timer(timeout_seconds, self.timed_out.set)
             timer.daemon = True
             timer.start()
 
-        plugins: list[Any] = [collector]
+        plugins: list[Any] = [self.collector]
         if timer is not None:
-            plugins.append(_TimeoutPlugin(timed_out))
+            plugins.append(_TimeoutPlugin(self.timed_out))
 
         # Run pytest in-process (suppress noisy output)
         try:
@@ -362,32 +433,11 @@ def run_tests_for_mutant(
                 contextlib.redirect_stdout(io.StringIO()),
                 contextlib.redirect_stderr(io.StringIO()),
             ):
-                exit_code = pytest.main(args, plugins=plugins)
+                self.exit_code = pytest.main(self._args(), plugins=plugins)
         except (Exception, SystemExit) as exc:
-            elapsed = time.monotonic() - start
-            if timed_out.is_set():
-                # An infinite loop introduced by the mutant: a real kill.
-                return MutantResult(
-                    mutant=mutant,
-                    killed=True,
-                    tests_run=collector.total,
-                    killing_test="<timeout>",
-                    time_seconds=elapsed,
-                    test_ids_run=[],
-                    killing_tests=["<timeout>"],
-                )
-            # The runner itself crashed: no test caught the mutant, and no
-            # test result can be trusted, so this is an error, not a kill.
-            return MutantResult(
-                mutant=mutant,
-                killed=False,
-                tests_run=collector.total,
-                killing_test=None,
-                time_seconds=elapsed,
-                test_ids_run=[],
-                killing_tests=[],
-                error=f"pytest crashed: {type(exc).__name__}: {exc}",
-            )
+            # Recorded, not raised: a crash is a verdict about this mutant
+            # (see result_for), and the outer session must keep running.
+            self.crash = f"pytest crashed: {type(exc).__name__}: {exc}"
         finally:
             if timer is not None:
                 timer.cancel()
@@ -402,73 +452,107 @@ def run_tests_for_mutant(
             # mutated cleanup code).  Then remove project modules that the
             # inner run added (installed packages it imported stay loaded).
             sys.modules.update(saved_modules)
-            scope = ProjectModuleScope()
             for key in list(sys.modules.keys()):
                 if key not in saved_modules:
                     mod = sys.modules.get(key)
                     mod_file = (
                         getattr(mod, "__file__", None) if mod is not None else None
                     )
-                    if mod_file is not None and scope.contains(mod_file):
+                    if mod_file is not None and self.scope.contains(mod_file):
                         sys.modules.pop(key, None)
 
-        elapsed = time.monotonic() - start
-        test_ids_run = collector.passed + collector.failed + collector.errors
+    def failures(self) -> list[str]:
+        """Tests that failed in the call phase, then setup/teardown errors."""
+        return self.collector.failed + self.collector.errors
 
-        # If the timeout fired but pytest caught the SystemExit internally,
-        # treat it as killed.
-        if timed_out.is_set():
+    def error(self) -> str | None:
+        """Why the run did not test anything, or None if tests completed."""
+        if self.crash is not None:
+            return self.crash
+        return _inner_run_error(self.exit_code, self.collector)
+
+    def result_for(self, mutant: Mutant) -> MutantResult:
+        """Classify this run as a kill, a survival or an error for *mutant*."""
+        collector = self.collector
+        test_ids_run = collector.passed + collector.failed + collector.errors
+        if self.timed_out.is_set():
+            # An infinite loop introduced by the mutant, whether pytest
+            # caught the timeout's SystemExit or let it escape: a real kill.
             return MutantResult(
                 mutant=mutant,
                 killed=True,
                 tests_run=collector.total,
                 killing_test="<timeout>",
-                time_seconds=elapsed,
-                test_ids_run=test_ids_run,
+                time_seconds=self.elapsed,
+                test_ids_run=[] if self.crash is not None else test_ids_run,
                 killing_tests=["<timeout>"],
             )
-
-        killing_tests = collector.failed + collector.errors
-        if killing_tests:
-            return MutantResult(
-                mutant=mutant,
-                killed=True,
-                tests_run=collector.total,
-                killing_test=killing_tests[0],
-                time_seconds=elapsed,
-                test_ids_run=test_ids_run,
-                killing_tests=killing_tests,
-            )
-
+        if self.crash is None:
+            killing_tests = self.failures()
+            if not killing_tests and self.import_errors:
+                # The mutated module itself raised on import, so every test
+                # importing it errored at collection: the suite went red.
+                killing_tests = collector.collection_error_ids or [
+                    f"<import of {self.import_errors[0]}>"
+                ]
+            if killing_tests:
+                return MutantResult(
+                    mutant=mutant,
+                    killed=True,
+                    tests_run=collector.total,
+                    killing_test=killing_tests[0],
+                    time_seconds=self.elapsed,
+                    test_ids_run=test_ids_run,
+                    killing_tests=killing_tests,
+                )
         return MutantResult(
             mutant=mutant,
             killed=False,
             tests_run=collector.total,
             killing_test=None,
-            time_seconds=elapsed,
-            test_ids_run=test_ids_run,
+            time_seconds=self.elapsed,
+            test_ids_run=[] if self.crash is not None else test_ids_run,
             killing_tests=[],
-            error=_inner_run_error(exit_code, collector),
+            error=self.error(),
         )
-    finally:
-        # Cleanup: remove hook and clear cached modules
-        remove_hook(finder)
-        clear_target_modules(module_names)
-        if known_user_modules is not None:
-            _clear_user_modules_fast(known_user_modules)
-        else:
-            _clear_user_modules()
-        _clear_framework_caches()
 
-        # Safety net: remove any stale MutatingFinders left on
-        # sys.meta_path from crashed previous runs.
-        sys.meta_path[:] = [
-            f for f in sys.meta_path if not isinstance(f, MutatingFinder)
-        ]
 
-        # Restore stdlib path modules that may have been evicted during
-        # cleanup.  Must use direct dict assignment — ``import ntpath``
-        # would go through the import machinery, hitting pytest's
-        # assertion rewriter → PurePath → import ntpath → recursion.
-        for mod_name, mod_obj in _STDLIB_PATH_MODULES.items():
-            sys.modules.setdefault(mod_name, mod_obj)
+def run_tests_for_mutant(
+    mutant: Mutant,
+    target_sources: dict[str, str],
+    module_to_file: dict[str, str],
+    test_ids: list[str] | None = None,
+    test_dir: str | None = None,
+    known_user_modules: frozenset[str] | None = None,
+    test_times: dict[str, float] | None = None,
+    scope: ProjectModuleScope | None = None,
+) -> MutantResult:
+    """Run tests against a single mutant, return the result."""
+    finder = install_hook(target_sources, mutant, module_to_file)
+    session = InnerSession(
+        finder,
+        test_ids,
+        test_dir,
+        scope or ProjectModuleScope(),
+        known_user_modules=known_user_modules,
+        test_times=test_times,
+    )
+    return session.run().result_for(mutant)
+
+
+def run_baseline(
+    test_ids: list[str] | None,
+    test_dir: str | None,
+    known_user_modules: frozenset[str],
+    scope: ProjectModuleScope,
+) -> InnerSession:
+    """Run the tests once with no import hook installed: nothing is mutated."""
+    session = InnerSession(
+        None,
+        test_ids,
+        test_dir,
+        scope,
+        known_user_modules=known_user_modules,
+        exitfirst=False,
+    )
+    return session.run()

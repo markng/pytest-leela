@@ -28,6 +28,7 @@ from pytest_leela.resources import ResourceLimits, apply_limits, is_memory_ok
 from pytest_leela.runner import (
     ProjectModuleScope,
     precompute_user_modules,
+    run_baseline,
     run_tests_for_mutant,
 )
 from pytest_leela.type_extractor import enrich_mutation_points
@@ -197,7 +198,8 @@ class Engine:
         # 8. Precompute user modules once before the mutation loop.
         # This turns O(N) scans of sys.modules into O(K) targeted pops
         # inside each run_tests_for_mutant call (K << N).
-        known_user_modules = precompute_user_modules()
+        scope = ProjectModuleScope()
+        known_user_modules = precompute_user_modules(scope)
         test_times = coverage_map.test_times if coverage_map is not None else None
 
         mutant_test_ids = [
@@ -209,9 +211,7 @@ class Engine:
         # in-process path every mutant uses.  Otherwise a test that fails
         # for an unrelated reason would score every mutant as killed.
         if all_mutants:
-            self._check_baseline(
-                all_mutants[0], mutant_test_ids, test_dir, known_user_modules
-            )
+            self._check_baseline(mutant_test_ids, test_dir, known_user_modules, scope)
 
         # 10. Run each mutant
         results: list[MutantResult] = []
@@ -228,6 +228,7 @@ class Engine:
                 test_dir=test_dir,
                 known_user_modules=known_user_modules,
                 test_times=test_times,
+                scope=scope,
             )
             results.append(result)
 
@@ -266,34 +267,26 @@ class Engine:
 
     @staticmethod
     def _check_baseline(
-        probe: Mutant,
         mutant_test_ids: list[list[str] | None],
         test_dir: str | None,
         known_user_modules: frozenset[str],
+        scope: ProjectModuleScope,
     ) -> None:
         """Raise BaselineFailure unless every selected test passes unmutated.
 
-        Runs the union of all mutants' tests once with no target sources, so
-        the import hook never applies *probe* and the code under test loads
-        unmodified.
+        Runs the union of all mutants' tests once, with no import hook
+        installed, so nothing can be mutated, and without ``-x``, so the
+        failure names every failing test.
         """
         baseline_ids: list[str] | None = None
         if all(ids is not None for ids in mutant_test_ids):
             baseline_ids = sorted({t for ids in mutant_test_ids for t in ids or ()})
-        result = run_tests_for_mutant(
-            probe,
-            {},
-            {},
-            test_ids=baseline_ids,
-            test_dir=test_dir,
-            known_user_modules=known_user_modules,
-        )
-        if result.status == "survived":
+        session = run_baseline(baseline_ids, test_dir, known_user_modules, scope)
+        failures = session.failures()
+        error = session.error()
+        if not failures and error is None:
             return
-        if result.status == "error":
-            reason = f"{result.error}"
-        else:
-            reason = f"failed: {', '.join(result.killing_tests)}"
+        reason = f"failed: {', '.join(failures)}" if failures else error
         raise BaselineFailure(
             f"tests do not pass with no mutation applied ({reason}); "
             "mutant results would be meaningless, so no mutants were run"
