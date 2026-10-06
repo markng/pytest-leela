@@ -1468,10 +1468,9 @@ def describe_ProjectModuleScope():
         venv = tmp_path / ".venv"
         _isolated_scope_env(monkeypatch, venv, site_packages=[venv / "sp"])
         scope = ProjectModuleScope(str(tmp_path))
-        assert scope.environment_roots == (
-            "/nowhere" + os.sep,
-            str(venv) + os.sep,
-            str(venv / "sp") + os.sep,
+        # Sorted, so the order depends on where tmp_path lives.
+        assert scope.environment_roots == tuple(
+            sorted(["/nowhere" + os.sep, str(venv) + os.sep, str(venv / "sp") + os.sep])
         )
 
     def describe_module_names():
