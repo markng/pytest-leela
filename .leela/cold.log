@@ -1,0 +1,465 @@
+[init] reconciled 19 files; 205 symbols in index
+[watch] /Users/mng/Projects/pytest-leela  index: .leela/index.db
+  status: 205 symbols  (0 clean, 205 dirty, 0 stale, 0 error)  pending re-analysis: 205
+[analyze] re-analyzing 205 dirty symbol(s)...
+[analyze]   ute_user_modules (runner.py:64, 7 mutants)
+[analyze]     ute_user_modules.L64 Sub ERROR
+[analyze]   ute_user_modules — 1 mutants (1 error)
+[analyze]   framework_caches (runner.py:92, 1 mutants)
+[analyze]     framework_caches.L92 Is ERROR
+[analyze]   framework_caches — 1 mutants (1 error)
+[analyze]   ear_user_modules (runner.py:103, 6 mutants)
+[analyze]     ear_user_modules.L103 Sub ERROR
+[analyze]   ear_user_modules — 1 mutants (1 error)
+[analyze]   untest_logreport (runner.py:137, 6 mutants)
+[analyze]     untest_logreport.L137 NotEq ERROR
+[analyze]   untest_logreport — 1 mutants (1 error)
+[analyze]   tests_for_mutant (runner.py:151, 60 mutants)
+[analyze]     tests_for_mutant.L151 BitAnd ERROR
+[analyze]   tests_for_mutant — 1 mutants (1 error)
+[analyze]   nfig:load_config (config.py:26, 15 mutants)
+[analyze]     nfig:load_config.L26 Mult ERROR
+[analyze]   nfig:load_config — 1 mutants (1 error)
+[analyze]   st_sessionfinish (benchmark.py:29, 7 mutants)
+[analyze]     st_sessionfinish.L29 Eq ERROR
+[analyze]   st_sessionfinish — 1 mutants (1 error)
+[analyze]   benchmark_report (benchmark.py:89, 26 mutants)
+[analyze]     benchmark_report.L89 swap_branches ERROR
+[analyze]   benchmark_report — 1 mutants (1 error)
+[analyze]   __add__ (models.py:28, 5 mutants)
+[analyze]     __add__.L28 None ERROR
+[analyze]   __add__ — 1 mutants (1 error)
+[analyze]   ls:MutationPoint (models.py:45, 2 mutants)
+[analyze]     ls:MutationPoint.L45 BitAnd ERROR
+[analyze]   ls:MutationPoint — 1 mutants (1 error)
+[analyze]   els:MutantResult (models.py:64, 2 mutants)
+[analyze]     els:MutantResult.L64 BitAnd ERROR
+[analyze]   els:MutantResult — 1 mutants (1 error)
+[analyze]   tests_for (models.py:78, 1 mutants)
+[analyze]     tests_for.L78 None ERROR
+[analyze]   tests_for — 1 mutants (1 error)
+[analyze]   add (models.py:82, 1 mutants)
+[analyze]     add.L82 In ERROR
+[analyze]   add — 1 mutants (1 error)
+[analyze]   models:RunResult (models.py:97, 2 mutants)
+[analyze]     models:RunResult.L97 BitAnd ERROR
+[analyze]   models:RunResult — 1 mutants (1 error)
+[analyze]   killed (models.py:103, 1 mutants)
+[analyze]     killed.L103 negate_expr ERROR
+[analyze]   killed — 1 mutants (1 error)
+[analyze]   survived (models.py:107, 2 mutants)
+[analyze]     survived.L107 None ERROR
+[analyze]   survived — 1 mutants (1 error)
+[analyze]   mutation_score (models.py:111, 6 mutants)
+[analyze]     mutation_score.L111 NotEq ERROR
+[analyze]   mutation_score — 1 mutants (1 error)
+[analyze]   s:EngineProgress (models.py:161, 4 mutants)
+[analyze]     s:EngineProgress.L161 BitAnd ERROR
+[analyze]   s:EngineProgress — 1 mutants (1 error)
+[analyze]   symbol_short (models.py:167, 4 mutants)
+[analyze]     symbol_short.L167 IsNot ERROR
+[analyze]   symbol_short — 1 mutants (1 error)
+[analyze]   index:Symbol (index.py:76, 2 mutants)
+[analyze]     index:Symbol.L76 BitAnd ERROR
+[analyze]   index:Symbol — 1 mutants (1 error)
+[analyze]   is_noop (index.py:89, 3 mutants)
+[analyze]     is_noop.L89 negate_expr ERROR
+[analyze]   is_noop — 1 mutants (1 error)
+[analyze]   dex:_module_name (index.py:105, 8 mutants)
+[analyze]     dex:_module_name.L105 Or ERROR
+[analyze]   dex:_module_name — 1 mutants (1 error)
+[analyze]   :extract_symbols (index.py:131, 1 mutants)
+[analyze]     :extract_symbols.L131 None ERROR
+[analyze]   :extract_symbols — 1 mutants (1 error)
+[analyze]   ex:_add_function (index.py:138, 7 mutants)
+[analyze]     ex:_add_function.L138 BitAnd ERROR
+[analyze]   ex:_add_function — 1 mutants (1 error)
+[analyze]   index:_add_class (index.py:162, 2 mutants)
+[analyze]     index:_add_class.L162 And ERROR
+[analyze]   index:_add_class — 1 mutants (1 error)
+[analyze]   __init__ (index.py:243, 2 mutants)
+[analyze]     __init__.L243 BitAnd ERROR
+[analyze]   __init__ — 1 mutants (1 error)
+[analyze]   _setup_schema (index.py:262, 8 mutants)
+[analyze]     _setup_schema.L262 Is ERROR
+  status: 205 symbols  (27 clean, 178 dirty, 0 stale, 0 error)  pending re-analysis: 178
+[analyze]   _setup_schema — 1 mutants (1 error)
+[analyze]   transaction (index.py:294, 2 mutants)
+[analyze]     transaction.L294 broaden ERROR
+[analyze]   transaction — 1 mutants (1 error)
+[analyze]   __enter__ (index.py:305, 1 mutants)
+[analyze]     __enter__.L305 None ERROR
+[analyze]   __enter__ — 1 mutants (1 error)
+[analyze]   reconcile_file (index.py:331, 8 mutants)
+[analyze]     reconcile_file.L331 Add ERROR
+[analyze]   reconcile_file — 1 mutants (1 error)
+[analyze]   _symbols_in_file (index.py:403, 1 mutants)
+[analyze]     _symbols_in_file.L403 None ERROR
+[analyze]   _symbols_in_file — 1 mutants (1 error)
+[analyze]   get_symbol (index.py:418, 9 mutants)
+[analyze]     get_symbol.L418 IsNot ERROR
+[analyze]   get_symbol — 1 mutants (1 error)
+[analyze]   get_state (index.py:434, 7 mutants)
+[analyze]     get_state.L434 None ERROR
+[analyze]   get_state — 1 mutants (1 error)
+[analyze]   et_dirty_symbols (index.py:437, 3 mutants)
+[analyze]     et_dirty_symbols.L437 BitAnd ERROR
+[analyze]   et_dirty_symbols — 1 mutants (1 error)
+[analyze]   all_symbols (index.py:469, 5 mutants)
+[analyze]     all_symbols.L469 None ERROR
+[analyze]   all_symbols — 1 mutants (1 error)
+[analyze]   count (index.py:486, 2 mutants)
+[analyze]     count.L486 Is ERROR
+[analyze]   count — 1 mutants (1 error)
+[analyze]   mark_state (index.py:495, 1 mutants)
+[analyze]     mark_state.L495 In ERROR
+[analyze]   mark_state — 1 mutants (1 error)
+[analyze]   has_clean_mutant (index.py:527, 2 mutants)
+[analyze]     has_clean_mutant.L527 negate_expr ERROR
+[analyze]   has_clean_mutant — 1 mutants (1 error)
+[analyze]   find_symbol_for (index.py:549, 5 mutants)
+[analyze]     find_symbol_for.L549 IsNot ERROR
+[analyze]   find_symbol_for — 1 mutants (1 error)
+[analyze]   bols_with_ranges (index.py:568, 1 mutants)
+[analyze]     bols_with_ranges.L568 None ERROR
+[analyze]   bols_with_ranges — 1 mutants (1 error)
+[analyze]   te_mutant_result (index.py:629, 3 mutants)
+[analyze]     te_mutant_result.L629 swap_branches ERROR
+[analyze]   te_mutant_result — 1 mutants (1 error)
+[analyze]   et_cached_result (index.py:667, 19 mutants)
+[analyze]     et_cached_result.L667 IsNot ERROR
+[analyze]   et_cached_result — 1 mutants (1 error)
+[analyze]   te_test_set_hash (index.py:723, 5 mutants)
+[analyze]     te_test_set_hash.L723 BitAnd ERROR
+[analyze]   te_test_set_hash — 1 mutants (1 error)
+[analyze]   dex:_utc_now_iso (index.py:738, 1 mutants)
+[analyze]     dex:_utc_now_iso.L738 None ERROR
+[analyze]   dex:_utc_now_iso — 1 mutants (1 error)
+[analyze]   ff:changed_files (git_diff.py:12, 15 mutants)
+[analyze]     ff:changed_files.L12 BitAnd ERROR
+[analyze]   ff:changed_files — 1 mutants (1 error)
+[analyze]   ff:changed_lines (git_diff.py:63, 6 mutants)
+[analyze]     ff:changed_lines.L63 broaden ERROR
+[analyze]   ff:changed_lines — 1 mutants (1 error)
+[analyze]   parse_diff_hunks (git_diff.py:80, 11 mutants)
+[analyze]     parse_diff_hunks.L80 BitAnd ERROR
+[analyze]   parse_diff_hunks — 1 mutants (1 error)
+[analyze]   format_test_name (html_report.py:34, 9 mutants)
+[analyze]     format_test_name.L34 _remove ERROR
+[analyze]   format_test_name — 1 mutants (1 error)
+[analyze]   nd_function_node (html_report.py:81, 13 mutants)
+[analyze]     nd_function_node.L81 Or ERROR
+[analyze]   nd_function_node — 1 mutants (1 error)
+[analyze]   act_test_sources (html_report.py:110, 23 mutants)
+[analyze]     act_test_sources.L110 Is ERROR
+[analyze]   act_test_sources — 1 mutants (1 error)
+[analyze]   uild_report_data (html_report.py:160, 25 mutants)
+[analyze]     uild_report_data.L160 GtE ERROR
+[analyze]   uild_report_data — 1 mutants (1 error)
+[analyze]   pe_json_for_html (html_report.py:286, 1 mutants)
+[analyze]     pe_json_for_html.L286 None ERROR
+[analyze]   pe_json_for_html — 1 mutants (1 error)
+[analyze]   uild_html_viewer (html_report.py:297, 1 mutants)
+[analyze]     uild_html_viewer.L297 None ERROR
+[analyze]   uild_html_viewer — 1 mutants (1 error)
+[analyze]   e_name_from_path (engine.py:51, 6 mutants)
+[analyze]     e_name_from_path.L51 Sub ERROR
+[analyze]   e_name_from_path — 1 mutants (1 error)
+[analyze]   an_process_state (engine.py:80, 6 mutants)
+[analyze]     an_process_state.L80 _remove ERROR
+[analyze]   an_process_state — 1 mutants (1 error)
+[analyze]   __init__ (engine.py:103, 6 mutants)
+[analyze]     __init__.L103 BitAnd ERROR
+[analyze]   __init__ — 1 mutants (1 error)
+[analyze]   run (engine.py:117, 118 mutants)
+[analyze]     run.L117 BitAnd ERROR
+[analyze]   run — 1 mutants (1 error)
+[analyze]   stop (coverage_tracker.py:36, 1 mutants)
+[analyze]     stop.L36 None ERROR
+[analyze]   stop — 1 mutants (1 error)
+[analyze]   _trace (coverage_tracker.py:39, 7 mutants)
+[analyze]     _trace.L39 _remove ERROR
+[analyze]   _trace — 1 mutants (1 error)
+[analyze]   _trace_lines (coverage_tracker.py:49, 3 mutants)
+[analyze]     _trace_lines.L49 NotEq ERROR
+[analyze]   _trace_lines — 1 mutants (1 error)
+[analyze]   runtest_teardown (coverage_tracker.py:71, 4 mutants)
+[analyze]     runtest_teardown.L71 BitAnd ERROR
+  status: 205 symbols  (61 clean, 144 dirty, 0 stale, 0 error)  pending re-analysis: 144
+[analyze]   runtest_teardown — 1 mutants (1 error)
+[analyze]   collect_coverage (coverage_tracker.py:82, 7 mutants)
+[analyze]     collect_coverage.L82 BitAnd ERROR
+[analyze]   collect_coverage — 1 mutants (1 error)
+[analyze]   nnotation_to_str (type_extractor.py:16, 23 mutants)
+[analyze]     nnotation_to_str.L16 None ERROR
+[analyze]   nnotation_to_str — 1 mutants (1 error)
+[analyze]   _process_func (type_extractor.py:59, 11 mutants)
+[analyze]     _process_func.L59 BitAnd ERROR
+[analyze]   _process_func — 1 mutants (1 error)
+[analyze]   __init__ (type_extractor.py:103, 8 mutants)
+[analyze]     __init__.L103 BitAnd ERROR
+[analyze]   __init__ — 1 mutants (1 error)
+[analyze]   assignment_env (type_extractor.py:117, 4 mutants)
+[analyze]     assignment_env.L117 IsNot ERROR
+[analyze]   assignment_env — 1 mutants (1 error)
+[analyze]   d_enclosing_func (type_extractor.py:129, 15 mutants)
+[analyze]     d_enclosing_func.L129 BitAnd ERROR
+[analyze]   d_enclosing_func — 1 mutants (1 error)
+[analyze]   pe_of_value_node (type_extractor.py:151, 10 mutants)
+[analyze]     pe_of_value_node.L151 empty_str ERROR
+[analyze]   pe_of_value_node — 1 mutants (1 error)
+[analyze]   _infer_expr_type (type_extractor.py:167, 14 mutants)
+[analyze]     _infer_expr_type.L167 BitAnd ERROR
+[analyze]   _infer_expr_type — 1 mutants (1 error)
+[analyze]   igned_value_type (type_extractor.py:192, 19 mutants)
+[analyze]     igned_value_type.L192 BitAnd ERROR
+[analyze]   igned_value_type — 1 mutants (1 error)
+[analyze]   d_assignment_env (type_extractor.py:232, 10 mutants)
+[analyze]     d_assignment_env.L232 BitAnd ERROR
+[analyze]   d_assignment_env — 1 mutants (1 error)
+[analyze]   ctor:_env_assign (type_extractor.py:270, 6 mutants)
+[analyze]     ctor:_env_assign.L270 BitAnd ERROR
+[analyze]   ctor:_env_assign — 1 mutants (1 error)
+[analyze]   infer_binop_type (type_extractor.py:295, 9 mutants)
+[analyze]     infer_binop_type.L295 And ERROR
+[analyze]   infer_binop_type — 1 mutants (1 error)
+[analyze]   r_augassign_type (type_extractor.py:317, 7 mutants)
+[analyze]     r_augassign_type.L317 And ERROR
+[analyze]   r_augassign_type — 1 mutants (1 error)
+[analyze]   fer_compare_type (type_extractor.py:329, 7 mutants)
+[analyze]     fer_compare_type.L329 Is ERROR
+[analyze]   fer_compare_type — 1 mutants (1 error)
+[analyze]   or:_find_node_at (type_extractor.py:344, 8 mutants)
+[analyze]     or:_find_node_at.L344 Or ERROR
+[analyze]   or:_find_node_at — 1 mutants (1 error)
+[analyze]   me_from_dataflow (type_extractor.py:376, 24 mutants)
+[analyze]     me_from_dataflow.L376 NotEq ERROR
+[analyze]   me_from_dataflow — 1 mutants (1 error)
+[analyze]   om_env_not_param (type_extractor.py:423, 8 mutants)
+[analyze]     om_env_not_param.L423 BitAnd ERROR
+[analyze]   om_env_not_param — 1 mutants (1 error)
+[analyze]   _mutation_points (type_extractor.py:443, 18 mutants)
+[analyze]     _mutation_points.L443 _remove ERROR
+[analyze]   _mutation_points — 1 mutants (1 error)
+[analyze]   in:_is_test_file (plugin.py:22, 3 mutants)
+[analyze]     in:_is_test_file.L22 negate_expr ERROR
+[analyze]   in:_is_test_file — 1 mutants (1 error)
+[analyze]   pytest_configure (plugin.py:87, 1 mutants)
+[analyze]     pytest_configure.L87 And ERROR
+[analyze]   pytest_configure — 1 mutants (1 error)
+[analyze]   ind_target_files (plugin.py:100, 7 mutants)
+[analyze]     ind_target_files.L100 Or ERROR
+[analyze]   ind_target_files — 1 mutants (1 error)
+[analyze]   _default_targets (plugin.py:119, 13 mutants)
+[analyze]     _default_targets.L119 Mult ERROR
+[analyze]   _default_targets — 1 mutants (1 error)
+[analyze]   :_apply_excludes (plugin.py:141, 6 mutants)
+[analyze]     :_apply_excludes.L141 BitAnd ERROR
+[analyze]   :_apply_excludes — 1 mutants (1 error)
+[analyze]   __init__ (plugin.py:162, 2 mutants)
+[analyze]     __init__.L162 BitAnd ERROR
+[analyze]   __init__ — 1 mutants (1 error)
+[analyze]   lve_target_files (plugin.py:197, 1 mutants)
+[analyze]     lve_target_files.L197 None ERROR
+[analyze]   lve_target_files — 1 mutants (1 error)
+[analyze]   st_sessionfinish (plugin.py:200, 12 mutants)
+[analyze]     st_sessionfinish.L200 Eq ERROR
+[analyze]   st_sessionfinish — 1 mutants (1 error)
+[analyze]   _matches (import_hook.py:55, 4 mutants)
+[analyze]     _matches.L55 negate_expr ERROR
+[analyze]   _matches — 1 mutants (1 error)
+[analyze]   visit_BinOp (import_hook.py:63, 4 mutants)
+[analyze]     visit_BinOp.L63 Or ERROR
+[analyze]   visit_BinOp — 1 mutants (1 error)
+[analyze]   visit_Compare (import_hook.py:71, 4 mutants)
+[analyze]     visit_Compare.L71 Or ERROR
+[analyze]   visit_Compare — 1 mutants (1 error)
+[analyze]   visit_BoolOp (import_hook.py:80, 4 mutants)
+[analyze]     visit_BoolOp.L80 Or ERROR
+[analyze]   visit_BoolOp — 1 mutants (1 error)
+[analyze]   visit_AugAssign (import_hook.py:88, 4 mutants)
+[analyze]     visit_AugAssign.L88 Or ERROR
+[analyze]   visit_AugAssign — 1 mutants (1 error)
+[analyze]   visit_IfExp (import_hook.py:96, 8 mutants)
+[analyze]     visit_IfExp.L96 Or ERROR
+[analyze]   visit_IfExp — 1 mutants (1 error)
+[analyze]   visit_Break (import_hook.py:110, 5 mutants)
+[analyze]     visit_Break.L110 Or ERROR
+[analyze]   visit_Break — 1 mutants (1 error)
+[analyze]   visit_Continue (import_hook.py:117, 5 mutants)
+[analyze]     visit_Continue.L117 Or ERROR
+[analyze]   visit_Continue — 1 mutants (1 error)
+[analyze]   it_ExceptHandler (import_hook.py:124, 7 mutants)
+[analyze]     it_ExceptHandler.L124 Or ERROR
+  status: 205 symbols  (96 clean, 109 dirty, 0 stale, 0 error)  pending re-analysis: 109
+[analyze]   it_ExceptHandler — 1 mutants (1 error)
+[analyze]   visit_UnaryOp (import_hook.py:139, 6 mutants)
+[analyze]     visit_UnaryOp.L139 Or ERROR
+[analyze]   visit_UnaryOp — 1 mutants (1 error)
+[analyze]   visit_Return (import_hook.py:150, 3 mutants)
+[analyze]     visit_Return.L150 Or ERROR
+[analyze]   visit_Return — 1 mutants (1 error)
+[analyze]   _mutate_return (import_hook.py:157, 17 mutants)
+[analyze]     _mutate_return.L157 NotEq ERROR
+[analyze]   _mutate_return — 1 mutants (1 error)
+[analyze]   k:apply_mutation (import_hook.py:196, 1 mutants)
+[analyze]     k:apply_mutation.L196 None ERROR
+[analyze]   k:apply_mutation — 1 mutants (1 error)
+[analyze]   create_module (import_hook.py:213, 1 mutants)
+[analyze]     create_module.L213 expr ERROR
+[analyze]   create_module — 1 mutants (1 error)
+[analyze]   exec_module (import_hook.py:223, 1 mutants)
+[analyze]     exec_module.L223 IsNot ERROR
+[analyze]   exec_module — 1 mutants (1 error)
+[analyze]   find_spec (import_hook.py:259, 5 mutants)
+[analyze]     find_spec.L259 NotIn ERROR
+[analyze]   find_spec — 1 mutants (1 error)
+[analyze]   ook:install_hook (import_hook.py:273, 3 mutants)
+[analyze]     ook:install_hook.L273 BitAnd ERROR
+[analyze]   ook:install_hook — 1 mutants (1 error)
+[analyze]   hook:remove_hook (import_hook.py:287, 2 mutants)
+[analyze]     hook:remove_hook.L287 broaden ERROR
+[analyze]   hook:remove_hook — 1 mutants (1 error)
+[analyze]   s:ResourceLimits (resources.py:13, 4 mutants)
+[analyze]     s:ResourceLimits.L13 BitAnd ERROR
+[analyze]   s:ResourceLimits — 1 mutants (1 error)
+[analyze]   effective_cores (resources.py:18, 6 mutants)
+[analyze]     effective_cores.L18 And ERROR
+[analyze]   effective_cores — 1 mutants (1 error)
+[analyze]   :apply_cpu_limit (resources.py:27, 3 mutants)
+[analyze]     :apply_cpu_limit.L27 And ERROR
+[analyze]   :apply_cpu_limit — 1 mutants (1 error)
+[analyze]   eck_memory_usage (resources.py:48, 11 mutants)
+[analyze]     eck_memory_usage.L48 GtE ERROR
+[analyze]   eck_memory_usage — 1 mutants (1 error)
+[analyze]   ces:is_memory_ok (resources.py:57, 5 mutants)
+[analyze]     ces:is_memory_ok.L57 IsNot ERROR
+[analyze]   ces:is_memory_ok — 1 mutants (1 error)
+[analyze]   ces:apply_limits (resources.py:64, 1 mutants)
+[analyze]     ces:apply_limits.L64 Is ERROR
+[analyze]   ces:apply_limits — 1 mutants (1 error)
+[analyze]   visit_BinOp (ast_analysis.py:64, 1 mutants)
+[analyze]     visit_BinOp.L64 Is ERROR
+[analyze]   visit_BinOp — 1 mutants (1 error)
+[analyze]   visit_Compare (ast_analysis.py:81, 1 mutants)
+[analyze]     visit_Compare.L81 Is ERROR
+[analyze]   visit_Compare — 1 mutants (1 error)
+[analyze]   visit_BoolOp (ast_analysis.py:97, 1 mutants)
+[analyze]     visit_BoolOp.L97 Is ERROR
+[analyze]   visit_BoolOp — 1 mutants (1 error)
+[analyze]   visit_UnaryOp (ast_analysis.py:113, 1 mutants)
+[analyze]     visit_UnaryOp.L113 Is ERROR
+[analyze]   visit_UnaryOp — 1 mutants (1 error)
+[analyze]   visit_AugAssign (ast_analysis.py:129, 1 mutants)
+[analyze]     visit_AugAssign.L129 Is ERROR
+[analyze]   visit_AugAssign — 1 mutants (1 error)
+[analyze]   it_ExceptHandler (ast_analysis.py:187, 8 mutants)
+[analyze]     it_ExceptHandler.L187 Or ERROR
+[analyze]   it_ExceptHandler — 1 mutants (1 error)
+[analyze]   visit_Return (ast_analysis.py:227, 1 mutants)
+[analyze]     visit_Return.L227 Is ERROR
+[analyze]   visit_Return — 1 mutants (1 error)
+[analyze]   ify_return_value (ast_analysis.py:247, 18 mutants)
+[analyze]     ify_return_value.L247 IsNot ERROR
+[analyze]   ify_return_value — 1 mutants (1 error)
+[analyze]   s:_skipped_lines (ast_analysis.py:302, 11 mutants)
+[analyze]     s:_skipped_lines.L302 Or ERROR
+[analyze]   s:_skipped_lines — 1 mutants (1 error)
+[analyze]   _mutation_points (ast_analysis.py:335, 4 mutants)
+[analyze]     _mutation_points.L335 NotIn ERROR
+[analyze]   _mutation_points — 1 mutants (1 error)
+[analyze]   n_points_in_file (ast_analysis.py:351, 1 mutants)
+[analyze]     n_points_in_file.L351 None ERROR
+[analyze]   n_points_in_file — 1 mutants (1 error)
+[analyze]   ild_allowed_keys (operators.py:265, 13 mutants)
+[analyze]     ild_allowed_keys.L265 BitAnd ERROR
+[analyze]   ild_allowed_keys — 1 mutants (1 error)
+[analyze]   rs:mutations_for (operators.py:293, 9 mutants)
+[analyze]     rs:mutations_for.L293 BitAnd ERROR
+[analyze]   rs:mutations_for — 1 mutants (1 error)
+[analyze]   ors:count_pruned (operators.py:320, 9 mutants)
+[analyze]     ors:count_pruned.L320 BitAnd ERROR
+[analyze]   ors:count_pruned — 1 mutants (1 error)
+[analyze]   change_me:greet (change_me.py:11, 1 mutants)
+[analyze]     change_me:greet.L11 None ERROR
+[analyze]   change_me:greet — 1 mutants (1 error)
+[analyze]   change_me:add (change_me.py:16, 4 mutants)
+[analyze]     change_me:add.L16 negate_expr ERROR
+[analyze]   change_me:add — 1 mutants (1 error)
+[analyze]   tput:_op_display (output.py:42, 13 mutants)
+[analyze]     tput:_op_display.L42 NotIn ERROR
+[analyze]   tput:_op_display — 1 mutants (1 error)
+[analyze]   output:_pct (output.py:63, 10 mutants)
+[analyze]     output:_pct.L63 negate_expr ERROR
+[analyze]   output:_pct — 1 mutants (1 error)
+[analyze]   _terminal_report (output.py:77, 13 mutants)
+[analyze]     _terminal_report.L77 swap_branches ERROR
+[analyze]   _terminal_report — 1 mutants (1 error)
+[analyze]   rmat_json_report (output.py:157, 1 mutants)
+[analyze]     rmat_json_report.L157 None ERROR
+  status: 205 symbols  (131 clean, 74 dirty, 0 stale, 0 error)  pending re-analysis: 74
+[analyze]   rmat_json_report — 1 mutants (1 error)
+[analyze]   emon:ChangeEvent (daemon.py:79, 2 mutants)
+[analyze]     emon:ChangeEvent.L79 BitAnd ERROR
+[analyze]   emon:ChangeEvent — 1 mutants (1 error)
+[analyze]   render (daemon.py:86, 3 mutants)
+[analyze]     render.L86 IsNot ERROR
+[analyze]   render — 1 mutants (1 error)
+[analyze]   from_db (daemon.py:118, 11 mutants)
+[analyze]     from_db.L118 None ERROR
+[analyze]   from_db — 1 mutants (1 error)
+[analyze]   render (daemon.py:128, 1 mutants)
+[analyze]     render.L128 None ERROR
+[analyze]   render — 1 mutants (1 error)
+[analyze]   __init__ (daemon.py:152, 45 mutants)
+[analyze]     __init__.L152 BitAnd ERROR
+[analyze]   __init__ — 1 mutants (1 error)
+[analyze]   t_symbol_summary (daemon.py:218, 4 mutants)
+[analyze]     t_symbol_summary.L218 _remove ERROR
+[analyze]   t_symbol_summary — 1 mutants (1 error)
+[analyze]   _print_mutant (daemon.py:236, 7 mutants)
+[analyze]     _print_mutant.L236 And ERROR
+[analyze]   _print_mutant — 1 mutants (1 error)
+[analyze]   _initial_build (daemon.py:271, 10 mutants)
+[analyze]     _initial_build.L271 broaden ERROR
+[analyze]   _initial_build — 1 mutants (1 error)
+[analyze]   ter_source_files (daemon.py:290, 5 mutants)
+[analyze]     ter_source_files.L290 Mult ERROR
+[analyze]   ter_source_files — 1 mutants (1 error)
+[analyze]   _should_skip (daemon.py:298, 2 mutants)
+[analyze]     _should_skip.L298 negate_expr ERROR
+[analyze]   _should_skip — 1 mutants (1 error)
+[analyze]   _iter_all_py (daemon.py:312, 6 mutants)
+[analyze]     _iter_all_py.L312 Mult ERROR
+[analyze]   _iter_all_py — 1 mutants (1 error)
+[analyze]   scan_for_changes (daemon.py:334, 14 mutants)
+[analyze]     scan_for_changes.L334 broaden ERROR
+[analyze]   scan_for_changes — 1 mutants (1 error)
+[analyze]   concile_deletion (daemon.py:368, 1 mutants)
+[analyze]     concile_deletion.L368 None ERROR
+[analyze]   concile_deletion — 1 mutants (1 error)
+[analyze]   spawn_reanalysis (daemon.py:389, 10 mutants)
+[analyze]     spawn_reanalysis.L389 IsNot ERROR
+[analyze]   spawn_reanalysis — 1 mutants (1 error)
+[analyze]   _run_reanalysis (daemon.py:440, 31 mutants)
+[analyze]     _run_reanalysis.L440 BitAnd ERROR
+[analyze]   _run_reanalysis — 1 mutants (1 error)
+[analyze]   ect_target_files (daemon.py:521, 1 mutants)
+[analyze]     ect_target_files.L521 None ERROR
+[analyze]   ect_target_files — 1 mutants (1 error)
+[analyze]   resolve_test_dir (daemon.py:524, 9 mutants)
+[analyze]     resolve_test_dir.L524 BitAnd ERROR
+[analyze]   resolve_test_dir — 1 mutants (1 error)
+[analyze]   run (daemon.py:554, 3 mutants)
+[analyze]     run.L554 broaden ERROR
+[analyze]   run — 1 mutants (1 error)
+[analyze]   _loop (daemon.py:563, 8 mutants)
+[analyze]     _loop.L563 _remove ERROR
+[analyze]   _loop — 1 mutants (1 error)
+[analyze]   daemon:main (daemon.py:595, 4 mutants)
+[analyze]     daemon:main.L595 BitAnd ERROR
+[analyze]   daemon:main — 1 mutants (1 error)
+[analyze] done.   status: 205 symbols  (205 clean, 0 dirty, 0 stale, 0 error)  pending re-analysis: 0
+  status: 205 symbols  (205 clean, 0 dirty, 0 stale, 0 error)  pending re-analysis: 0
+  status: 205 symbols  (205 clean, 0 dirty, 0 stale, 0 error)  pending re-analysis: 0
+  status: 205 symbols  (205 clean, 0 dirty, 0 stale, 0 error)  pending re-analysis: 0
