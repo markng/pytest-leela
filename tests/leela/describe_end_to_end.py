@@ -156,6 +156,8 @@ def _django_project(pytester, test_body):
     ``shop.backoffice`` registers a project-defined ModelAdmin and is
     imported only from ``ShopConfig.ready()``: nothing references it, so
     only leela's walk of the admin registry can keep it loaded.
+    ``shop.admin`` registers nothing and ``stock`` has no admin, so only the
+    ``<app>.admin`` and models-module roots keep those modules loaded.
     """
     # Hard import: a missing pytest-django must fail, never skip.
     importlib.import_module("pytest_django")
@@ -179,6 +181,7 @@ def _django_project(pytester, test_body):
                 "django.contrib.sessions",
                 "django.contrib.admin",
                 "shop.apps.ShopConfig",
+                "stock",
             ]
             DATABASES = {
                 "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}
@@ -212,6 +215,16 @@ def _django_project(pytester, test_body):
         "@admin.register(Item)\n"
         "class ItemAdmin(admin.ModelAdmin):\n"
         "    list_display = ('name',)\n"
+    )
+    (shop / "admin.py").write_text(
+        _LOGGED + "from django.contrib import admin\n\n"
+        "admin.site.site_header = 'Shop admin'\n"
+    )
+    stock = pytester.mkpydir("stock")
+    (stock / "models.py").write_text(
+        _LOGGED + "from django.db import models\n\n\n"
+        "class Bin(models.Model):\n"
+        "    label = models.CharField(max_length=20)\n"
     )
     (shop / "pricing.py").write_text("def total(a, b):\n    return a + b\n")
     tests = pytester.mkdir("tests")
@@ -272,18 +285,25 @@ def describe_django_project():
         result.stdout.fnmatch_lines(["*line 2: + * SURVIVED"])
 
     def it_never_re_executes_models_admin_or_what_they_reference(pytester):
-        """shop.models is pinned as a model module, shop.backoffice through
-        the admin registry walk, shop.mixins through the reference closure.
-        Each must execute exactly once across the outer and inner sessions.
+        """Each pinning mechanism keeps one module loaded: shop.models and
+        stock.models as model modules, shop.admin as an ``<app>.admin``,
+        shop.backoffice through the admin registry walk, shop.mixins through
+        the reference closure.  Each must execute exactly once across the
+        outer and inner sessions.
         """
         project = _django_project(
             pytester,
             "import sys\n\n"
+            "from django.apps import apps\n"
             "from django.contrib import admin\n\n"
+            "import shop.admin\n"
             "from shop.backoffice import ItemAdmin\n"
             "from shop.mixins import PricedMixin\n"
-            "from shop.models import Item\n\n\n"
+            "from shop.models import Item\n"
+            "from stock.models import Bin\n\n\n"
             "def test_registry_and_identity_hold():\n"
+            "    assert admin.site.site_header == 'Shop admin'\n"
+            "    assert apps.get_model('stock', 'Bin') is Bin\n"
             "    assert issubclass(Item, PricedMixin)\n"
             "    assert type(admin.site._registry[Item]) is ItemAdmin\n"
             "    assert sys.modules['shop.mixins'].PricedMixin is PricedMixin\n"
@@ -293,6 +313,12 @@ def describe_django_project():
         result = _leela_django(project)
 
         executions = (project.path / "imports.log").read_text().split()
-        assert sorted(executions) == ["shop.backoffice", "shop.mixins", "shop.models"]
+        assert sorted(executions) == [
+            "shop.admin",
+            "shop.backoffice",
+            "shop.mixins",
+            "shop.models",
+            "stock.models",
+        ]
         result.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
         assert result.ret == 0
