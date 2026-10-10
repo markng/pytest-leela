@@ -1,6 +1,11 @@
 """CPU and memory resource limiting."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+# its ``compile()`` call must also remain unflagged.
 
 import os
 from dataclasses import dataclass
@@ -26,10 +31,18 @@ def apply_cpu_limit(max_cores: int) -> None:
     """Restrict this process to a set of CPU cores."""
     available = os.cpu_count() or 4
     cores = min(max_cores, available)
-    try:
-        os.sched_setaffinity(0, set(range(cores)))
-    except (AttributeError, OSError):
+    setaffinity = getattr(os, "sched_setaffinity", None)
+    if setaffinity is None:
         # Not available on all platforms (e.g., macOS)
+        return
+    try:
+        setaffinity(0, set(range(cores)))
+    except (AttributeError, OSError):
+        # ``AttributeError`` covers platforms where the attribute
+        # disappears between the ``getattr`` lookup and the call
+        # (e.g. mocked test environments that remove the attr on
+        # call). ``OSError`` covers kernels that refuse affinity
+        # changes (containers, seccomp, etc.).
         pass
 
 

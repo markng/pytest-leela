@@ -1,14 +1,23 @@
 """Tests for pytest_leela.engine."""
 
 import os
+import py_compile
 import sys
+import sysconfig
 import tempfile
+from pathlib import Path
 import types
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from pytest_leela.engine import Engine, _clean_process_state, _module_name_from_path
+from pytest_leela.engine import (
+    Engine,
+    _TestDependencies,
+    _clean_process_state,
+    _module_name_from_path,
+)
+from pytest_leela.index import IndexDB, extract_symbols
 from pytest_leela.import_hook import MutatingFinder
 from pytest_leela.models import (
     CoverageMap,
@@ -145,7 +154,6 @@ def describe_module_name_from_path():
         """When file is not under any sys.path entry, use CWD-relative."""
         monkeypatch.chdir(tmp_path)
         # Clear sys.path of anything that matches
-        original_path = sys.path.copy()
         monkeypatch.setattr("sys.path", ["/nonexistent"])
 
         file_path = str(tmp_path / "standalone.py")
@@ -796,3 +804,330 @@ def describe_Engine_run_test_id_fallback():
         for test_ids in captured:
             # Coverage found tests → use those, no fallback to overwrite
             assert test_ids == ["tests/test_cov.py::test_one"]
+
+
+def describe_TestDependencies():
+    def it_tracks_project_imports_below_install_data_and_scripts(tmp_path, monkeypatch):
+        # A project can live below its interpreter prefix or scripts directory;
+        # those broad installation locations are not library origins.
+        prefix = tmp_path / "environment"
+        scripts = prefix / "bin"
+        scripts.mkdir(parents=True)
+        library = prefix / "lib"
+        library.mkdir()
+        tests = scripts / "project" / "tests"
+        tests.mkdir(parents=True)
+        dependency = scripts / "project" / "prefix_dependency.py"
+        dependency.write_text("VALUE = 5\n")
+        test = tests / "test_prefix.py"
+        test.write_text("from prefix_dependency import VALUE\n")
+        monkeypatch.syspath_prepend(str(dependency.parent))
+        paths = {"data": str(prefix), "scripts": str(scripts), "purelib": str(library)}
+        monkeypatch.setattr(sysconfig, "get_paths", lambda: paths)
+        monkeypatch.setattr(sysconfig, "get_path", paths.get)
+        selection = [f"{test}::test_value"]
+        before = _TestDependencies(str(tests))
+        fingerprint = before.fingerprint(selection)
+        assert fingerprint is not None
+        assert dependency.resolve() in before.dependency_files(selection)
+        dependency.write_text("VALUE = 6\n")
+        assert _TestDependencies(str(tests)).fingerprint(selection) != fingerprint
+
+    @pytest.mark.parametrize("module", ["sys", "_frozen_importlib"])
+    def it_has_no_local_dependencies_for_builtin_and_frozen_modules(tmp_path, module):
+        dependencies = _TestDependencies(str(tmp_path))
+        assert dependencies._resolve_import(module, tmp_path / "test_env.py") == set()
+
+    def it_returns_no_proven_origin_for_an_unavailable_dependency(tmp_path):
+        dependencies = _TestDependencies(str(tmp_path))
+        assert dependencies._resolve_import(
+            "unavailable_fingerprint_dependency", tmp_path / "test_missing.py"
+        ) is None
+
+    def it_declines_to_fingerprint_a_sourceless_local_dependency(tmp_path, monkeypatch):
+        dependency = tmp_path / "sourceless_dependency.py"
+        dependency.write_text("VALUE = 5\n")
+        py_compile.compile(str(dependency), cfile=str(dependency.with_suffix(".pyc")),
+                           doraise=True)
+        dependency.unlink()
+        monkeypatch.syspath_prepend(str(tmp_path))
+        dependencies = _TestDependencies(str(tmp_path))
+        assert dependencies._resolve_import(
+            "sourceless_dependency", tmp_path / "test_bytecode.py"
+        ) is None
+
+    def it_rejects_ambiguous_local_imports(tmp_path, monkeypatch):
+        roots = [tmp_path / "first", tmp_path / "second"]
+        for root in roots:
+            root.mkdir()
+            (root / "ambiguous_dependency.py").write_text("VALUE = 5\n")
+            monkeypatch.syspath_prepend(str(root))
+        dependencies = _TestDependencies(str(tmp_path))
+        assert dependencies._resolve_import(
+            "ambiguous_dependency", tmp_path / "test_ambiguous.py"
+        ) is None
+
+    @pytest.mark.parametrize("statement", [
+        "__import__('sys')", "eval('1')", "exec('value = 1')",
+        "import importlib", "import runpy",
+    ])
+    def it_disables_fingerprinting_for_dynamic_execution(tmp_path, statement):
+        test = tmp_path / "test_dynamic.py"
+        test.write_text(statement + "\n")
+        dependencies = _TestDependencies(str(tmp_path))
+        assert dependencies.fingerprint([f"{test}::test_dynamic"]) is None
+        assert dependencies.dependency_files([f"{test}::test_dynamic"]) is None
+
+    def it_treats_none_plugin_specification_as_uncached(tmp_path):
+        # pytest accepts None as an empty plugin specification, but the
+        # dependency scanner conservatively declines to fingerprint it.
+        test = tmp_path / "test_plugins.py"
+        test.write_text("pytest_plugins = None\ndef test_pass():\n    assert True\n")
+        dependencies = _TestDependencies(str(tmp_path))
+        assert dependencies.fingerprint([f"{test}::test_pass"]) is None
+
+    def it_disables_fingerprinting_for_computed_plugin_specifications(tmp_path):
+        test = tmp_path / "test_plugins.py"
+        test.write_text("pytest_plugins = list()\ndef test_pass():\n    assert True\n")
+        assert _TestDependencies(str(tmp_path)).fingerprint([f"{test}::test_pass"]) is None
+
+    @pytest.mark.parametrize("statement", [
+        "from .missing_dependency import VALUE", "from . import missing_dependency",
+    ])
+    def it_disables_fingerprinting_for_unavailable_relative_imports(tmp_path, statement):
+        test = tmp_path / "test_missing.py"
+        test.write_text(statement + "\n")
+        assert _TestDependencies(str(tmp_path)).fingerprint([f"{test}::test_missing"]) is None
+
+    def it_tracks_submodules_imported_from_local_packages(tmp_path, monkeypatch):
+        package = tmp_path / "fingerprint_package"
+        package.mkdir()
+        (package / "__init__.py").write_text("")
+        child = package / "values.py"
+        child.write_text("VALUE = 5\n")
+        test = tmp_path / "test_child.py"
+        test.write_text("from fingerprint_package import values\n")
+        monkeypatch.syspath_prepend(str(tmp_path))
+        selection = [f"{test}::test_value"]
+        before = _TestDependencies(str(tmp_path))
+        fingerprint = before.fingerprint(selection)
+        assert fingerprint is not None
+        assert child.resolve() in before.dependency_files(selection)
+        child.write_text("VALUE = 6\n")
+        assert _TestDependencies(str(tmp_path)).fingerprint(selection) != fingerprint
+
+    def it_disables_fingerprinting_when_a_test_file_disappears(tmp_path):
+        test = tmp_path / "test_deleted.py"
+        test.write_text("def test_value():\n    assert True\n")
+        dependencies = _TestDependencies(str(tmp_path))
+        selection = [f"{test}::test_value"]
+        assert test.resolve() in dependencies.dependency_files(selection)
+        test.unlink()
+        assert dependencies.fingerprint(selection) is None
+
+    def it_disables_discovery_fingerprinting_when_the_test_tree_is_unreadable(
+        tmp_path, monkeypatch
+    ):
+        def unreadable_tree(path, onerror):
+            onerror(OSError("test directory unavailable"))
+            return iter(())
+
+        monkeypatch.setattr(os, "walk", unreadable_tree)
+        assert _TestDependencies(str(tmp_path)).fingerprint(None) is None
+
+
+def describe_Engine_index_completion():
+    def it_marks_completed_symbols_clean_and_leaves_unstarted_symbols_dirty(
+        tmp_path, monkeypatch
+    ):
+        target = tmp_path / "completion_target.py"
+        source = (
+            "def first(a, b):\n    return a + b\n\n"
+            "def second(a, b):\n    return a + b\n"
+        )
+        target.write_text(source)
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_completion.py").write_text(
+            "from completion_target import first, second\n"
+            "def test_values():\n"
+            "    assert first(1, 2) == 3\n"
+            "    assert second(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        checks = iter([True, True, True, False])
+        with IndexDB(tmp_path / "index.db") as db:
+            with (
+                patch("pytest_leela.engine.apply_limits"),
+                patch("pytest_leela.engine.is_memory_ok", side_effect=lambda _: next(checks)),
+            ):
+                result = Engine(use_types=False, use_coverage=False, index=db).run(
+                    [str(target)], str(tests), limits=ResourceLimits(max_memory_percent=90)
+                )
+            symbols = extract_symbols(str(target), source)
+            first_id = next(sid for sid in symbols if sid.endswith(":first"))
+            second_id = next(sid for sid in symbols if sid.endswith(":second"))
+            assert result.mutants_tested == 3
+            assert db.get_state(first_id) == "clean"
+            assert db.get_state(second_id) == "dirty"
+
+    def it_keeps_a_partially_analyzed_symbol_dirty_when_memory_limits_interrupt(
+        tmp_path, monkeypatch
+    ):
+        target = tmp_path / "partial_target.py"
+        source = "def add(a, b):\n    return a + b\n"
+        target.write_text(source)
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_partial.py").write_text(
+            "from partial_target import add\n"
+            "def test_add():\n    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        checks = iter([True, False])
+        with IndexDB(tmp_path / "index.db") as db:
+            with (
+                patch("pytest_leela.engine.apply_limits"),
+                patch("pytest_leela.engine.is_memory_ok", side_effect=lambda _: next(checks)),
+            ):
+                result = Engine(use_types=False, use_coverage=False, index=db).run(
+                    [str(target)], str(tests), limits=ResourceLimits(max_memory_percent=90)
+                )
+            symbol_id = next(iter(extract_symbols(str(target), source)))
+            assert result.mutants_tested == 1
+            assert db.get_state(symbol_id) == "dirty"
+
+    def it_marks_the_active_symbol_error_when_the_runner_filesystem_operation_fails(
+        tmp_path, monkeypatch
+    ):
+        target = tmp_path / "failure_target.py"
+        source = "def add(a, b):\n    return a + b\n"
+        target.write_text(source)
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_failure.py").write_text(
+            "from failure_target import add\n"
+            "def test_add():\n    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        cache = Path(py_compile.compile(str(target), doraise=True))
+        with IndexDB(tmp_path / "index.db") as db:
+            with (
+                patch.object(Path, "unlink", side_effect=PermissionError("cache unavailable")),
+                pytest.raises(PermissionError, match="cache unavailable"),
+            ):
+                Engine(use_types=False, use_coverage=False, index=db).run(
+                    [str(target)], str(tests)
+                )
+            assert cache.exists()
+            symbol_id = next(iter(extract_symbols(str(target), source)))
+            assert db.get_state(symbol_id) == "error"
+
+    def it_marks_warm_cached_and_no_point_symbols_clean(tmp_path, monkeypatch):
+        target = tmp_path / "cache_target.py"
+        source = (
+            "def add(a, b):\n    return a + b\n\n"
+            "def no_points():\n    return None\n"
+        )
+        target.write_text(source)
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_cache.py").write_text(
+            "from cache_target import add\n"
+            "def test_add():\n    assert add(1, 2) == 3\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        with IndexDB(tmp_path / "index.db") as db:
+            first = Engine(use_types=False, use_coverage=False, index=db).run(
+                [str(target)], str(tests)
+            )
+            with patch("pytest_leela.engine.run_tests_for_mutant") as runner:
+                second = Engine(use_types=False, use_coverage=False, index=db).run(
+                    [str(target)], str(tests)
+                )
+            symbols = extract_symbols(str(target), source)
+            add_id = next(sid for sid in symbols if sid.endswith(":add"))
+            no_points_id = next(sid for sid in symbols if sid.endswith(":no_points"))
+            assert first.mutants_tested == second.mutants_tested
+            assert not runner.called
+            assert db.get_state(add_id) == db.get_state(no_points_id) == "clean"
+
+    def it_marks_type_pruned_symbols_clean_without_executing_mutants(
+        tmp_path, monkeypatch
+    ):
+        target = tmp_path / "pruned_target.py"
+        source = "def value() -> int:\n    return 1\n"
+        target.write_text(source)
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_pruned.py").write_text("def test_pass():\n    assert True\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        with IndexDB(tmp_path / "index.db") as db:
+            with patch("pytest_leela.engine.mutations_for", return_value=[]):
+                result = Engine(use_types=True, use_coverage=False, index=db).run(
+                    [str(target)], str(tests)
+                )
+            symbol_id = next(iter(extract_symbols(str(target), source)))
+            assert result.mutants_tested == 0
+            assert db.get_state(symbol_id) == "clean"
+
+
+def describe_Engine_symbol_attribution():
+    def it_attributes_method_results_to_the_method_not_the_enclosing_class(
+        tmp_path, monkeypatch
+    ):
+        target = tmp_path / "method_target.py"
+        source = "class Calculator:\n    def add(self, a, b):\n        return a + b\n"
+        target.write_text(source)
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_method.py").write_text(
+            "from method_target import Calculator\n"
+            "def test_add():\n    assert Calculator().add(3, 2) == 5\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        events = []
+        with IndexDB(tmp_path / "index.db") as db:
+            result = Engine(use_types=False, use_coverage=False, index=db,
+                            on_progress=events.append).run([str(target)], str(tests))
+            symbols = extract_symbols(str(target), source)
+            method_id = next(sid for sid in symbols if sid.endswith(":Calculator.add"))
+            class_id = next(sid for sid in symbols if sid.endswith(":Calculator"))
+            assert db.symbols_for_tests({"tests/test_method.py::test_add"}) == {method_id}
+            assert db.get_state(method_id) == "clean"
+            assert db.get_state(class_id) == "clean"
+        assert result.mutants_tested == result.killed == 3
+        starts = [event for event in events if event.kind == "symbol-start"]
+        assert len(starts) == 1
+        assert starts[0].symbol_id == method_id
+        assert starts[0].symbol_short == "Calculator.add"
+
+    def it_reports_progress_and_completes_for_module_scope_expressions(
+        tmp_path, monkeypatch
+    ):
+        target = tmp_path / "module_scope_target.py"
+        source = "VALUE = 3 + 2\n"
+        target.write_text(source)
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_value.py").write_text(
+            "from module_scope_target import VALUE\n"
+            "def test_value():\n    assert VALUE == 5\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        events = []
+        result = Engine(use_types=False, use_coverage=False,
+                        on_progress=events.append).run([str(target)], str(tests))
+        assert result.mutants_tested == result.killed == 2
+        assert result.target_sources == {str(target): source}
+        assert [event.kind for event in events] == ["symbol-start", "mutant", "mutant", "done"]
+        assert events[0].symbol_id is None
+        assert events[0].symbol_short == ""
+        assert events[0].n_mutants_in_symbol == 2
+        assert all(event.status == "killed" for event in events[1:-1])

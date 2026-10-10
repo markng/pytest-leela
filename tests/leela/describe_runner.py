@@ -137,6 +137,42 @@ def describe_run_tests_for_mutant():
         # Called at both sites: pre-test setup (line 108) and finally cleanup (line 188)
         assert mock_clear.call_count == 2
 
+    def it_removes_the_finder_when_freshness_preparation_fails(
+        tmp_path, monkeypatch
+    ):
+        """Propagate cache-removal errors without leaking the mutation finder."""
+        import importlib
+        import py_compile
+        from pathlib import Path
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "fresh_failure_target.py"
+        target.write_text(source)
+        cache = Path(py_compile.compile(str(target), doraise=True))
+
+        points = find_mutation_points(source, str(target), "fresh_failure_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+        with patch.object(
+            Path, "unlink", side_effect=PermissionError("cache is not removable")
+        ):
+            with pytest.raises(PermissionError, match="cache is not removable"):
+                run_tests_for_mutant(
+                    mutant,
+                    {"fresh_failure_target": source},
+                    {"fresh_failure_target": str(target)},
+                    test_dir=str(tmp_path),
+                    dependency_files={target},
+                )
+
+        assert not any(isinstance(finder, MutatingFinder) for finder in sys.meta_path)
+        imported = importlib.import_module("fresh_failure_target")
+        assert imported.add(5, 2) == 7
+
     def it_kills_a_detectable_mutant(tmp_path, monkeypatch):
         source = "def add(a, b):\n    return a + b\n"
         target = tmp_path / "runner_target.py"
@@ -359,9 +395,7 @@ def describe_run_tests_for_mutant():
             return 0
 
         try:
-            with patch(
-                "pytest_leela.runner.pytest.main", side_effect=mock_pytest_main
-            ):
+            with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
                 run_tests_for_mutant(
                     mutant,
                     {"outside_cwd_target": source},
@@ -544,6 +578,48 @@ def describe_run_tests_for_mutant():
         finally:
             # Restore sys.meta_path if the mutation clobbered it
             sys.meta_path[:] = saved_meta_path
+
+    def it_kills_when_collection_fails_with_import_error(tmp_path, monkeypatch):
+        """Collection failure (import error) must register as a kill, not a survive.
+
+        Without the ``pytest_collectreport`` hook in ``_ResultCollector``, a
+        test module that fails to import (e.g. the mutation broke the import)
+        would be misreported as SURVIVED with ``tests_run=0``. The hook
+        increments ``total`` and appends to ``errors``, so the post-loop
+        kill check flips to True.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "collerr_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "collerr_tests"
+        test_dir.mkdir()
+        (test_dir / "test_collerr.py").write_text(
+            "import nonexistent_module_zzz\n\n"
+            "def test_add():\n"
+            "    assert True\n"
+        )
+
+        points = find_mutation_points(source, str(target), "collerr_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"collerr_target": source},
+            {"collerr_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.killed is True
+        assert result.tests_run >= 1
+        assert result.killing_test is not None
+        assert len(result.killing_tests) >= 1
 
 
 def describe_TimeoutPlugin():
@@ -990,6 +1066,30 @@ def describe_run_tests_for_mutant_with_known_user_modules():
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
         return source, mutant
 
+    def it_updates_the_shared_prepared_dependency_set(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant(tmp_path)
+        test_file = tmp_path / "test_shared_preparation.py"
+        test_file.write_text(
+            "from opt_target import add\n\n"
+            "def test_add():\n    assert add(1, 2) == 3\n"
+        )
+        prepared = set()
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"opt_target": source},
+            {"opt_target": str(tmp_path / "opt_target.py")},
+            test_ids=[f"{test_file}::test_add"],
+            dependency_files={test_file},
+            prepared_dependencies=prepared,
+        )
+
+        assert result.killed is True
+        assert result.killing_test == "test_shared_preparation.py::test_add"
+        assert prepared == {test_file}
+
     def it_works_with_known_user_modules_parameter(tmp_path, monkeypatch):
         """The optimized path should produce the same result as the fallback."""
         monkeypatch.chdir(tmp_path)
@@ -1112,3 +1212,99 @@ def describe_run_tests_for_mutant_with_known_user_modules():
 
         mock_fast.assert_not_called()
         assert mock_full.call_count == 2
+
+
+def describe_bytecode_artifacts():
+    def it_uses_the_installed_pytest_rewrite_tag():
+        from _pytest.assertion.rewrite import PYTEST_TAG
+        from pytest_leela.runner import _pytest_rewrite_tag
+
+        assert _pytest_rewrite_tag() == PYTEST_TAG
+
+    def it_returns_both_exact_cache_paths_without_sibling_artifacts(tmp_path):
+        import importlib.util
+        import py_compile
+        import subprocess
+        from pathlib import Path
+
+        from _pytest.assertion.rewrite import PYTEST_TAG
+        from pytest_leela.runner import _bytecode_artifacts
+
+        source = tmp_path / "test_cached.py"
+        source.write_text("def test_cached():\n    assert 1 + 1 == 2\n")
+        cpython_cache = Path(py_compile.compile(str(source), doraise=True))
+        rewrite_cache = cpython_cache.parent / f"test_cached.{PYTEST_TAG}.pyc"
+        # The rewriter's cache is generated by an ordinary pytest run.
+        subprocess.run(
+            [sys.executable, "-m", "pytest", str(source), "-q", "-p", "no:leela"],
+            check=True,
+            capture_output=True,
+        )
+        assert rewrite_cache.is_file()
+        sibling = source.with_name("sibling.py")
+        sibling.write_text("value = 1\n")
+        sibling_cache = Path(py_compile.compile(str(sibling), doraise=True))
+
+        assert cpython_cache == Path(importlib.util.cache_from_source(str(source)))
+        assert _bytecode_artifacts(source) == [cpython_cache, rewrite_cache]
+        assert sibling_cache.is_file()
+
+    def it_returns_no_artifacts_for_uncached_source(tmp_path):
+        from pytest_leela.runner import _bytecode_artifacts
+
+        source = tmp_path / "uncached.py"
+        source.write_text("value = 1\n")
+        assert _bytecode_artifacts(source) == []
+
+
+def describe_prepare_fresh_dependencies():
+    def it_removes_stale_bytecode_only_once_per_source(tmp_path):
+        import py_compile
+        from pathlib import Path
+
+        from pytest_leela.runner import _prepare_fresh_dependencies
+
+        source = tmp_path / "dependency.py"
+        source.write_text("value = 1\n")
+        cache = Path(py_compile.compile(str(source), doraise=True))
+        prepared = set()
+
+        _prepare_fresh_dependencies({source}, prepared)
+
+        assert prepared == {source}
+        assert not cache.exists()
+        # A later import rebuilds bytecode; the same run must preserve it.
+        rebuilt = Path(py_compile.compile(str(source), doraise=True))
+        _prepare_fresh_dependencies({source}, prepared)
+        assert rebuilt.is_file()
+        assert prepared == {source}
+
+
+def describe_selection_source_files():
+    def it_includes_python_node_ids_and_ancestor_configuration(tmp_path):
+        from pytest_leela.runner import _selection_source_files
+
+        package = tmp_path / "checks"
+        package.mkdir()
+        source = package / "test_selected.py"
+        source.write_text("def test_selected():\n    assert True\n")
+        conftest = tmp_path / "conftest.py"
+        conftest.write_text("")
+        init = package / "__init__.py"
+        init.write_text("")
+        unselected = package / "test_other.py"
+        unselected.write_text("def test_other():\n    assert True\n")
+
+        files = _selection_source_files([f"{source}::test_selected"])
+
+        assert {source.resolve(), conftest.resolve(), init.resolve()} <= files
+        assert unselected.resolve() not in files
+
+    def it_ignores_missing_python_files_and_non_python_selections(tmp_path):
+        from pytest_leela.runner import _selection_source_files
+
+        text = tmp_path / "cases.txt"
+        text.write_text("case\n")
+        missing = tmp_path / "test_missing.py"
+
+        assert _selection_source_files([str(text), f"{missing}::test_missing"]) == set()

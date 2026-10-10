@@ -1,6 +1,11 @@
 """Terminal reporter and structured output for mutation testing results."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+# its ``compile()`` call must also remain unflagged.
 
 import json
 import os
@@ -40,11 +45,11 @@ def _op_display(original: str, replacement: str) -> str:
 
     # Special return mutations
     if replacement in ("negate", "negate_expr"):
-        return f"return x \u2192 return -x"
+        return "return x \u2192 return -x"
     if replacement == "remove_negation":
-        return f"return -x \u2192 return x"
+        return "return -x \u2192 return x"
     if replacement == "empty_str":
-        return f'return "..." \u2192 return ""'
+        return 'return "..." \u2192 return ""'
     if replacement in ("True", "False", "None") and original in (
         "True",
         "False",

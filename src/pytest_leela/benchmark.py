@@ -1,8 +1,12 @@
 """Benchmark mode — attribute speedup to each optimisation layer."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+# its ``compile()`` call must also remain unflagged.
 
-import time
 from dataclasses import dataclass
 
 import pytest
@@ -30,13 +34,14 @@ class BenchmarkPlugin:
             return
 
         targets = self.config.getoption("target", default=[])
+        python_files = self.config.getini("python_files")
         if targets:
             target_files: list[str] = []
             for t in targets:
-                target_files.extend(_find_target_files(t))
+                target_files.extend(_find_target_files(t, python_files))
             target_files = sorted(set(target_files))
         else:
-            target_files = _find_default_targets(session.config.rootpath)
+            target_files = _find_default_targets(session.config.rootpath, python_files)
 
         if not target_files:
             return
