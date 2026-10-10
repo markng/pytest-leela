@@ -1,11 +1,19 @@
 """Per-test line coverage via sys.settrace."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+# its ``compile()`` call must also remain unflagged.
 
 import contextlib
 import io
+import json
 import os
+import subprocess
 import sys
+import tempfile
 import threading
 import time
 from typing import Any
@@ -115,3 +123,66 @@ def collect_coverage(
 
     plugin.coverage_map.test_times = plugin.test_times
     return plugin.coverage_map
+
+
+def collect_coverage_subprocess(
+    target_files: list[str],
+    test_node_ids: list[str] | None = None,
+    cwd: str | None = None,
+) -> CoverageMap:
+    """Run the coverage collector in a fresh subprocess.
+
+    A standalone entry point invoked by
+    ``coverage_tracker.collect_coverage_subprocess`` from a
+    fresh Python interpreter (not the one hosting the daemon)
+    so pytest discovers its rootdir from ``cwd`` and finds the
+    project's ``pyproject.toml``. The in-process variant
+    (``collect_coverage``) inherits the outer pytest's state,
+    which is wrong when called from inside another test run.
+
+    Returns an empty ``CoverageMap`` if ``target_files`` is empty
+    or the project has no tests. Collection/launch failures and timeouts
+    are surfaced to the daemon rather than disguised as empty coverage.
+    Uses this interpreter: launch the daemon from the project dev environment.
+    """
+    if not target_files:
+        return CoverageMap()
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as out:
+        output_path: str = out.name
+    try:
+        cmd = [
+            sys.executable,
+            "-m",
+            "pytest_leela.coverage_collector",
+            "--output",
+            output_path,
+        ]
+        for target_file in target_files:
+            cmd.extend(["--target", target_file])
+        for tid in test_node_ids or []:
+            cmd.extend(["--test", tid])
+        subprocess.run(
+            cmd,
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        with open(output_path) as f:
+            payload = json.load(f)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            f"Coverage collection failed with {sys.executable}: "
+            f"{exc.stderr}\n{exc.stdout}. Use the project dev environment "
+            "with its pytest plugins installed."
+        ) from exc
+    finally:
+        os.unlink(output_path)
+
+    cov = CoverageMap()
+    for key, tests in payload["line_to_tests"].items():
+        file_part, _, line_part = key.rpartition(":")
+        cov.line_to_tests[(file_part, int(line_part))] = set(tests)
+    cov.test_times = dict(payload["test_times"])
+    return cov
