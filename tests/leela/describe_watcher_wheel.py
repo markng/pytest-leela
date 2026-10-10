@@ -10,7 +10,7 @@ def describe_watcher_wheel():
     def it_excludes_sentinel_and_imports_in_an_isolated_interpreter(tmp_path):
         root = Path(__file__).resolve().parents[2]
         result = subprocess.run(
-            [sys.executable, '-m', 'pip', 'wheel', '--no-deps', '--no-build-isolation',
+            [sys.executable, '-m', 'pip', 'wheel', '--no-deps',
              '--wheel-dir', str(tmp_path), str(root)],
             capture_output=True, text=True, timeout=120,
         )
