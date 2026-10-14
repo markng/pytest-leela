@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 
+import pytest
+
 from pytest_leela.html_report import (
     _build_html_viewer,
     _build_report_data,
@@ -881,3 +883,75 @@ def describe_generate_html_report():
 
         data_js = tmp_path / "report.data.js"
         assert not data_js.exists()
+
+
+def _make_error_mutant_result(mutant_id: int = 9, **point_overrides) -> MutantResult:
+    point = _make_point(**point_overrides)
+    return MutantResult(
+        mutant=Mutant(point=point, replacement_op="Sub", mutant_id=mutant_id),
+        killed=False,
+        tests_run=0,
+        killing_test=None,
+        time_seconds=0.05,
+        error="no tests ran",
+    )
+
+
+def describe_report_data_with_errors():
+    def _data():
+        return _build_report_data(
+            _make_run_result(
+                results=[
+                    _make_mutant_result(True, 1),
+                    _make_mutant_result(False, 2),
+                    _make_error_mutant_result(3),
+                ]
+            )
+        )
+
+    def it_records_each_mutants_status_and_error():
+        mutants = _data()["files"]["app.py"]["mutants"]
+        assert [m["status"] for m in mutants] == ["killed", "survived", "error"]
+        assert [m["error"] for m in mutants] == [None, None, "no tests ran"]
+
+    def it_counts_errors_in_file_stats_and_scores_without_them():
+        stats = _data()["files"]["app.py"]["stats"]
+        assert stats == {
+            "total": 3,
+            "killed": 1,
+            "survived": 1,
+            "errors": 1,
+            "score": 50.0,
+        }
+
+    def it_scores_zero_for_a_file_whose_every_mutant_errored():
+        data = _build_report_data(
+            _make_run_result(results=[_make_error_mutant_result(1)])
+        )
+        assert data["files"]["app.py"]["stats"]["score"] == pytest.approx(0.0)
+
+    def it_leaves_errored_mutants_out_of_the_survivor_index():
+        index = _data()["survived_index"]
+        assert [s["mutant_idx"] for s in index] == [1]
+
+    def it_counts_errors_in_the_summary():
+        summary = _data()["summary"]
+        assert summary["errors"] == 1
+        assert summary["survived"] == 1
+        assert summary["mutation_score"] == pytest.approx(50.0)
+
+
+def describe_html_viewer_error_rendering():
+    def it_renders_an_error_badge_and_reason():
+        html = _build_html_viewer("{}")
+        assert 'status-badge status-error">Error</span>' in html
+        assert '<div class="mc-error">' in html
+
+    def it_renders_the_header_error_count():
+        html = _build_html_viewer("{}")
+        assert 'id="error-count"' in html
+        assert '" errors (not scored)"' in html
+
+    def it_treats_only_survived_status_as_a_survivor_line():
+        html = _build_html_viewer("{}")
+        assert 'else if (m.status === "survived") hasSurvived = true;' in html

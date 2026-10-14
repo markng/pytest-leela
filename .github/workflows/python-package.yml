@@ -10,6 +10,43 @@ on:
     branches: [ "main" ]
 
 jobs:
+  lockfile:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+    - name: Check uv.lock matches pyproject.toml
+      run: |
+        python -m pip install --upgrade pip "uv==0.11.19"
+        uv lock --check
+
+  pytest-floor:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install the oldest supported pytest
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,django]" "pytest==7.0.0"
+    - name: Test with pytest
+      run: |
+        # Every warning is an error except two that pytest 7.0 itself raises:
+        # its helpconfig hookwrapper warns when a conftest fails to import
+        # (several tests do that on purpose), and on Python 3.12 its assertion
+        # rewriter uses ast.Str/ast.Num, which warn whenever a test module has
+        # no cached rewrite yet (every module on a fresh checkout).
+        pytest -W error -W "ignore::pluggy.PluggyTeardownRaisedWarning" \
+          -W "ignore::DeprecationWarning:_pytest.assertion.rewrite"
+
   build:
 
     runs-on: ubuntu-latest
@@ -27,12 +64,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        pip install -e ".[dev,django]"
     - name: Lint with flake8
       run: |
         pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    - name: Type-check with mypy
+      run: |
+        mypy
     - name: Test with pytest
       run: |
         pytest

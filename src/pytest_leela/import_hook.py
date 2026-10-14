@@ -204,10 +204,15 @@ class MutatingLoader(importlib.abc.Loader):
         source: str,
         mutant: Mutant,
         filename: str,
+        import_errors: list[str] | None = None,
     ) -> None:
         self.source = source
         self.mutant = mutant
         self.filename = filename
+        # Receives one entry per exception raised while executing the
+        # mutated source, so the runner can tell an import broken by the
+        # mutant from an unrelated collection error.
+        self.import_errors: list[str] = [] if import_errors is None else import_errors
 
     def create_module(self, spec: importlib.machinery.ModuleSpec) -> None:
         return None
@@ -229,7 +234,11 @@ class MutatingLoader(importlib.abc.Loader):
         tree = applier.visit(tree)
         ast.fix_missing_locations(tree)
         code = compile(tree, self.filename, "exec")
-        exec(code, module.__dict__)
+        try:
+            exec(code, module.__dict__)
+        except Exception as exc:
+            self.import_errors.append(f"{module.__name__}: {type(exc).__name__}: {exc}")
+            raise
 
 
 class MutatingFinder(importlib.abc.MetaPathFinder):
@@ -243,6 +252,9 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         # target_modules: {module_name: source_code}
         self.target_modules = target_modules
         self.mutant = mutant
+        # Exceptions raised while executing a mutated module (see
+        # MutatingLoader.import_errors).
+        self.import_errors: list[str] = []
         self._module_to_file: dict[str, str] = {}
         for mod_name in target_modules:
             self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
@@ -262,6 +274,7 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
                 self.target_modules[fullname],
                 self.mutant,
                 filename,
+                self.import_errors,
             )
             return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
         return None

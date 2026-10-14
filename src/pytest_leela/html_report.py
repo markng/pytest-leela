@@ -189,6 +189,8 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
             "replacement": replacement_disp,
             "description": desc,
             "killed": mr.killed,
+            "status": mr.status,
+            "error": mr.error,
             "tests_run": mr.tests_run,
             "time_seconds": mr.time_seconds,
             "killing_test": (
@@ -228,9 +230,11 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
 
         # Per-file stats
         total = len(mutant_list)
-        killed = sum(1 for m in mutant_list if m["killed"])
-        survived = total - killed
-        score = (killed / total * 100.0) if total > 0 else 0.0
+        killed = sum(1 for m in mutant_list if m["status"] == "killed")
+        survived = sum(1 for m in mutant_list if m["status"] == "survived")
+        errors = total - killed - survived
+        scored = killed + survived
+        score = (killed / scored * 100.0) if scored > 0 else 0.0
 
         files[rel] = {
             "source": source,
@@ -240,6 +244,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
                 "total": total,
                 "killed": killed,
                 "survived": survived,
+                "errors": errors,
                 "score": round(score, 2),
             },
         }
@@ -248,7 +253,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
     survived_index: list[dict[str, Any]] = []
     for rel in sorted(files.keys()):
         for midx, m in enumerate(files[rel]["mutants"]):
-            if not m["killed"]:
+            if m["status"] == "survived":
                 survived_index.append(
                     {
                         "file": rel,
@@ -268,6 +273,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
             "mutants_pruned": result.mutants_pruned,
             "killed": result.killed,
             "survived": len(result.survived),
+            "errors": len(result.errors),
             "mutation_score": round(result.mutation_score, 2),
             "wall_time_seconds": result.wall_time_seconds,
         },
@@ -478,6 +484,7 @@ html, body {{
 }}
 .mut-killed  {{ color: #a6e3a1; }}
 .mut-survived {{ color: #f38ba8; font-weight: 700; }}
+.mut-error {{ color: #fab387; font-weight: 700; }}
 .code-cell {{
     padding-left: 12px !important;
 }}
@@ -533,6 +540,17 @@ html, body {{
     border-left-color: #f38ba8;
     background: rgba(243, 139, 168, 0.08);
 }}
+.mutant-card.error {{
+    border-left-color: #fab387;
+    background: rgba(250, 179, 135, 0.08);
+}}
+.mc-error {{
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 11px;
+    color: #fab387;
+    margin-top: 4px;
+    word-break: break-all;
+}}
 .mutant-card .mc-header {{
     display: flex;
     align-items: center;
@@ -548,6 +566,7 @@ html, body {{
 }}
 .status-killed   {{ background: #a6e3a1; color: #1e1e2e; }}
 .status-survived {{ background: #f38ba8; color: #1e1e2e; }}
+.status-error    {{ background: #fab387; color: #1e1e2e; }}
 .mc-desc {{
     font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
     font-size: 13px;
@@ -774,6 +793,7 @@ html, body {{
     <span class="logo">Leela</span>
     <span id="score-badge" class="score-badge"></span>
     <span id="survived-count"></span>
+    <span id="error-count" class="mut-error"></span>
     <span class="hdr-spacer"></span>
     <button class="hdr-btn" id="btn-prev" title="Previous survivor (p)">&lt; Prev</button>
     <button class="hdr-btn" id="btn-next" title="Next survivor (n)">Next &gt;</button>
@@ -949,6 +969,8 @@ window.LEELA_DATA = {json_data};
         var sc = document.getElementById("survived-count");
         sc.textContent = summary.survived + " survived";
         if (summary.survived === 0) sc.style.color = "#a6e3a1";
+        var ec = document.getElementById("error-count");
+        ec.textContent = summary.errors > 0 ? summary.errors + " errors (not scored)" : "";
     }}
 
     /* --- Sidebar --- */
@@ -963,7 +985,7 @@ window.LEELA_DATA = {json_data};
             html += '<div class="file-entry' + cls + '" data-file="' + esc(fname) + '">';
             html += '<span class="fname" title="' + esc(fname) + '">' + esc(fname) + "</span>";
             html += '<span class="file-badge ' + fileBadgeColor(st.score) + '">' + st.score.toFixed(0) + "%</span>";
-            html += '<span class="fstats">' + st.killed + "/" + st.total + "</span>";
+            html += '<span class="fstats">' + st.killed + "/" + (st.killed + st.survived) + (st.errors > 0 ? ' <span class="mut-error">!' + st.errors + "</span>" : "") + "</span>";
             html += "</div>";
         }});
         list.innerHTML = html;
@@ -1004,11 +1026,13 @@ window.LEELA_DATA = {json_data};
             // Survived?
             var hasSurvived = false;
             var hasKilled = false;
+            var eCount = 0;
             var mutCount = 0;
             if (lineMutants[ln]) {{
                 lineMutants[ln].forEach(function(m) {{
-                    if (m.killed) hasKilled = true;
-                    else hasSurvived = true;
+                    if (m.status === "killed") hasKilled = true;
+                    else if (m.status === "survived") hasSurvived = true;
+                    else eCount++;
                     mutCount++;
                 }});
             }}
@@ -1029,15 +1053,18 @@ window.LEELA_DATA = {json_data};
             var mutHtml = "";
             if (mutCount > 0) {{
                 if (hasSurvived) {{
-                    var sCount = lineMutants[ln].filter(function(m) {{ return !m.killed; }}).length;
+                    var sCount = lineMutants[ln].filter(function(m) {{ return m.status === "survived"; }}).length;
                     mutHtml = '<span class="mut-survived">' + (sCount > 1 ? "\u2717" + sCount : "\u2717") + "</span>";
                     if (hasKilled) {{
                         var kCount = lineMutants[ln].filter(function(m) {{ return m.killed; }}).length;
                         mutHtml += ' <span class="mut-killed">' + (kCount > 1 ? "\u2713" + kCount : "\u2713") + "</span>";
                     }}
-                }} else {{
-                    var kc = mutCount;
+                }} else if (hasKilled) {{
+                    var kc = mutCount - eCount;
                     mutHtml = '<span class="mut-killed">' + (kc > 1 ? "\u2713" + kc : "\u2713") + "</span>";
+                }}
+                if (eCount > 0) {{
+                    mutHtml += (mutHtml ? " " : "") + '<span class="mut-error">' + (eCount > 1 ? "!" + eCount : "!") + "</span>";
                 }}
             }}
             html += '<td class="mut-cell">' + mutHtml + "</td>";
@@ -1100,17 +1127,22 @@ window.LEELA_DATA = {json_data};
         if (mutants.length > 0) {{
             html += '<div class="detail-section"><h3>Mutants (' + mutants.length + ")</h3>";
             mutants.forEach(function(m) {{
-                var sclass = m.killed ? "" : " survived";
+                var sclass = m.status === "killed" ? "" : " " + m.status;
                 html += '<div class="mutant-card' + sclass + '">';
                 html += '<div class="mc-header">';
-                if (m.killed) {{
+                if (m.status === "killed") {{
                     html += '<span class="status-badge status-killed">Killed</span>';
+                }} else if (m.status === "error") {{
+                    html += '<span class="status-badge status-error">Error</span>';
                 }} else {{
                     html += '<span class="status-badge status-survived">Survived</span>';
                 }}
                 html += '<span class="mc-desc">' + esc(m.description) + "</span>";
                 html += "</div>";
                 html += '<div class="mc-meta">' + esc(m.node_type) + " col " + m.col_offset + " &middot; " + (m.time_seconds * 1000).toFixed(0) + "ms</div>";
+                if (m.error) {{
+                    html += '<div class="mc-error">' + esc(m.error) + "</div>";
+                }}
                 if (m.killed && m.killing_tests && m.killing_tests.length > 0) {{
                     html += '<div class="mc-tests"><div class="mc-label">Killing tests:</div>';
                     m.killing_tests.forEach(function(t) {{

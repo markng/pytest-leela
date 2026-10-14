@@ -253,3 +253,34 @@ def describe_BenchmarkPlugin():
                 call_args = MockEngine.return_value.run.call_args
                 test_dir_arg = call_args[0][1]
                 assert test_dir_arg == str(Path("/project/root") / "tests")
+
+
+def describe_benchmark_target_discovery():
+    """The project's python_files patterns reach both discovery helpers."""
+
+    def _plugin(targets):
+        from pytest_leela.benchmark import BenchmarkPlugin
+
+        config = MagicMock()
+        config.getoption.return_value = targets
+        config.getini.return_value = ["check_*.py"]
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/project/root")
+        return BenchmarkPlugin(config), session
+
+    def it_passes_python_files_to_explicit_target_discovery():
+        plugin, session = _plugin(["/some/target.py"])
+        with patch(
+            "pytest_leela.benchmark._find_target_files", return_value=[]
+        ) as mock_find:
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+        mock_find.assert_called_once_with("/some/target.py", ["check_*.py"])
+
+    def it_passes_python_files_to_default_target_discovery():
+        plugin, session = _plugin([])
+        with patch(
+            "pytest_leela.benchmark._find_default_targets", return_value=[]
+        ) as mock_find:
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+        mock_find.assert_called_once_with(Path("/project/root"), ["check_*.py"])

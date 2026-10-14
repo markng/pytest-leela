@@ -1153,3 +1153,208 @@ def describe_apply_excludes():
         files = ["/root/migrations/0001.py"]
         result = _apply_excludes(files, ["migrations/*.py"], Path("/root"))
         assert result == []
+
+
+def describe_exit_status_with_errored_mutants():
+    """Errored mutants fail the session unless ``fail_on_error = false``."""
+
+    def _finish(results, leela_config):
+        from pytest_leela.models import RunResult
+        from pytest_leela.plugin import LeelaPlugin
+
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+        plugin = LeelaPlugin(config)
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.return_value = RunResult(
+            target_files=["/fake/mod.py"],
+            total_mutants=len(results),
+            mutants_tested=len(results),
+            mutants_pruned=0,
+            results=results,
+            wall_time_seconds=0.5,
+        )
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=leela_config),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
+        ):
+            plugin.pytest_sessionfinish(session, exitstatus=0)
+        return session.exitstatus
+
+    def _result(killed, error=None):
+        from pytest_leela.models import Mutant, MutantResult, MutationPoint
+
+        point = MutationPoint(
+            file_path="/fake/mod.py",
+            module_name="mod",
+            lineno=10,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type="int",
+        )
+        return MutantResult(
+            mutant=Mutant(point=point, replacement_op="Sub", mutant_id=1),
+            killed=killed,
+            tests_run=0 if error else 1,
+            killing_test="t::a" if killed else None,
+            time_seconds=0.1,
+            error=error,
+        )
+
+    def it_fails_the_session_on_an_errored_mutant_by_default():
+        from pytest_leela.config import LeelaConfig
+
+        status = _finish([_result(True), _result(False, "no tests ran")], LeelaConfig())
+        assert status == 1
+
+    def it_passes_with_errors_when_fail_on_error_is_false():
+        from pytest_leela.config import LeelaConfig
+
+        status = _finish(
+            [_result(True), _result(False, "no tests ran")],
+            LeelaConfig(fail_on_error=False),
+        )
+        assert status == 0
+
+    def it_still_fails_on_survivors_when_fail_on_error_is_false():
+        from pytest_leela.config import LeelaConfig
+
+        status = _finish([_result(False)], LeelaConfig(fail_on_error=False))
+        assert status == 1
+
+
+def describe_outer_django_db_unblocked():
+    """pytest-django's outer DB block must be lifted for leela's inner runs."""
+
+    def _plugin(stash):
+        from pytest_leela.plugin import LeelaPlugin
+
+        config = MagicMock()
+        config.stash = stash
+        return LeelaPlugin(config)
+
+    def it_is_a_no_op_without_pytest_django(monkeypatch):
+        import sys
+
+        monkeypatch.delitem(sys.modules, "pytest_django.plugin", raising=False)
+        with _plugin(MagicMock())._outer_django_db_unblocked():
+            entered = True
+        assert entered
+
+    def it_is_a_no_op_when_pytest_django_is_disabled(monkeypatch):
+        import sys
+        import types
+
+        import pytest
+
+        fake = types.ModuleType("pytest_django.plugin")
+        fake.blocking_manager_key = pytest.StashKey()
+        monkeypatch.setitem(sys.modules, "pytest_django.plugin", fake)
+        with _plugin(pytest.Stash())._outer_django_db_unblocked():
+            entered = True
+        assert entered
+
+    def it_unblocks_the_outer_blocker_for_the_duration(monkeypatch):
+        import contextlib
+        import sys
+        import types
+
+        import pytest
+
+        events: list[str] = []
+
+        class FakeBlocker:
+            @contextlib.contextmanager
+            def unblock(self):
+                events.append("unblock")
+                try:
+                    yield
+                finally:
+                    events.append("restore")
+
+        fake = types.ModuleType("pytest_django.plugin")
+        fake.blocking_manager_key = pytest.StashKey()
+        monkeypatch.setitem(sys.modules, "pytest_django.plugin", fake)
+        stash = pytest.Stash()
+        stash[fake.blocking_manager_key] = FakeBlocker()
+
+        with _plugin(stash)._outer_django_db_unblocked():
+            events.append("inside")
+
+        assert events == ["unblock", "inside", "restore"]
+
+
+def describe_baseline_failure_handling():
+    def _session(config):
+        session = MagicMock()
+        session.config = config
+        session.config.rootpath = Path("/tmp/project")
+        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
+        session.exitstatus = 0
+        return session
+
+    def _config():
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"],
+            "diff": None,
+            "max_cores": None,
+            "max_memory": None,
+        }.get(key, default)
+        return config
+
+    def _finish(config, session):
+        from pytest_leela.config import LeelaConfig
+        from pytest_leela.engine import BaselineFailure
+        from pytest_leela.plugin import LeelaPlugin
+
+        mock_engine_cls = MagicMock()
+        mock_engine_cls.return_value.run.side_effect = BaselineFailure("boom")
+        with (
+            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
+            patch(
+                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
+            ),
+            patch("pytest_leela.plugin.Engine", mock_engine_cls),
+            patch("pytest_leela.plugin.format_terminal_report") as mock_report,
+        ):
+            LeelaPlugin(config).pytest_sessionfinish(session, exitstatus=0)
+        return mock_report
+
+    def it_writes_the_reason_and_fails_the_session():
+        config = _config()
+        session = _session(config)
+
+        mock_report = _finish(config, session)
+
+        config.get_terminal_writer.return_value.write.assert_called_once_with(
+            "\nleela: aborted: boom\n"
+        )
+        assert session.exitstatus == 1
+        mock_report.assert_not_called()
+
+    def it_prints_the_reason_without_a_terminal_writer(capsys):
+        config = _config()
+        del config.get_terminal_writer
+        session = _session(config)
+
+        _finish(config, session)
+
+        assert "\nleela: aborted: boom\n" in capsys.readouterr().out
+        assert session.exitstatus == 1
