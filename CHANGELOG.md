@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- **The clean baseline reads current local source, tests and helpers.**
+  Timestamp bytecode caches could reuse stale code after a same-size edit
+  with an unchanged mtime, accepting a failing baseline and running mutants.
+  Leela now removes only the project's source and assertion-rewrite caches
+  before coverage and the unmutated baseline, leaving installed packages alone.
+
 - **Installed packages in a virtualenv inside the project are no longer
   evicted between mutants.** Leela evicted every module whose `__file__`
   sat under the cwd (and, before a run, everything under the temp dir).

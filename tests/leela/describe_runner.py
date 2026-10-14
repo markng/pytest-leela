@@ -2,9 +2,11 @@
 
 import importlib
 import os
+import py_compile
 import sys
 import threading
 import types
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,6 +19,7 @@ from pytest_leela.runner import (
     ProjectModuleScope,
     _ResultCollector,
     _clear_framework_caches,
+    _prepare_source_bytecode,
     _django_registry_module_names,
     _inner_run_error,
     _exception_summary,
@@ -94,6 +97,45 @@ def describe_ResultCollector():
         assert collector.total == 3
         assert collector.passed == ["test_1", "test_3"]
         assert collector.failed == ["test_2"]
+
+
+def describe_prepare_source_bytecode():
+    def it_preserves_installed_packages_and_unrelated_cache_files(tmp_path):
+        source = tmp_path / "local.py"
+        source.write_text("value = 1\n")
+        installed = tmp_path / "site-packages" / "vendor.py"
+        installed.parent.mkdir()
+        installed.write_text("value = 2\n")
+        local_cache = Path(py_compile.compile(str(source), doraise=True))
+        installed_cache = Path(py_compile.compile(str(installed), doraise=True))
+        unrelated = local_cache.parent / "unrelated.txt"
+        unrelated.write_text("keep")
+        _prepare_source_bytecode(ProjectModuleScope(str(tmp_path)))
+        assert not local_cache.exists()
+        assert installed_cache.exists()
+        assert unrelated.read_text() == "keep"
+
+    def it_propagates_a_real_cache_permission_error(tmp_path):
+        source = tmp_path / "denied.py"
+        source.write_text("value = 1\n")
+        cache = Path(py_compile.compile(str(source), doraise=True))
+        cache.parent.chmod(0o500)
+        try:
+            with pytest.raises(PermissionError):
+                _prepare_source_bytecode(ProjectModuleScope(str(tmp_path)))
+        finally:
+            cache.parent.chmod(0o700)
+        assert cache.exists()
+
+    def it_propagates_an_unreadable_source_directory(tmp_path):
+        denied = tmp_path / "denied"
+        denied.mkdir()
+        denied.chmod(0)
+        try:
+            with pytest.raises(PermissionError):
+                _prepare_source_bytecode(ProjectModuleScope(str(tmp_path)))
+        finally:
+            denied.chmod(0o700)
 
 
 def describe_clear_framework_caches():

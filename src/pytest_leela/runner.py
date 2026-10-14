@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import importlib.util
 import ntpath  # noqa: F401 — keep in sys.modules (see engine.py comment)
 import os
 import posixpath  # noqa: F401 — same as ntpath
@@ -13,6 +14,7 @@ import threading
 import time
 import types
 from collections.abc import Callable, Generator
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from _pytest.config import ConftestImportFailure
@@ -656,6 +658,38 @@ def run_tests_for_mutant(
     return session.run().result_for(mutant)
 
 
+def _raise_bytecode_scan_error(error: OSError) -> None:
+    raise error
+
+
+def _prepare_source_bytecode(
+    scope: ProjectModuleScope, target_files: list[str] | None = None
+) -> None:
+    """Discard only local source caches before a fresh, unmutated run.
+
+    Timestamp caches can accept changed source of the same size and mtime,
+    including pytest's assertion-rewritten tests. Installed packages stay out.
+    """
+    sources = {Path(os.path.abspath(path)) for path in target_files or []}
+    for directory, subdirs, files in os.walk(
+        scope.cwd, onerror=_raise_bytecode_scan_error
+    ):
+        subdirs[:] = [
+            name for name in subdirs
+            if scope.contains(os.path.join(directory, name) + os.sep)
+        ]
+        sources.update(
+            Path(directory, name) for name in files if name.endswith(".py")
+        )
+    for source in sources:
+        cache = Path(importlib.util.cache_from_source(str(source)))
+        cache.unlink(missing_ok=True)
+        for rewritten in cache.parent.glob(
+            f"{source.stem}.{sys.implementation.cache_tag}-pytest-*.pyc"
+        ):
+            rewritten.unlink(missing_ok=True)
+
+
 def run_baseline(
     test_ids: list[str] | None,
     test_dir: str | None,
@@ -663,6 +697,7 @@ def run_baseline(
     scope: ProjectModuleScope,
 ) -> InnerSession:
     """Run the tests once with no import hook installed: nothing is mutated."""
+    _prepare_source_bytecode(scope)
     session = InnerSession(
         None,
         test_ids,

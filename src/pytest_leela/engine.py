@@ -27,6 +27,7 @@ from pytest_leela.operators import build_allowed_keys, count_pruned, mutations_f
 from pytest_leela.resources import ResourceLimits, apply_limits, is_memory_ok
 from pytest_leela.runner import (
     ProjectModuleScope,
+    _prepare_source_bytecode,
     precompute_user_modules,
     run_baseline,
     run_tests_for_mutant,
@@ -125,6 +126,8 @@ class Engine:
         start = time.monotonic()
 
         _clean_process_state()
+        scope = ProjectModuleScope()
+        _prepare_source_bytecode(scope, target_files)
 
         if limits is not None:
             apply_limits(limits)
@@ -196,7 +199,6 @@ class Engine:
         # 8. Precompute user modules once before the mutation loop.
         # This turns O(N) scans of sys.modules into O(K) targeted pops
         # inside each run_tests_for_mutant call (K << N).
-        scope = ProjectModuleScope()
         known_user_modules = precompute_user_modules(scope)
         test_times = coverage_map.test_times if coverage_map is not None else None
 

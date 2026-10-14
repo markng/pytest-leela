@@ -1,9 +1,12 @@
 """Tests for pytest_leela.engine."""
 
+import importlib.util
 import os
+import struct
 import sys
 import tempfile
 import types
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -955,6 +958,70 @@ def describe_Engine_run_baseline():
             Engine(use_types=False, use_coverage=False).run([str(target)])
 
         mock_baseline.assert_not_called()
+
+
+def describe_Engine_baseline_source_freshness():
+    @pytest.mark.parametrize("changed_input", ["target", "helper", "test"])
+    @pytest.mark.parametrize("selected", [False, True])
+    def it_rejects_same_timestamp_edits_before_running_mutants(
+        tmp_path, monkeypatch, changed_input, selected
+    ):
+        from pytest_leela.engine import run_tests_for_mutant
+
+        monkeypatch.setattr(sys, "dont_write_bytecode", False)
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        target = tmp_path / "fresh_target.py"
+        helper = tmp_path / "fresh_helper.py"
+        target.write_text(
+            "from fresh_helper import offset\n\n"
+            "def add(a, b):\n    return a + b + offset()\n"
+        )
+        helper.write_text("def offset():\n    return 0\n")
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        test = tests / "test_fresh.py"
+        test.write_text(
+            "from fresh_target import add\n\n"
+            "def test_add():\n    assert add(1, 2) == 3\n"
+        )
+        options = (
+            {"test_node_ids": ["tests/test_fresh.py::test_add"]}
+            if selected
+            else {"test_dir": str(tests)}
+        )
+        first = Engine(use_types=False, use_coverage=False).run([str(target)], **options)
+        assert first.mutants_tested > 0
+        assert "fresh_target" not in sys.modules
+        changed, old, new = {
+            "target": (target, "a + b", "a - b"),
+            "helper": (helper, "return 0", "return 1"),
+            "test": (test, "== 3", "== 4"),
+        }[changed_input]
+        cache = Path(importlib.util.cache_from_source(str(changed)))
+        if changed_input == "test":
+            cache = next(cache.parent.glob("test_fresh.*-pytest-*.pyc"))
+        raw = cache.read_bytes()
+        flags, timestamp, size = struct.unpack("<III", raw[4:16])
+        before = changed.stat()
+        assert flags == 0
+        assert timestamp == int(before.st_mtime) & 0xFFFFFFFF
+        assert size == before.st_size
+        changed.write_text(changed.read_text().replace(old, new))
+        os.utime(changed, ns=(before.st_atime_ns, before.st_mtime_ns))
+        assert changed.stat().st_size == size
+        assert changed.stat().st_mtime_ns == before.st_mtime_ns
+        print(
+            f"freshness input={changed_input} selected={selected} cache={cache} "
+            f"flags={flags} timestamp={timestamp} size={size} mtime_ns={before.st_mtime_ns}"
+        )
+        with patch(
+            "pytest_leela.engine.run_tests_for_mutant", wraps=run_tests_for_mutant
+        ) as real_mutants:
+            with pytest.raises(BaselineFailure, match="no mutants were run"):
+                Engine(use_types=False, use_coverage=False).run([str(target)], **options)
+            real_mutants.assert_not_called()
+        print("freshness outcome=BaselineFailure real_mutant_calls=0")
 
 
 def describe_Engine_check_baseline():
