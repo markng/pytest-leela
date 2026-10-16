@@ -1,6 +1,7 @@
 """Tests for pytest_leela.runner — test execution against mutants."""
 
 import importlib
+import re
 import os
 import py_compile
 import sys
@@ -1708,8 +1709,11 @@ def describe_run_tests_for_mutant_classification():
         assert result.killing_tests == ["t::b"]
         assert result.test_ids_run == ["t::a", "t::b"]
 
-    def it_kills_on_a_setup_error_even_with_zero_calls(tmp_path, monkeypatch):
-        """A fixture broken by the mutant is a test catching it."""
+    def it_classifies_a_setup_error_as_inconclusive_without_causal_proof(
+        tmp_path, monkeypatch
+    ):
+        """With a mocked inner run the clean control also 'fails', so the
+        setup error cannot be proven causal: report inconclusive error."""
         result = _run(
             tmp_path,
             monkeypatch,
@@ -1717,11 +1721,16 @@ def describe_run_tests_for_mutant_classification():
             [_FakeReport("t::c", "setup", passed=False, failed=True)],
             pytest.ExitCode.TESTS_FAILED,
         )
-        assert result.status == "killed"
+        assert result.status == "error"
         assert result.tests_run == 0
-        assert result.killing_test == "t::c"
+        assert "inconclusive" in result.error
+        assert "setup: t::c" in result.error
 
-    def it_lists_failures_before_setup_errors(tmp_path, monkeypatch):
+    def it_lists_only_call_failures_when_call_and_setup_both_fail(
+        tmp_path, monkeypatch
+    ):
+        """Call-phase assertion failures are definite kills; setup errors
+        alongside them are incidental and excluded from killing_tests."""
         result = _run(
             tmp_path,
             monkeypatch,
@@ -1732,8 +1741,9 @@ def describe_run_tests_for_mutant_classification():
             ],
             pytest.ExitCode.TESTS_FAILED,
         )
+        assert result.status == "killed"
         assert result.killing_test == "t::f"
-        assert result.killing_tests == ["t::f", "t::e"]
+        assert result.killing_tests == ["t::f"]
 
     def it_errors_when_no_tests_ran(tmp_path, monkeypatch):
         result = _run(tmp_path, monkeypatch, "cls_none", [], pytest.ExitCode.OK)
@@ -2244,47 +2254,55 @@ def describe_django_registry_admin_site_walk():
         assert _django_registry_module_names() == frozenset({"_noadmin.admin"})
 
 
-def describe_import_error_kill_rule():
-    """The mutated module raised on import: a kill only if pytest reported it
-    as a failure, for every exit code an inner run can return."""
+def describe_import_error_inconclusive_rule():
+    """The mutated module raised on import: classified as an inconclusive
+    error until a clean control and a mutant confirmation prove causality."""
 
     codes = pytest.ExitCode
 
     @pytest.mark.parametrize(
-        ("exit_code", "session_started", "collection_failed", "status", "error"),
+        ("exit_code", "session_started", "collection_failed", "error_pattern"),
         [
-            (codes.OK, True, False, "error", "no tests ran"),
-            (codes.TESTS_FAILED, True, True, "killed", None),
-            (codes.INTERRUPTED, True, True, "killed", None),
-            (codes.INTERRUPTED, True, False, "error", "pytest exited with INTERRUPTED"),
+            (codes.OK, True, False, "no tests ran"),
             (
-                codes.INTERNAL_ERROR,
+                codes.TESTS_FAILED,
                 True,
-                False,
-                "error",
-                "pytest exited with INTERNAL_ERROR",
+                True,
+                "inconclusive: no tests ran .*phases: collection: test_x.py",
             ),
-            (codes.USAGE_ERROR, False, False, "killed", None),
-            (codes.USAGE_ERROR, True, True, "killed", None),
-            (codes.USAGE_ERROR, True, False, "error", "pytest exited with USAGE_ERROR"),
             (
-                codes.NO_TESTS_COLLECTED,
+                codes.INTERRUPTED,
                 True,
-                False,
-                "error",
-                "pytest exited with NO_TESTS_COLLECTED",
+                True,
+                "inconclusive: pytest exited with INTERRUPTED .*phases: collection: test_x.py",
             ),
-            (99, True, False, "error", "pytest exited with exit code 99"),
+            (codes.INTERRUPTED, True, False, "pytest exited with INTERRUPTED"),
+            (codes.INTERNAL_ERROR, True, False, "pytest exited with INTERNAL_ERROR"),
+            (
+                codes.USAGE_ERROR,
+                False,
+                False,
+                "inconclusive: pytest exited with USAGE_ERROR; phases: import: "
+                "rule_calc_4_False_False: ZeroDivisionError",
+            ),
+            (
+                codes.USAGE_ERROR,
+                True,
+                True,
+                "inconclusive: pytest exited with USAGE_ERROR .*phases: collection: test_x.py",
+            ),
+            (codes.USAGE_ERROR, True, False, "pytest exited with USAGE_ERROR"),
+            (codes.NO_TESTS_COLLECTED, True, False, "pytest exited with NO_TESTS_COLLECTED"),
+            (99, True, False, "pytest exited with exit code 99"),
         ],
     )
-    def it_applies_the_rule(
+    def it_classifies_the_run_as_error_until_proven(
         tmp_path,
         monkeypatch,
         exit_code,
         session_started,
         collection_failed,
-        status,
-        error,
+        error_pattern,
     ):
         name = f"rule_calc_{int(exit_code)}_{session_started}_{collection_failed}"
         monkeypatch.chdir(tmp_path)
@@ -2310,21 +2328,17 @@ def describe_import_error_kill_rule():
             return exit_code
 
         with patch("pytest_leela.runner.pytest.main", side_effect=fake_main):
-            result = run_tests_for_mutant(
-                mutant,
-                {name: source},
-                {name: str(tmp_path / f"{name}.py")},
-                test_dir=str(tmp_path),
+            finder = install_hook(
+                {name: source}, mutant, {name: str(tmp_path / f"{name}.py")}
             )
+            session = InnerSession(
+                finder, None, str(tmp_path), ProjectModuleScope(str(tmp_path))
+            )
+            result = session.run().result_for(mutant)
 
-        assert result.status == status
-        assert result.error == error
-        if status == "killed":
-            expected = ["test_x.py"] if collection_failed else []
-            assert result.killing_tests[: len(expected)] == expected
-            if not collection_failed:
-                [killing] = result.killing_tests
-                assert killing.startswith(f"<import of {name}: ZeroDivisionError:")
+        assert result.status == "error"
+        assert result.killed is False
+        assert re.search(error_pattern, result.error or "")
 
 
 def describe_collection_failures():
@@ -2349,7 +2363,11 @@ def describe_collection_failures():
     ):
         """With -x and a directory, the first module's collection error makes
         pytest stop and exit TESTS_FAILED: the path the judge's twoassert probe
-        takes.  The Session's own echo of that failure is not a killing test."""
+        takes.  The Session's own echo of that failure is not a killing test.
+
+        A clean control passes and the mutant failure recurs, so the collection
+        failure is proven causal and counts as a kill.
+        """
         mutant, sources, files = _mutant(
             tmp_path, monkeypatch, "two_calc", "FloorDiv", "Mult"
         )
@@ -2362,15 +2380,11 @@ def describe_collection_failures():
                 f"def test_{letter}():\n"
                 "    assert two_calc.RATIO == 5\n"
             )
-        finder = install_hook(sources, mutant, files)
 
-        session = InnerSession(
-            finder, None, str(test_dir), ProjectModuleScope(str(tmp_path))
-        ).run()
-        result = session.result_for(mutant)
+        result = run_tests_for_mutant(
+            mutant, sources, files, test_dir=str(test_dir)
+        )
 
-        assert session.exit_code == pytest.ExitCode.TESTS_FAILED
-        assert session.collector.collection_error_ids == ["two_tests/test_a.py"]
         assert result.status == "killed"
         assert result.killing_tests == ["two_tests/test_a.py"]
         assert result.tests_run == 0
@@ -2569,11 +2583,12 @@ def describe_collection_failures():
             "conftest called pytest.exit() at import (calc unavailable)"
         )
 
-    def it_reports_a_conftest_check_failing_during_collection_as_an_error(
+    def it_kills_when_a_conftest_check_fails_only_under_the_mutant(
         tmp_path, monkeypatch
     ):
-        """The conftest's own check, not the target, raised: an error, as it
-        is when the conftest loads before the session (confassert)."""
+        """The conftest's own check fails during collection only because the
+        mutant changed the target value.  A clean control passes and the
+        failure recurs, so the check counts as a kill."""
         mutant, sources, files = _mutant(
             tmp_path, monkeypatch, "collcheck_calc", "FloorDiv", "Mult"
         )
@@ -2589,9 +2604,12 @@ def describe_collection_failures():
 
         result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
 
-        assert result.status == "error"
-        assert result.killing_tests == []
-        assert "RuntimeError: ratio changed" in result.error
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.killing_tests[0] in (
+            "collcheck_tests/sub",
+            os.path.join("collcheck_tests", "sub", "conftest.py"),
+        )
 
     def it_kills_when_the_target_breaks_a_conftest_loaded_during_collection(
         tmp_path, monkeypatch
@@ -2654,6 +2672,27 @@ def describe_collection_failures():
             run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
 
     def describe_result_collector():
+        def it_uses_the_conftest_path_when_session_report_has_no_nodeid():
+            collector = _ResultCollector()
+            from _pytest.config import ConftestImportFailure
+
+            cause = RuntimeError("broken")
+            try:
+                failure = ConftestImportFailure(Path("tests/conftest.py"), cause=cause)
+            except TypeError:
+                failure = ConftestImportFailure(
+                    Path("tests/conftest.py"),
+                    (type(cause), cause, cause.__traceback__),
+                )
+            call = types.SimpleNamespace(excinfo=types.SimpleNamespace(value=failure))
+            node = types.SimpleNamespace(nodeid="")
+            report = types.SimpleNamespace(nodeid="")
+
+            collector.pytest_exception_interact(node, call, report)
+
+            assert collector.conftest_failure_ids == {"tests/conftest.py"}
+            assert collector._session_conftest_failure == "tests/conftest.py"
+
         def it_ignores_the_session_report_that_echoes_a_module_failure():
             collector = _ResultCollector()
 
@@ -2697,3 +2736,725 @@ def describe_collection_failures():
             assert _inner_run_error(pytest.ExitCode.INTERRUPTED, collector) == (
                 "pytest exited with INTERRUPTED (test_a.py: RuntimeError: boom)"
             )
+
+
+def describe_causal_proof_for_inconclusive_failures():
+    """Setup/teardown/collection/import failures are errors unless a clean
+    unmutated control passes and the same failure recurs on mutant
+    confirmation."""
+
+    def it_errors_when_a_flaky_collection_failure_does_not_recur(tmp_path, monkeypatch):
+        """A flaky import OSError kills the first mutant run but is gone on
+        the confirmation run, so the result is inconclusive error, not kill."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        counter = tmp_path / "import_counter.txt"
+        counter.write_text("0")
+
+        target = tmp_path / "flaky_target.py"
+        target.write_text(
+            "from pathlib import Path\n"
+            "_counter = Path(__file__).with_name('import_counter.txt')\n"
+            "_n = int(_counter.read_text())\n"
+            "_counter.write_text(str(_n + 1))\n"
+            "if _n == 0:\n"
+            "    raise OSError('flaky import failure')\n"
+            "\n"
+            "def value():\n"
+            "    return 1\n"
+        )
+
+        test_dir = tmp_path / "flaky_tests"
+        test_dir.mkdir()
+        (test_dir / "test_flaky.py").write_text(
+            "from flaky_target import value\n\n"
+            "def test_value():\n"
+            "    assert value() in (1, None)\n"
+        )
+
+        source = target.read_text()
+        points = find_mutation_points(source, str(target), "flaky_target")
+        # Mutate the return in value() to None; the test is weak enough
+        # that the mutant survives when the import succeeds.
+        point = next(p for p in points if p.node_type == "Return")
+        mutant = Mutant(point=point, replacement_op="None", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"flaky_target": source},
+            {"flaky_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert "inconclusive" in (result.error or "")
+        assert "same-failure recurrence was not established" in result.error
+        assert "OSError: flaky import failure" in result.error
+        assert "confirmation: survived" in result.error
+
+    def it_errors_when_the_control_run_also_fails(tmp_path, monkeypatch):
+        """A fixture that fails setup in every run is ambient, not mutant
+        caused; the clean control also fails, so the result is error."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "ambient_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "ambient_tests"
+        test_dir.mkdir()
+        (test_dir / "test_a_pass.py").write_text(
+            "def test_a_pass():\n    assert True\n"
+        )
+        (test_dir / "test_b_ambient.py").write_text(
+            "import pytest\n"
+            "from ambient_target import add\n\n"
+            "@pytest.fixture\n"
+            "def broken():\n"
+            "    assert False, 'ambient setup failure'\n\n"
+            "def test_add(broken):\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "ambient_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"ambient_target": source},
+            {"ambient_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert "inconclusive" in (result.error or "")
+        assert "control run also failed" in (result.error or "")
+        assert "original result: inconclusive:" in (result.error or "")
+        assert "failed: ambient_tests/test_b_ambient.py::test_add" in result.error
+        assert "setup: ambient_tests/test_b_ambient.py::test_add" in result.error
+        assert result.error.count("AssertionError: ambient setup failure") == 2
+        assert result.tests_run == 1
+        _assert_inconclusive_diagnostics_roundtrip(
+            result, tmp_path, ["setup:", "AssertionError: ambient setup failure", "control run also failed"]
+        )
+
+    def it_preserves_control_error_when_ambient_setup_fails_before_any_call(
+        tmp_path, monkeypatch
+    ):
+        """If setup fails before any call, retain the control's specific
+        no-tests-ran error rather than replacing it with a generic failure list."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "ambient_zero_target.py"
+        target.write_text(source)
+        test_dir = tmp_path / "ambient_zero_tests"
+        test_dir.mkdir()
+        (test_dir / "test_ambient.py").write_text(
+            "import pytest\n"
+            "from ambient_zero_target import add\n\n"
+            "@pytest.fixture\n"
+            "def broken():\n"
+            "    assert False, 'ambient setup failure'\n\n"
+            "def test_add(broken):\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "ambient_zero_target")
+        mutant = Mutant(
+            point=next(p for p in points if p.node_type == "BinOp"),
+            replacement_op="Sub",
+            mutant_id=0,
+        )
+        result = run_tests_for_mutant(
+            mutant,
+            {"ambient_zero_target": source},
+            {"ambient_zero_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert "control run also failed (no tests ran" in (result.error or "")
+        assert "original result: inconclusive: no tests ran" in result.error
+        assert "setup: ambient_zero_tests/test_ambient.py::test_add" in result.error
+        assert result.error.count("AssertionError: ambient setup failure") == 2
+        assert result.tests_run == 0
+        _assert_inconclusive_diagnostics_roundtrip(
+            result, tmp_path, ["setup:", "AssertionError: ambient setup failure", "no tests ran"]
+        )
+
+    def it_kills_when_a_setup_failure_recurrs_after_a_prior_test_passes(
+        tmp_path, monkeypatch
+    ):
+        """A prior test passing does not make a later setup failure causal;
+        the bounded clean control and mutant confirmation are still required."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "nonzero_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "nonzero_tests"
+        test_dir.mkdir()
+        (test_dir / "test_a_pass.py").write_text("def test_a_pass():\n    assert True\n")
+        (test_dir / "test_b_setup.py").write_text(
+            "import pytest\n"
+            "from nonzero_target import add\n\n"
+            "@pytest.fixture\n"
+            "def three():\n"
+            "    assert add(1, 2) == 3\n"
+            "    return 3\n\n"
+            "def test_b_setup(three):\n"
+            "    assert three == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "nonzero_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        finder = install_hook(
+            {"nonzero_target": source}, mutant, {"nonzero_target": str(target)}
+        )
+        session = InnerSession(
+            finder,
+            None,
+            str(test_dir),
+            ProjectModuleScope(str(tmp_path)),
+        ).run()
+        unverified = session.result_for(mutant)
+        assert unverified.status == "error"
+        assert unverified.error.startswith("inconclusive:")
+        assert "setup: nonzero_tests/test_b_setup.py::test_b_setup" in unverified.error
+        assert "AssertionError" in unverified.error
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"nonzero_target": source},
+            {"nonzero_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        assert result.tests_run == 1
+        assert result.killing_test == "nonzero_tests/test_b_setup.py::test_b_setup"
+        assert result.error is None
+
+    def it_kills_when_a_setup_failure_recurrs_after_a_clean_control(
+        tmp_path, monkeypatch
+    ):
+        """A fixture broken by the mutant fails setup; the control passes and
+        the failure recurs, so the mutant is killed."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "proof_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "proof_tests"
+        test_dir.mkdir()
+        (test_dir / "test_proof.py").write_text(
+            "import pytest\n"
+            "from proof_target import add\n\n"
+            "@pytest.fixture\n"
+            "def three():\n"
+            "    assert add(1, 2) == 3\n"
+            "    return 3\n\n"
+            "def test_add(three):\n"
+            "    assert three == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "proof_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"proof_target": source},
+            {"proof_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 0
+        assert result.killing_test == "proof_tests/test_proof.py::test_add"
+
+
+def _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, required):
+    import json
+    from pytest_leela.models import RunResult
+    from pytest_leela.output import format_json_report, format_terminal_report
+    from pytest_leela.html_report import generate_html_report
+
+    assert result.status == "error"
+    assert not result.killed
+    assert result.killing_tests == []
+    run = RunResult([result.mutant.point.file_path], 1, 1, 0, [result], 0.0)
+    assert run.mutants_scored == 0
+    assert run.mutation_score == 0.0
+    assert run.errors == [result]
+    terminal = format_terminal_report(run)
+    json_report = format_json_report(run)
+    # Retain actual renderer outputs during this already-required focused run.
+    (tmp_path / "evidence-terminal.txt").write_text(terminal)
+    (tmp_path / "evidence-report.json").write_text(json_report)
+    import hashlib
+    import pytest_leela.runner as runner_module
+    import pytest_leela.import_hook as hook_module
+
+    paths = [Path(runner_module.__file__), Path(hook_module.__file__), Path(__file__)]
+    (tmp_path / "evidence-source-binding.json").write_text(json.dumps({
+        str(p.resolve()): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths
+    }, indent=2))
+    data = json.loads(json_report)
+    assert data["errors"] == 1
+    assert data["error_mutants"][0]["error"] == result.error
+    html = tmp_path / "evidence.html"
+    generate_html_report(run, str(html))
+    embedded = html.read_text().split("window.LEELA_DATA = ", 1)[1]
+    html_data, _ = json.JSONDecoder().raw_decode(embedded)
+    rendered = next(iter(html_data["files"].values()))["mutants"][0]
+    assert rendered["error"] == result.error
+    assert rendered["tests_run"] == result.tests_run
+    for detail in required:
+        assert detail in result.error
+        assert detail in terminal
+        assert detail in data["error_mutants"][0]["error"]
+        assert detail in rendered["error"]
+
+
+def describe_same_failure_evidence():
+    """Real baseline/control/confirmation sessions, never fabricated outcomes."""
+
+    counter_code = (
+        "from pathlib import Path\n"
+        "counter = Path(__file__).parents[1] / 'attempts.txt'\n"
+        "attempt = int(counter.read_text())\n"
+        "counter.write_text(str(attempt + 1))\n"
+    )
+
+    def _project(tmp_path, monkeypatch, test_source, prior=False, source=None):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = source or "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "evidence_target.py"
+        target.write_text(source)
+        tests = tmp_path / "evidence_tests"
+        tests.mkdir()
+        if prior:
+            (tests / "test_a_prior.py").write_text("def test_prior():\n    pass\n")
+        (tests / "test_b_evidence.py").write_text(test_source)
+        (tmp_path / "attempts.txt").write_text("0")
+        point = next(
+            p for p in find_mutation_points(source, str(target), "evidence_target")
+            if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        return Mutant(point, "Sub", 0), source, target, tests
+
+    def _baseline_then_mutant(tmp_path, project, test_ids=None, test_times=None):
+        from pytest_leela.runner import run_baseline
+
+        mutant, source, target, tests = project
+        scope = ProjectModuleScope(str(tmp_path))
+        known = precompute_user_modules(scope)
+        baseline = run_baseline(test_ids, str(tests), known, scope)
+        assert baseline.error() is None
+        assert baseline.failures() == []
+        return run_tests_for_mutant(
+            mutant, {"evidence_target": source}, {"evidence_target": str(target)},
+            test_ids=test_ids, test_dir=str(tests), known_user_modules=known,
+            scope=scope, test_times=test_times,
+        )
+
+    @pytest.mark.parametrize("prior", [False, True])
+    @pytest.mark.parametrize(
+        ("first", "last", "details"),
+        [
+            ("raise OSError('endpoint A unavailable')",
+             "raise ValueError('invalid endpoint B response')",
+             ["OSError: endpoint A unavailable", "ValueError: invalid endpoint B response"]),
+            ("raise OSError('endpoint A unavailable')",
+             "raise OSError('endpoint B unavailable')",
+             ["OSError: endpoint A unavailable", "OSError: endpoint B unavailable"]),
+            ("raise RuntimeError('service failed') from OSError('endpoint A unavailable')",
+             "raise RuntimeError('service failed') from ValueError('endpoint B invalid')",
+             ["RuntimeError: service failed", "OSError: endpoint A unavailable", "ValueError: endpoint B invalid"]),
+            ("raise ExceptionGroup('service failed', [OSError('endpoint A unavailable')])",
+             "raise ExceptionGroup('service failed', [ValueError('endpoint B invalid')])",
+             ["ExceptionGroup: service failed", "OSError: endpoint A unavailable", "ValueError: endpoint B invalid"]),
+        ],
+        ids=["different-class", "different-message", "different-cause", "different-group-child"],
+    )
+    def it_does_not_kill_different_failures_at_the_same_setup_node(
+        tmp_path, monkeypatch, prior, first, last, details
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            f"    if attempt == 1:\n        {first}\n"
+            f"    if attempt == 3:\n        {last}\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n", prior)
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert result.tests_run == int(prior)
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["original", "control", "confirmation", "setup:", "test_weak", *details])
+
+    def it_distinguishes_setup_from_teardown_at_the_same_node(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('same message')\n"
+            "    yield\n"
+            "    if attempt == 3:\n        raise OSError('same message')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert result.tests_run == 1
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["setup:", "teardown:", "OSError: same message", "confirmation"])
+
+    def it_distinguishes_collection_exceptions_and_retains_both(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            counter_code + "from evidence_target import add\n"
+            "if attempt == 1:\n    raise OSError('endpoint A unavailable')\n"
+            "if attempt == 3:\n    raise ValueError('endpoint B invalid')\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert result.tests_run == 0
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["collection:", "OSError: endpoint A unavailable", "ValueError: endpoint B invalid"])
+
+    @pytest.mark.parametrize("prior", [False, True])
+    def it_preserves_original_and_failed_control_exceptions(tmp_path, monkeypatch, prior):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('original endpoint failed')\n"
+            "    if attempt == 2:\n        raise RuntimeError('control service unavailable')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n", prior)
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.tests_run == int(prior)
+        assert (tmp_path / "attempts.txt").read_text() == "3"  # no confirmation
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["control run also failed", "setup:", "original", "OSError: original endpoint failed", "RuntimeError: control service unavailable"])
+
+    def it_retains_a_truly_surviving_confirmation_after_green_baseline(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            counter_code + "from evidence_target import add\n"
+            "if attempt == 1:\n    raise OSError('transient collection outage')\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.tests_run == 1
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["OSError: transient collection outage", "collection:", "control", "confirmation", "survived"])
+
+    def it_retains_a_different_call_failure_on_confirmation(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('transient setup outage')\n"
+            "    return attempt\n"
+            "def test_weak(endpoint):\n"
+            "    assert endpoint != 3, 'confirmation assertion failed'\n"
+            "    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["OSError: transient setup outage", "call:", "AssertionError: confirmation assertion failed"])
+
+    @pytest.mark.parametrize(
+        "phase", ["setup", "setup-group", "teardown", "collection", "import"]
+    )
+    def it_preserves_genuine_same_failure_kills(tmp_path, monkeypatch, phase):
+        code = ("import pytest\nfrom evidence_target import add\n"
+                "@pytest.fixture\ndef endpoint():\n")
+        if phase == "teardown":
+            code += "    yield\n"
+        code += "    if add(1, 2) != 3:\n"
+        if phase == "setup-group":
+            code += "        raise ExceptionGroup('mutant broke endpoint', [OSError('endpoint unavailable')])\n"
+        else:
+            code += "        raise OSError('mutant broke endpoint')\n"
+        code += "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n"
+        if phase == "collection":
+            code = ("from evidence_target import add\n"
+                    "if add(1, 2) != 3:\n    raise OSError('mutant broke endpoint')\n"
+                    "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        source = None
+        if phase == "import":
+            source = ("DIVISOR = 1 + 1\n"
+                      "try:\n    RATIO = 10 // DIVISOR\n"
+                      "except ZeroDivisionError as exc:\n    raise RuntimeError('ratio unavailable') from exc\n"
+                      "def add(a, b):\n    return a + b\n")
+            code = "def test_weak():\n    pass\n"
+        project = _project(tmp_path, monkeypatch, code, source=source)
+        if phase == "import":
+            (project[3] / "conftest.py").write_text("import evidence_target\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == int(phase == "teardown")
+        assert result.killing_tests
+
+    def it_keeps_call_assertion_kills_even_with_a_teardown_error(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n    yield\n"
+            "    if add(1, 2) != 3:\n        raise OSError('teardown endpoint failed')\n"
+            "def test_strong(endpoint):\n    assert add(1, 2) == 3\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 1
+        assert result.killing_tests == ["evidence_tests/test_b_evidence.py::test_strong"]
+
+    def it_errors_on_non_idempotent_registration_after_an_engine_baseline(tmp_path, monkeypatch):
+        import builtins
+        from pytest_leela.engine import Engine
+
+        monkeypatch.setattr(builtins, "_issue13_registration", False, raising=False)
+        source = ("import builtins\n"
+                  "if builtins._issue13_registration:\n    raise RuntimeError('registry already installed')\n"
+                  "builtins._issue13_registration = True\n"
+                  "def add(a, b):\n    return a + b\n")
+        project = _project(tmp_path, monkeypatch,
+            "from evidence_target import add\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), (int, float))\n", source=source)
+        run = Engine(use_types=False, use_coverage=False, enabled_categories=["arithmetic"]).run(
+            [str(project[2])], test_dir=str(project[3]))
+        assert run.results
+        assert all(r.status == "error" for r in run.results)
+        assert run.mutants_scored == 0
+        assert run.killed == 0
+        for result in run.results:
+            assert result.tests_run == 0
+            _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["RuntimeError: registry already installed", "control run also failed", "collection:"])
+
+    @pytest.mark.parametrize(
+        "kind", ["implicit-context", "cycle", "broken-message", "broken-group-child"]
+    )
+    def it_preserves_meaningful_chains_and_never_proves_uncertain_exceptions(
+        tmp_path, monkeypatch, kind
+    ):
+        failure = {
+            "implicit-context": (
+                "        try:\n"
+                "            raise OSError('first endpoint' if attempt == 1 else 'second endpoint')\n"
+                "        except OSError:\n            raise RuntimeError('same wrapper')\n"
+            ),
+            "cycle": (
+                "        failure = RuntimeError('cyclic endpoint failure')\n"
+                "        failure.__cause__ = failure\n        raise failure\n"
+            ),
+            "broken-message": "        raise BrokenMessage()\n",
+            "broken-group-child": "        raise ExceptionGroup('endpoint group', [BrokenMessage()])\n",
+        }[kind]
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "class BrokenMessage(RuntimeError):\n"
+            "    def __str__(self):\n        raise ValueError('message formatter failed')\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt in (1, 3):\n" + failure +
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        required = {
+            "implicit-context": ["RuntimeError: same wrapper", "OSError: first endpoint", "OSError: second endpoint"],
+            "cycle": ["RuntimeError: cyclic endpoint failure", "cycle"],
+            "broken-message": ["BrokenMessage", "message unavailable", "ValueError"],
+            "broken-group-child": ["ExceptionGroup: endpoint group", "BrokenMessage", "message unavailable"],
+        }[kind]
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["setup:", "original", "confirmation", *required])
+
+    def it_does_not_promote_a_plugin_failure_without_exception_evidence(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            "from evidence_target import add\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        (project[3] / "conftest.py").write_text(
+            "import pytest\n"
+            "@pytest.hookimpl(hookwrapper=True)\n"
+            "def pytest_runtest_makereport(item, call):\n"
+            "    outcome = yield\n    report = outcome.get_result()\n"
+            "    if report.when == 'setup':\n"
+            "        from evidence_target import add\n"
+            "        if add(1, 2) != 3:\n"
+            "            report.outcome = 'failed'\n"
+            "            report.longrepr = 'plugin rejected endpoint without exception'\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "setup:", "plugin rejected endpoint without exception", "confirmation",
+            "exception evidence unavailable",
+        ])
+
+    @pytest.mark.parametrize("bridge", [False, True])
+    def it_distinguishes_causes_of_a_target_import_before_session_start(
+        tmp_path, monkeypatch, bridge
+    ):
+        source = (
+            "from pathlib import Path\n"
+            "counter = Path(__file__).with_name('attempts.txt')\n"
+            "attempt = int(counter.read_text())\n"
+            "counter.write_text(str(sum((attempt, 1))))\n"
+            "if attempt == 1:\n    raise RuntimeError('import unavailable') from OSError('endpoint A unavailable')\n"
+            "if attempt == 3:\n    raise RuntimeError('import unavailable') from ValueError('endpoint B invalid')\n"
+            "def add(a, b):\n    return a + b\n"
+        )
+        project = _project(tmp_path, monkeypatch, "def test_weak():\n    pass\n", source=source)
+        (project[3] / "conftest.py").write_text("import evidence_target\n")
+        if bridge:
+            # A real pytest extension replaces the wrapper before the runner
+            # can observe its cause. The loader must retain that evidence.
+            (tmp_path / "evidence_bridge.py").write_text(
+                "import pytest\nfrom _pytest.config import ConftestImportFailure\n"
+                "@pytest.hookimpl(hookwrapper=True, trylast=True)\n"
+                "def pytest_load_initial_conftests():\n"
+                "    outcome = yield\n"
+                "    if outcome.excinfo and isinstance(outcome.excinfo[1], ConftestImportFailure):\n"
+                "        outcome.force_exception(pytest.UsageError('bridge replaced conftest wrapper'))\n"
+            )
+            monkeypatch.setenv("PYTEST_PLUGINS", "evidence_bridge")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.tests_run == 0
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "import:", "evidence_target" if bridge else "conftest.py",
+            "RuntimeError: import unavailable",
+            "OSError: endpoint A unavailable", "ValueError: endpoint B invalid",
+        ])
+
+    def it_distinguishes_exception_identity_beyond_the_class_name(tmp_path, monkeypatch):
+        for name in ("endpoint_a", "endpoint_b"):
+            (tmp_path / (name + ".py")).write_text("class UnavailableError(RuntimeError):\n    pass\n")
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "import endpoint_a, endpoint_b\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise endpoint_a.UnavailableError('same message')\n"
+            "    if attempt == 3:\n        raise endpoint_b.UnavailableError('same message')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["setup:", "UnavailableError: same message", "confirmation"])
+
+    def it_retains_the_actual_call_exception_when_control_fails(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('original setup outage')\n"
+            "    return attempt\n"
+            "def test_weak(endpoint):\n"
+            "    assert endpoint != 2, 'control assertion failed'\n"
+            "    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert (tmp_path / "attempts.txt").read_text() == "3"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "setup:", "OSError: original setup outage", "call:", "AssertionError: control assertion failed",
+        ])
+
+    def it_does_not_compare_a_deliberately_suppressed_context(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt in (1, 3):\n"
+            "        try:\n            raise OSError('first' if attempt == 1 else 'second')\n"
+            "        except OSError:\n            raise RuntimeError('visible endpoint failure') from None\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "killed"
+        assert result.error is None
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+
+    def it_names_an_actual_confirmation_timeout_without_promoting_the_original_failure(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nimport time\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('initial setup outage')\n"
+            "    if attempt == 3:\n        time.sleep(5.1)\n"
+            "def test_first(endpoint):\n    assert isinstance(add(1, 2), int)\n"
+            "def test_last():\n    pass\n")
+        ids = [f"evidence_tests/test_b_evidence.py::test_{name}" for name in ("first", "last")]
+        result = _baseline_then_mutant(tmp_path, project, ids, dict.fromkeys(ids, 0.0))
+        assert result.tests_run == 1
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "setup:", "OSError: initial setup outage", "confirmation: killed", "<timeout>",
+        ])
+
+    def it_distinguishes_explicit_cause_from_implicit_context_with_identical_messages(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n"
+            "        raise RuntimeError('endpoint unavailable') from OSError('transport unavailable')\n"
+            "    if attempt == 3:\n"
+            "        try:\n            raise OSError('transport unavailable')\n"
+            "        except OSError:\n            raise RuntimeError('endpoint unavailable')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "original", "confirmation", "RuntimeError: endpoint unavailable",
+            "OSError: transport unavailable", "caused by:", "during handling:",
+        ])
+
+    def it_confirms_the_same_visible_failure_when_only_empty_context_suppression_changes(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if add(1, 2) != 3:\n"
+            "        if attempt == 1:\n            raise RuntimeError('mutant broke endpoint')\n"
+            "        raise RuntimeError('mutant broke endpoint') from None\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 0
+        assert result.killing_test == "evidence_tests/test_b_evidence.py::test_weak"
+
+    def it_does_not_count_a_setup_exception_that_a_real_plugin_reports_as_passed(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture(autouse=True)\ndef advisory_check():\n" + code + "\n"
+            "    if add(1, 2) != 3:\n        raise RuntimeError('advisory endpoint check')\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        (project[3] / "conftest.py").write_text(
+            "import pytest\n"
+            "@pytest.hookimpl(hookwrapper=True)\n"
+            "def pytest_runtest_makereport(item, call):\n"
+            "    outcome = yield\n    report = outcome.get_result()\n"
+            "    if report.when == 'setup' and call.excinfo is not None:\n"
+            "        if isinstance(call.excinfo.value, RuntimeError):\n"
+            "            report.outcome = 'passed'\n"
+            "            report.longrepr = None\n")
+        # Pytest still invokes exception_interact for this exception: it does
+        # not require report.failed. Only the published failed reports count.
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "survived"
+        assert result.error is None
+        assert result.tests_run == 1
+        assert (tmp_path / "attempts.txt").read_text() == "2"  # no causal retries
