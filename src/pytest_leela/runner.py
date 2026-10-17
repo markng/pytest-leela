@@ -19,6 +19,7 @@ import threading
 import time
 import types
 from collections.abc import Callable, Generator
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -45,6 +46,7 @@ from pytest_leela.coverage_tracker import (  # noqa: E402 — see comment above
     _normalize_nodeid,
 )
 from pytest_leela.import_hook import (  # noqa: E402 — see comment above
+    _exception_evidence,
     MutatingFinder,
     clear_target_modules,
     install_hook,
@@ -336,6 +338,23 @@ class _TimeoutPlugin:
             raise SystemExit("leela: mutant timeout")
 
 
+@dataclass(frozen=True)
+class _FailureEvidence:
+    phase: str
+    nodeid: str
+    fingerprint: tuple[object, ...] | None
+    # Presentation must not participate in recurrence comparison.
+    diagnostic: str = field(compare=False)
+
+    def describe(self) -> str:
+        return f"{self.phase}: {self.nodeid}: {self.diagnostic}"
+
+
+def _failure_evidence(phase: str, nodeid: str, exc: BaseException) -> _FailureEvidence:
+    fingerprint, diagnostic = _exception_evidence(exc)
+    return _FailureEvidence(phase, nodeid, fingerprint, diagnostic)
+
+
 class _ResultCollector:
     """Minimal pytest plugin to collect test results."""
 
@@ -345,6 +364,7 @@ class _ResultCollector:
         self.errors: list[str] = []
         self.collection_errors: list[str] = []  # "nodeid: summary" entries
         self.collection_error_ids: list[str] = []
+        self.failure_evidence: dict[tuple[str, str], _FailureEvidence] = {}
         self.total = 0
         self.session_started = False
         # Why a conftest or test module called pytest.exit() at import.
@@ -378,10 +398,13 @@ class _ResultCollector:
         if isinstance(cause, pytest.exit.Exception):
             self.deliberate_exit = _conftest_exit_label(cause)
         else:
-            # No collect report exists for it: name the cause in the error.
-            self.collection_errors.append(
-                f"{os.path.relpath(exc.path)}: {type(cause).__name__}: {cause}"
+            # No collect report exists for it: snapshot the actual cause now.
+            nodeid = os.path.relpath(exc.path)
+            evidence = _failure_evidence(
+                "import", nodeid, exc if cause is None else cause
             )
+            self.failure_evidence[("import", nodeid)] = evidence
+            self.collection_errors.append(f"{nodeid}: {evidence.diagnostic}")
 
     def pytest_exception_interact(self, node: Any, call: Any, report: Any) -> None:
         # A conftest first loaded during collection fails as a collection
@@ -401,6 +424,15 @@ class _ResultCollector:
             # conftest collection hook that exits: no kill.
             self.exit_ids.add(report.nodeid)
             self.deliberate_exit = _collection_exit_label(node, exc)
+        phase = (
+            report.when
+            if getattr(report, "when", None) in ("call", "setup", "teardown")
+            else "collection"
+        )
+        nodeid = report.nodeid or self._session_conftest_failure or node.nodeid
+        if isinstance(exc, ConftestImportFailure) and exc.__cause__ is not None:
+            exc = exc.__cause__
+        self.failure_evidence[(phase, nodeid)] = _failure_evidence(phase, nodeid, exc)
 
     def pytest_runtest_logreport(self, report: Any) -> None:
         if report.when == "call":
@@ -411,6 +443,19 @@ class _ResultCollector:
                 self.failed.append(report.nodeid)
         elif report.when in ("setup", "teardown") and report.failed:
             self.errors.append(report.nodeid)
+        if report.failed:
+            # A plugin may synthesize a failed report without an exception.
+            # exception_interact replaces this only when real evidence exists.
+            self.failure_evidence.setdefault(
+                (report.when, report.nodeid),
+                _FailureEvidence(
+                    report.when,
+                    report.nodeid,
+                    None,
+                    "exception evidence unavailable; "
+                    + getattr(report, "longreprtext", "no exception detail"),
+                ),
+            )
 
     def pytest_collectreport(self, report: Any) -> None:
         # The Session's own report (empty nodeid) otherwise only echoes an
@@ -421,6 +466,15 @@ class _ResultCollector:
             self.collection_error_ids.append(nodeid)
             self.collection_errors.append(
                 nodeid if summary is None else f"{nodeid}: {summary}"
+            )
+            self.failure_evidence.setdefault(
+                ("collection", nodeid),
+                _FailureEvidence(
+                    "collection",
+                    nodeid,
+                    None,
+                    "exception evidence unavailable; " + report.longreprtext,
+                ),
             )
 
 
@@ -655,23 +709,51 @@ class InnerSession:
             return self.collector.deliberate_exit
         return _inner_run_error(self.exit_code, self.collector)
 
-    def _conftest_import_failed(self) -> bool:
-        """Whether a conftest failed to import before the session started.
+    def _failure_diagnostics(self) -> str:
+        return "; ".join(e.describe() for e in self.collector.failure_evidence.values())
 
-        pytest returns USAGE_ERROR then (_pytest/config/__init__.py, ``main``:
-        "except ConftestImportFailure"); an unmatched node id also gives
-        USAGE_ERROR, but only after the session started.
+    def inconclusive_failures(self) -> list[_FailureEvidence]:
+        """Return immutable setup/teardown/collection/import evidence.
+
+        Callers first classify the session, so this only gathers causal
+        evidence after definite kills and runner errors have been excluded.
+
+        Import errors are recorded even when the test catches them, so they
+        are only treated as inconclusive when they actually broke a conftest
+        before the session started (no collection report was produced) or
+        when combined with a collection/setup failure that proves they
+        propagated.
         """
-        return (
+        evidence = self.collector.failure_evidence
+        failures = [
+            e
+            for (phase, nodeid), e in evidence.items()
+            if phase in ("setup", "teardown") and nodeid in self.collector.errors
+        ]
+        failures.extend(
+            evidence[("collection", nodeid)]
+            for nodeid in self.collector.collection_error_ids
+            if nodeid not in self.collector.exit_ids
+        )
+        # Import errors matter only when they actually caused a failure.
+        conftest_import_failed = (
             self.exit_code == pytest.ExitCode.USAGE_ERROR
             and not self.collector.session_started
         )
-
-    def _conftest_failure_is_a_kill(self) -> bool:
-        """A conftest import failure is the mutant's doing only when the
-        mutated module raised during it.  A conftest's own check, or one
-        that calls pytest.exit() at import as a skip does, is not."""
-        return bool(self.import_errors) and self.collector.deliberate_exit is None
+        if not failures and conftest_import_failed and self.import_errors:
+            # Before session start, only initial conftest imports produced
+            # collector snapshots; no collection or runtest reports exist.
+            failures.extend(evidence.values())
+            if not failures:
+                # A plugin can replace ConftestImportFailure with UsageError
+                # before our hook sees it. The loader's immutable snapshot
+                # still names the actual target exception and its cause.
+                finder = cast(MutatingFinder, self.finder)  # import_errors is nonempty
+                failures.extend(
+                    _FailureEvidence("import", name, fingerprint, diagnostic)
+                    for name, fingerprint, diagnostic in finder._import_failures
+                )
+        return failures
 
     def _normalize(self, nodeid: str) -> str:
         """Return nodeids relative to the project root (runner cwd)."""
@@ -697,39 +779,128 @@ class InnerSession:
                 test_ids_run=[] if self.crash is not None else test_ids_run,
                 killing_tests=["<timeout>"],
             )
-        if self.crash is None:
-            # A test module failing to collect under the mutant, after a green
-            # baseline, is a detection.  Skips and empty runs are not.
-            conftest_kill = self._conftest_failure_is_a_kill()
-            raw_killing_tests = self.failures() + [
-                nodeid
-                for nodeid in collector.collection_error_ids
-                if nodeid not in collector.exit_ids
-                and (conftest_kill or nodeid not in collector.conftest_failure_ids)
-            ]
-            if not raw_killing_tests and conftest_kill and self._conftest_import_failed():
-                raw_killing_tests = [f"<import of {self.import_errors[0]}>"]
-            killing_tests = [self._normalize(n) for n in raw_killing_tests]
-            if killing_tests:
-                return MutantResult(
-                    mutant=mutant,
-                    killed=True,
-                    tests_run=collector.total,
-                    killing_test=killing_tests[0],
-                    time_seconds=self.elapsed,
-                    test_ids_run=test_ids_run,
-                    killing_tests=killing_tests,
+        if self.crash is not None:
+            return MutantResult(
+                mutant=mutant,
+                killed=False,
+                tests_run=collector.total,
+                killing_test=None,
+                time_seconds=self.elapsed,
+                test_ids_run=[],
+                killing_tests=[],
+                error=self.crash,
+            )
+        if collector.deliberate_exit is not None:
+            return MutantResult(
+                mutant=mutant,
+                killed=False,
+                tests_run=collector.total,
+                killing_test=None,
+                time_seconds=self.elapsed,
+                test_ids_run=test_ids_run,
+                killing_tests=[],
+                error=collector.deliberate_exit,
+            )
+        if collector.failed:
+            return MutantResult(
+                mutant=mutant,
+                killed=True,
+                tests_run=collector.total,
+                killing_test=self._normalize(collector.failed[0]),
+                time_seconds=self.elapsed,
+                test_ids_run=test_ids_run,
+                killing_tests=[self._normalize(n) for n in collector.failed],
+            )
+        inconclusive = self.inconclusive_failures()
+        if inconclusive:
+            base = self.error() or "setup/teardown/collection/import failure"
+            phases = "; ".join(e.describe() for e in inconclusive)
+            return MutantResult(
+                mutant=mutant,
+                killed=False,
+                tests_run=collector.total,
+                killing_test=None,
+                time_seconds=self.elapsed,
+                test_ids_run=test_ids_run,
+                killing_tests=[],
+                error=f"inconclusive: {base}; phases: {phases}",
+            )
+        if collector.total == 0 or self.exit_code not in _COMPLETED_EXIT_CODES:
+            error = self.error()
+            if error is None:
+                error = (
+                    "no tests ran"
+                    if collector.total == 0
+                    else f"pytest exited with {_exit_code_label(self.exit_code)}"
                 )
+            return MutantResult(
+                mutant=mutant,
+                killed=False,
+                tests_run=collector.total,
+                killing_test=None,
+                time_seconds=self.elapsed,
+                test_ids_run=test_ids_run,
+                killing_tests=[],
+                error=error,
+            )
         return MutantResult(
             mutant=mutant,
             killed=False,
             tests_run=collector.total,
             killing_test=None,
             time_seconds=self.elapsed,
-            test_ids_run=[] if self.crash is not None else test_ids_run,
+            test_ids_run=test_ids_run,
             killing_tests=[],
-            error=self.error(),
         )
+
+
+def _kill_from_inconclusive(
+    session: InnerSession, mutant: Mutant, inconclusive: list[_FailureEvidence]
+) -> MutantResult:
+    """Build a kill result after an inconclusive failure recurred."""
+    collector = session.collector
+    test_ids_run = [
+        session._normalize(n)
+        for n in collector.passed + collector.failed + collector.errors
+    ]
+    killing_tests: list[str] = []
+    for evidence in inconclusive:
+        if evidence.phase == "import":
+            killing_tests.extend(f"<import of {label}>" for label in session.import_errors)
+        else:
+            killing_tests.append(session._normalize(evidence.nodeid))
+    return MutantResult(
+        mutant=mutant,
+        killed=True,
+        tests_run=collector.total,
+        killing_test=killing_tests[0],
+        time_seconds=session.elapsed,
+        test_ids_run=test_ids_run,
+        killing_tests=killing_tests,
+    )
+
+
+def run_control(
+    test_ids: list[str] | None,
+    test_dir: str | None,
+    known_user_modules: frozenset[str],
+    scope: ProjectModuleScope,
+) -> InnerSession:
+    """Run the same test selection with no mutation applied.
+
+    This is the in-process equivalent of the mutant's path used to prove
+    that a setup/teardown/collection/import failure is caused by the mutant
+    rather than by ambient flakiness or process state.
+    """
+    session = InnerSession(
+        None,
+        test_ids,
+        test_dir,
+        scope,
+        known_user_modules=known_user_modules,
+        exitfirst=False,
+    )
+    return session.run()
 
 
 def run_tests_for_mutant(
@@ -744,10 +915,22 @@ def run_tests_for_mutant(
     dependency_files: set[Path] | None = None,
     prepared_dependencies: set[Path] | None = None,
 ) -> MutantResult:
-    """Run tests against a single mutant, return the result."""
-    _prepare_fresh_dependencies(
+    """Run tests against a single mutant, return the result.
+
+    When a setup/teardown/collection/import failure occurs with no ordinary
+    call-phase failure, the result is initially inconclusive.  We then run a
+    clean unmutated control through the same selected tests/path.  If the
+    control also fails, the failure is ambient and reported as an error.  If
+    the control passes, we re-run the mutant once; only if the same failure
+    recurs do we count the mutant as killed.
+    """
+    scope = scope or ProjectModuleScope()
+    dependency_files = (
         dependency_files if dependency_files is not None
-        else _selection_source_files(test_ids),
+        else _selection_source_files(test_ids)
+    )
+    _prepare_fresh_dependencies(
+        dependency_files,
         prepared_dependencies if prepared_dependencies is not None else set(),
     )
     finder = install_hook(target_sources, mutant, module_to_file)
@@ -755,11 +938,81 @@ def run_tests_for_mutant(
         finder,
         test_ids,
         test_dir,
-        scope or ProjectModuleScope(),
+        scope,
         known_user_modules=known_user_modules,
         test_times=test_times,
     )
-    return session.run().result_for(mutant)
+    result = session.run().result_for(mutant)
+
+    if result.status != "error" or not (result.error or "").startswith(
+        "inconclusive:"
+    ):
+        return result
+
+    inconclusive = session.inconclusive_failures()
+    control_known = known_user_modules or precompute_user_modules(scope)
+    _prepare_fresh_dependencies(dependency_files, set())
+    control = run_control(test_ids, test_dir, control_known, scope)
+    if control.error() is not None or control.failures():
+        reason = control.error()
+        if reason is None:
+            reason = f"failed: {', '.join(control.failures())}"
+        details = control._failure_diagnostics()
+        if details:
+            reason += f"; {details}"
+        return MutantResult(
+            mutant=mutant,
+            killed=False,
+            tests_run=session.collector.total,
+            killing_test=None,
+            time_seconds=session.elapsed,
+            test_ids_run=[],
+            killing_tests=[],
+            error=(
+                f"inconclusive: control run also failed ({reason}); "
+                f"original result: {result.error}"
+            ),
+        )
+
+    _prepare_fresh_dependencies(dependency_files, set())
+    finder2 = install_hook(target_sources, mutant, module_to_file)
+    session2 = InnerSession(
+        finder2,
+        test_ids,
+        test_dir,
+        scope,
+        known_user_modules=control_known,
+        test_times=test_times,
+    )
+    confirmation = session2.run().result_for(mutant)
+    if (
+        confirmation.status == "error"
+        and (confirmation.error or "").startswith("inconclusive:")
+        and all(e.fingerprint is not None for e in inconclusive)
+        and session2.inconclusive_failures() == inconclusive
+    ):
+        return _kill_from_inconclusive(session2, mutant, inconclusive)
+
+    confirmation_reason = confirmation.error or session2._failure_diagnostics()
+    if not confirmation_reason and confirmation.killing_tests:
+        confirmation_reason = f"killed by: {', '.join(confirmation.killing_tests)}"
+    return MutantResult(
+        mutant=mutant,
+        killed=False,
+        tests_run=session2.collector.total,
+        killing_test=None,
+        time_seconds=session2.elapsed,
+        test_ids_run=[],
+        killing_tests=[],
+        error=(
+            "inconclusive: same-failure recurrence was not established "
+            "on confirmation; "
+            f"original result: {result.error}; "
+            f"control: passed (tests_run={control.collector.total}); "
+            f"confirmation: {confirmation.status} (tests_run={confirmation.tests_run}; "
+            f"{confirmation_reason})"
+        ),
+    )
 
 
 def _raise_bytecode_scan_error(error: OSError) -> None:
@@ -779,12 +1032,11 @@ def _prepare_source_bytecode(
         scope.cwd, onerror=_raise_bytecode_scan_error
     ):
         subdirs[:] = [
-            name for name in subdirs
+            name
+            for name in subdirs
             if scope.contains(os.path.join(directory, name) + os.sep)
         ]
-        sources.update(
-            Path(directory, name) for name in files if name.endswith(".py")
-        )
+        sources.update(Path(directory, name) for name in files if name.endswith(".py"))
     for source in sources:
         cache = Path(importlib.util.cache_from_source(str(source)))
         cache.unlink(missing_ok=True)

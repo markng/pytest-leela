@@ -171,26 +171,33 @@ Each mutant ends in exactly one of three states:
 
 | Status | Meaning | Counts toward the score |
 |---|---|---|
-| **killed** | At least one test failed or errored in setup/teardown, a test module failed to collect, the run timed out (an infinite loop introduced by the mutant), or a conftest failed to import because the mutated module raised while being imported. A setup error or a collection failure caused by the environment or by nondeterminism rather than the mutant (a flaky fixture, a module that sometimes fails to import) also counts as a kill ([#13](https://github.com/markng/pytest-leela/issues/13)) | yes |
+| **killed** | A call-phase test failure or mutant timeout, or a setup/teardown/collection/import failure confirmed by a passing clean control and recurrence of the same failure under the mutant | yes |
 | **survived** | Tests ran and all of them passed | yes |
-| **error** | The inner run never tested the mutant: pytest crashed (for example a conftest that raised `Skipped` at import, or called `pytest.exit()` from `pytest_addoption`), a conftest called `pytest.exit()` at import or from a collection hook, a conftest's own check failed, the run exited abnormally with no test failure or collection failure (usage error, nothing collected, interrupted), or ran zero tests (everything skipped) | no |
+| **error** | No trustworthy verdict: an inconclusive setup/teardown/collection/import failure, pytest crash, deliberate skip/exit, abnormal exit without a test failure, or zero tests run (for example everything skipped). An inconclusive error may have zero **or positive** call-phase `tests_run` | no |
 
 The mutation score is `killed / (killed + survived)`. Errors are listed separately, with their
 reason, in the terminal report, the HTML report and the JSON output, and they fail the session
 unless `fail_on_error = false`. An error means leela could not tell whether your tests catch the
 mutant, so it is reported as neither a kill nor a survival.
 
-A test module that fails to collect under the mutant is a kill: the clean baseline has already
-shown it collects unmutated, so the mutant broke it. That covers the *target module itself*
-raising at import time (module-level code) and a test module's own module-level check, such as
-`assert calc.RATIO == 5`. The killing tests are the files that failed to collect.
+The initial clean baseline proves only that the selected tests passed before mutation.
+A setup, teardown, collection or import failure without a call-phase failure is initially
+inconclusive, even if earlier tests passed. Leela runs at most **one clean unmutated control**
+through the same selection and, only if that passes, **one additional mutant confirmation**.
+It counts a kill only when the actual phase, node, exception identity/message and meaningful
+visible chained cause recur. A failed control, different failure, surviving confirmation or
+insufficient exception evidence remains **error**, with the original and control/confirmation
+diagnostics. Ambient or flaky failures therefore do not automatically kill unrelated mutants.
+These are bounds on attempts, not a hard wall-clock execution limit or perfect proof against
+all nondeterminism.
 
-A conftest that fails to import counts as a kill only when the mutated module itself raised
-during that import. A conftest's own check does not count, nor does a conftest that catches the
-error and calls `pytest.exit()` or `pytest.skip()`: those are errors. So the same failing check
-is deliberately treated differently by location: `assert calc.RATIO == 5` at module level in a
-test module is a kill, but in a conftest it is an error, because a conftest failure is not
-attributed to the mutant.
+This check preserves genuine mutation-caused target imports and test-module collection
+failures, including module-level assertions such as `assert calc.RATIO == 5`; the killing
+nodes name the files that failed to collect. A conftest's own check failing **during
+collection** can also kill after this confirmation. Before the session starts, a failed
+conftest import is eligible when the mutated target itself raised during import; a conftest's
+own check without such a target import failure remains an error. A conftest that catches an
+error and calls `pytest.exit()` or `pytest.skip()` remains an error, not a confirmed kill.
 
 If a test caught the import error and the suite completed green, the mutant **survived**: no
 test noticed it. If the mutant made the tests skip themselves (a module-level `pytest.skip`, a
@@ -203,15 +210,17 @@ Known limits of these rules:
   that refuses to load twice (for example it raises when a process-global registry is already
   installed), every re-import fails to collect. Through `pytest --leela` the outer session has
   already imported it, so the clean baseline fails and the run aborts. When `Engine.run` is called
-  directly with `use_coverage=False` and a test directory, the baseline is the first import and
-  passes, and every mutant is then scored KILLED with `tests_run: 0`
-  ([#13](https://github.com/markng/pytest-leela/issues/13)).
+  directly with `use_coverage=False` and a test directory, the baseline may be the first import
+  and pass. Later re-import failures also fail the clean per-mutant control: those mutants
+  are inconclusive **errors**, commonly with `tests_run: 0`, excluded from the score. Leela
+  does not make non-idempotent registration safe to repeat in-process.
 - **A deliberate exit hides every kill not yet reported.** When a conftest or a test module
   catches the target's import error and calls `pytest.exit()`, the inner run ends there and the
   mutant is an **error**. Tests run only after collection, so no test failure is ever reported,
   including a test that imports the target inside its body; nor is a sibling module's collection
-  failure that pytest would have reached after the exit. Only a module that already failed to
-  collect before the exit stops the run first (`-x`) and still kills.
+  failure that pytest would have reached after the exit. A module that already failed to
+  collect before the exit stops the run first (`-x`) can still kill after same-failure
+  confirmation.
 
 ### Clean baseline before any mutant
 

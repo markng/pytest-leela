@@ -203,6 +203,55 @@ def apply_mutation(source: str, mutant: Mutant) -> tuple[str, bool]:
     return tree, applier.applied
 
 
+def _exception_evidence(
+    exc: BaseException, seen: frozenset[int] = frozenset()
+) -> tuple[tuple[object, ...] | None, str]:
+    """Snapshot identity/message/visible causes, never traceback locations.
+
+    A cycle or unrenderable message leaves useful diagnostics but cannot
+    establish recurrence. No live exception/traceback is retained.
+    """
+    name = type(exc).__qualname__
+    identity = f"{type(exc).__module__}.{name}"
+    display = name if type(exc).__module__ == "builtins" else identity
+    if id(exc) in seen:
+        return None, f"{display}: <exception chain cycle>"
+    seen = seen | {id(exc)}
+    reliable = True
+    try:
+        message = str(exc)
+    except Exception as formatting_error:
+        message = f"<message unavailable: {type(formatting_error).__qualname__}>"
+        reliable = False
+    diagnostic = f"{display}: {message}"
+    cause = exc.__cause__
+    chain_kind = "caused by"
+    if cause is None and not exc.__suppress_context__:
+        cause = exc.__context__
+        chain_kind = "during handling"
+    cause_key: tuple[object, ...] | None = None
+    if cause is not None:
+        nested_key, cause_text = _exception_evidence(cause, seen)
+        reliable = reliable and nested_key is not None
+        # Kind and cause contribute together, only when a visible cause exists.
+        cause_key = (chain_kind, nested_key)
+        diagnostic += f"; {chain_kind}: {cause_text}"
+    children: list[tuple[object, ...] | None] = []
+    if isinstance(exc, BaseExceptionGroup):
+        for child in exc.exceptions:
+            child_key, child_text = _exception_evidence(child, seen)
+            children.append(child_key)
+            reliable = reliable and child_key is not None
+            diagnostic += f"; contained: {child_text}"
+    key = (
+        identity,
+        message,
+        cause_key,
+        tuple(children),
+    )
+    return key if reliable else None, diagnostic
+
+
 class MutatingLoader(importlib.abc.Loader):
     """Loader that applies a mutation to source before executing."""
 
@@ -220,6 +269,7 @@ class MutatingLoader(importlib.abc.Loader):
         # mutated source, so the runner can tell an import broken by the
         # mutant from an unrelated collection error.
         self.import_errors: list[str] = [] if import_errors is None else import_errors
+        self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
 
     def create_module(self, spec: importlib.machinery.ModuleSpec) -> None:
         return None
@@ -244,7 +294,9 @@ class MutatingLoader(importlib.abc.Loader):
         try:
             exec(code, module.__dict__)
         except Exception as exc:
-            self.import_errors.append(f"{module.__name__}: {type(exc).__name__}: {exc}")
+            fingerprint, diagnostic = _exception_evidence(exc)
+            self._import_failures.append((module.__name__, fingerprint, diagnostic))
+            self.import_errors.append(f"{module.__name__}: {diagnostic}")
             raise
 
 
@@ -262,6 +314,7 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         # Exceptions raised while executing a mutated module (see
         # MutatingLoader.import_errors).
         self.import_errors: list[str] = []
+        self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
         self._module_to_file: dict[str, str] = {}
         for mod_name in target_modules:
             self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
@@ -302,6 +355,7 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
             filename,
             self.import_errors,
         )
+        loader._import_failures = self._import_failures
         return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
 
 
