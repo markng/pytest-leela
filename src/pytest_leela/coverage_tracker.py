@@ -1,18 +1,60 @@
 """Per-test line coverage via sys.settrace."""
 
-from __future__ import annotations
+# NOTE: do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+# its ``compile()`` call must also remain unflagged.
 
 import contextlib
 import io
+import json
 import os
+import subprocess
 import sys
+import tempfile
 import threading
 import time
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from pytest_leela.models import CoverageMap
+
+
+def _normalize_nodeid(nodeid: str, rootpath: Path, cwd: Path) -> str:
+    """Return a nodeid expressed relative to *cwd*.
+
+    pytest nodeids are relative to the pytest rootdir. When the
+    effective rootdir is a subdirectory (e.g. ``tests/pytest.ini``),
+    collected nodeids like ``test_calc.py::test_add`` must be
+    replayed from the project root as ``tests/test_calc.py::test_add``.
+    The ``::`` separator and any parametrized / describe suffixes are
+    preserved.
+    """
+    if "::" in nodeid:
+        file_part, _, rest = nodeid.partition("::")
+    else:
+        file_part, rest = nodeid, ""
+    file_path = Path(file_part)
+    if file_path.is_absolute():
+        try:
+            file_part = str(file_path.relative_to(cwd))
+        except ValueError:
+            pass
+    else:
+        abs_file = (rootpath / file_part).resolve()
+        try:
+            file_part = str(abs_file.relative_to(cwd.resolve()))
+        except ValueError:
+            # A root-relative nodeid outside the invocation directory is
+            # not replayable there; retain its resolved absolute origin.
+            file_part = str(abs_file)
+    if rest:
+        return f"{file_part}::{rest}"
+    return file_part
 
 
 class _LineTracer:
@@ -39,7 +81,7 @@ class _LineTracer:
         if not self._active:
             return None
         if event == "call":
-            filename = frame.f_code.co_filename
+            filename = os.path.abspath(frame.f_code.co_filename)
             if filename in self.target_files:
                 return self._trace_lines
             return None
@@ -47,7 +89,7 @@ class _LineTracer:
 
     def _trace_lines(self, frame: Any, event: str, arg: Any) -> Any:
         if event == "line":
-            filename = frame.f_code.co_filename
+            filename = os.path.abspath(frame.f_code.co_filename)
             if filename in self.target_files:
                 self.lines_hit.add((filename, frame.f_lineno))
         return self._trace_lines
@@ -62,6 +104,12 @@ class CoveragePlugin:
         self.coverage_map = CoverageMap()
         self.test_times: dict[str, float] = {}
         self._test_start: float = 0.0
+        self._rootpath: Path | None = None
+        self._cwd: Path | None = None
+
+    def pytest_sessionstart(self, session: pytest.Session) -> None:
+        self._rootpath = Path(session.config.rootpath)
+        self._cwd = Path.cwd()
 
     def pytest_runtest_setup(self, item: pytest.Item) -> None:
         self._test_start = time.monotonic()
@@ -71,7 +119,8 @@ class CoveragePlugin:
         self, item: pytest.Item, nextitem: pytest.Item | None
     ) -> None:
         lines = self.tracer.stop()
-        test_id = item.nodeid
+        rootpath = self._rootpath or Path.cwd()
+        test_id = _normalize_nodeid(item.nodeid, rootpath, self._cwd or Path.cwd())
         self.test_times[test_id] = time.monotonic() - self._test_start
         for file_path, lineno in lines:
             self.coverage_map.add(file_path, lineno, test_id)
@@ -115,3 +164,66 @@ def collect_coverage(
 
     plugin.coverage_map.test_times = plugin.test_times
     return plugin.coverage_map
+
+
+def collect_coverage_subprocess(
+    target_files: list[str],
+    test_node_ids: list[str] | None = None,
+    cwd: str | None = None,
+) -> CoverageMap:
+    """Run the coverage collector in a fresh subprocess.
+
+    A standalone entry point invoked by
+    ``coverage_tracker.collect_coverage_subprocess`` from a
+    fresh Python interpreter (not the one hosting the daemon)
+    so pytest discovers its rootdir from ``cwd`` and finds the
+    project's ``pyproject.toml``. The in-process variant
+    (``collect_coverage``) inherits the outer pytest's state,
+    which is wrong when called from inside another test run.
+
+    Returns an empty ``CoverageMap`` if ``target_files`` is empty
+    or the project has no tests. Collection/launch failures and timeouts
+    are surfaced to the daemon rather than disguised as empty coverage.
+    Uses this interpreter: launch the daemon from the project dev environment.
+    """
+    if not target_files:
+        return CoverageMap()
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as out:
+        output_path: str = out.name
+    try:
+        cmd = [
+            sys.executable,
+            "-m",
+            "pytest_leela.coverage_collector",
+            "--output",
+            output_path,
+        ]
+        for target_file in target_files:
+            cmd.extend(["--target", target_file])
+        for tid in test_node_ids or []:
+            cmd.extend(["--test", tid])
+        subprocess.run(
+            cmd,
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        with open(output_path) as f:
+            payload = json.load(f)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            f"Coverage collection failed with {sys.executable}: "
+            f"{exc.stderr}\n{exc.stdout}. Use the project dev environment "
+            "with its pytest plugins installed."
+        ) from exc
+    finally:
+        os.unlink(output_path)
+
+    cov = CoverageMap()
+    for key, tests in payload["line_to_tests"].items():
+        file_part, _, line_part = key.rpartition(":")
+        cov.line_to_tests[(file_part, int(line_part))] = set(tests)
+    cov.test_times = dict(payload["test_times"])
+    return cov

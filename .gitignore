@@ -31,3 +31,14 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# pytest-leela generated state (.leela index DB / WAL / SHM / logs / backups)
+/.leela/
+
+# Claude generated state (context/log files only; not settings/agents/instructions)
+/.claude/state/
+
+# pi runtime artifacts (status file + handoff patches; .pi/ configuration stays tracked)
+/.pi/STATUS.md
+/.pi/handoff.patch
+/.pi/HANDOFF.patch

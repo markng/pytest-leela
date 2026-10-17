@@ -1,6 +1,7 @@
 """Tests for pytest_leela.runner — test execution against mutants."""
 
 import importlib
+import json
 import re
 import os
 import py_compile
@@ -30,6 +31,7 @@ from pytest_leela.runner import (
     _clear_user_modules,
     _clear_user_modules_fast,
     precompute_user_modules,
+    run_baseline,
     run_tests_for_mutant,
 )
 
@@ -197,6 +199,42 @@ def describe_run_tests_for_mutant():
 
         # Called at both sites: pre-test setup (line 108) and finally cleanup (line 188)
         assert mock_clear.call_count == 2
+
+    def it_removes_the_finder_when_freshness_preparation_fails(
+        tmp_path, monkeypatch
+    ):
+        """Propagate cache-removal errors without leaking the mutation finder."""
+        import importlib
+        import py_compile
+        from pathlib import Path
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "fresh_failure_target.py"
+        target.write_text(source)
+        cache = Path(py_compile.compile(str(target), doraise=True))
+
+        points = find_mutation_points(source, str(target), "fresh_failure_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+        with patch.object(
+            Path, "unlink", side_effect=PermissionError("cache is not removable")
+        ):
+            with pytest.raises(PermissionError, match="cache is not removable"):
+                run_tests_for_mutant(
+                    mutant,
+                    {"fresh_failure_target": source},
+                    {"fresh_failure_target": str(target)},
+                    test_dir=str(tmp_path),
+                    dependency_files={target},
+                )
+
+        assert not any(isinstance(finder, MutatingFinder) for finder in sys.meta_path)
+        imported = importlib.import_module("fresh_failure_target")
+        assert imported.add(5, 2) == 7
 
     def it_kills_a_detectable_mutant(tmp_path, monkeypatch):
         source = "def add(a, b):\n    return a + b\n"
@@ -603,6 +641,181 @@ def describe_run_tests_for_mutant():
         finally:
             # Restore sys.meta_path if the mutation clobbered it
             sys.meta_path[:] = saved_meta_path
+
+    def it_kills_when_collection_fails_with_import_error(tmp_path, monkeypatch, record_property):
+        """Collection failure (import error) must register as a kill.
+
+        A mutation-caused import failure during collection is a detection:
+        the test module cannot be collected, so no runnable items exist
+        (``tests_run == 0``), but the mutant is still scored as killed and
+        the failing test file is named.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "collerr_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "collerr_tests"
+        test_dir.mkdir()
+        (test_dir / "test_collerr.py").write_text(
+            "from collerr_target import add\n\n"
+            "if add(1, 1) != 2:\n"
+            "    raise ImportError('mutated addition breaks collection')\n\n"
+            "def test_add():\n"
+            "    assert add(1, 1) == 2\n"
+        )
+
+        exits = []
+        nested_args = []
+        real_pytest_main = pytest.main
+
+        def observe_pytest_main(args, **kwargs):
+            nested_args.append(args)
+            exit_code = real_pytest_main(args, **kwargs)
+            exits.append(exit_code)
+            return exit_code
+
+        monkeypatch.setattr("pytest_leela.runner.pytest.main", observe_pytest_main)
+        scope = ProjectModuleScope()
+        baseline = run_baseline(None, str(test_dir), precompute_user_modules(scope), scope)
+        assert baseline.exit_code == pytest.ExitCode.OK
+        assert baseline.collector.total == 1
+        assert baseline.failures() == []
+        assert baseline.error() is None
+
+        points = find_mutation_points(source, str(target), "collerr_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"collerr_target": source},
+            {"collerr_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert exits == [
+            pytest.ExitCode.OK,  # baseline
+            pytest.ExitCode.INTERRUPTED,  # initial mutant
+            pytest.ExitCode.OK,  # clean causal control
+            pytest.ExitCode.INTERRUPTED,  # matching mutant confirmation
+        ]
+        record_property("nested_pytest_args", repr(nested_args))
+        record_property("nested_pytest_exits", repr([int(code) for code in exits]))
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 0
+        assert result.killing_test == "collerr_tests/test_collerr.py"
+        assert result.killing_tests == ["collerr_tests/test_collerr.py"]
+
+
+def describe_nested_pytest_project_configuration():
+    @pytest.mark.parametrize("config_name", ["pyproject.toml", "pytest.ini"])
+    @pytest.mark.parametrize("explicit_selection", [False, True])
+    def it_preserves_target_root_discovery_plugins_and_coverage(
+        tmp_path, monkeypatch, record_property, config_name, explicit_selection
+    ):
+        from pytest_leela.coverage_tracker import collect_coverage_subprocess
+
+        # The target's own configuration must win over an enclosing project
+        # and the already-running pytest session, without suppressing either.
+        (tmp_path / "pytest.ini").write_text(
+            "[pytest]\npython_files = wrong_*.py\n"
+        )
+        project = tmp_path / "target_project"
+        project.mkdir()
+        config = project / config_name
+        if config_name == "pyproject.toml":
+            config.write_text(
+                '[tool.pytest.ini_options]\n'
+                'python_files = ["check_*.py"]\n'
+                'pythonpath = ["src", "."]\n'
+            )
+        else:
+            config.write_text(
+                "[pytest]\npython_files = check_*.py\npythonpath = src .\n"
+            )
+        (project / "src").mkdir()
+        source = "def add(a, b):\n    return a + b\n"
+        target = project / "src" / "root_contract_calc.py"
+        target.write_text(source)
+        (project / "root_contract_plugin.py").write_text(
+            "import pytest\n"
+            "@pytest.fixture\n"
+            "def expected_sum():\n    return 5\n"
+        )
+        (project / "conftest.py").write_text(
+            "import json\nfrom pathlib import Path\nimport pytest\n"
+            "pytest_plugins = ['root_contract_plugin']\n"
+            "@pytest.fixture\n"
+            "def operands():\n    return (2, 3)\n"
+            "def pytest_sessionfinish(session, exitstatus):\n"
+            "    config = session.config\n"
+            "    with Path(__file__).with_name('nested-events.jsonl').open('a') as out:\n"
+            "        out.write(json.dumps({\n"
+            "            'root': str(config.rootpath),\n"
+            "            'ini': str(config.inipath),\n"
+            "            'argv': list(config.invocation_params.args),\n"
+            "            'patterns': config.getini('python_files'),\n"
+            "            'items': [item.nodeid for item in session.items],\n"
+            "            'exit': int(exitstatus),\n"
+            "        }) + '\\n')\n"
+        )
+        test_dir = project / "checks"
+        test_dir.mkdir()
+        (test_dir / "check_root_contract.py").write_text(
+            "from root_contract_calc import add\n"
+            "def describe_add():\n"
+            "    def it_adds(operands, expected_sum):\n"
+            "        assert add(*operands) == expected_sum\n"
+        )
+        nodeid = "checks/check_root_contract.py::describe_add::it_adds"
+        test_ids = [nodeid] if explicit_selection else None
+        monkeypatch.chdir(project)
+        scope = ProjectModuleScope()
+        baseline = run_baseline(
+            test_ids, str(test_dir), precompute_user_modules(scope), scope
+        )
+        assert baseline.exit_code == pytest.ExitCode.OK
+        assert baseline.collector.total == 1
+        assert baseline.failures() == []
+        assert baseline.error() is None
+
+        point = next(
+            p for p in find_mutation_points(source, str(target), "root_contract_calc")
+            if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        result = run_tests_for_mutant(
+            Mutant(point=point, replacement_op="Sub", mutant_id=0),
+            {"root_contract_calc": source},
+            {"root_contract_calc": str(target)},
+            test_ids=test_ids,
+            test_dir=str(test_dir),
+        )
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 1
+        assert result.killing_tests == [nodeid]
+
+        coverage = collect_coverage_subprocess(
+            [str(target)], test_ids, cwd=str(project)
+        )
+        assert coverage.tests_for(str(target), 2) == {nodeid}
+        assert set(coverage.test_times) == {nodeid}
+        events = [json.loads(line) for line in
+                  (project / "nested-events.jsonl").read_text().splitlines()]
+        assert len(events) == 3
+        assert [event["exit"] for event in events] == [0, 1, 0]
+        for event in events:
+            assert event["root"] == str(project)
+            assert event["ini"] == str(config)
+            assert event["patterns"] == ["check_*.py"]
+            assert event["items"] == [nodeid]
+        record_property("nested_root_config_events", json.dumps(events))
 
 
 def describe_TimeoutPlugin():
@@ -1080,6 +1293,30 @@ def describe_run_tests_for_mutant_with_known_user_modules():
         )
         mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
         return source, mutant
+
+    def it_updates_the_shared_prepared_dependency_set(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant(tmp_path)
+        test_file = tmp_path / "test_shared_preparation.py"
+        test_file.write_text(
+            "from opt_target import add\n\n"
+            "def test_add():\n    assert add(1, 2) == 3\n"
+        )
+        prepared = set()
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"opt_target": source},
+            {"opt_target": str(tmp_path / "opt_target.py")},
+            test_ids=[f"{test_file}::test_add"],
+            dependency_files={test_file},
+            prepared_dependencies=prepared,
+        )
+
+        assert result.killed is True
+        assert result.killing_test == "test_shared_preparation.py::test_add"
+        assert prepared == {test_file}
 
     def it_works_with_known_user_modules_parameter(tmp_path, monkeypatch):
         """The optimized path should produce the same result as the fallback."""
@@ -2738,6 +2975,105 @@ def describe_collection_failures():
             )
 
 
+def describe_bytecode_artifacts():
+    def it_uses_the_installed_pytest_rewrite_tag():
+        from _pytest.assertion.rewrite import PYTEST_TAG
+        from pytest_leela.runner import _pytest_rewrite_tag
+
+        assert _pytest_rewrite_tag() == PYTEST_TAG
+
+    def it_returns_both_exact_cache_paths_without_sibling_artifacts(tmp_path):
+        import importlib.util
+        import py_compile
+        import subprocess
+        from pathlib import Path
+
+        from _pytest.assertion.rewrite import PYTEST_TAG
+        from pytest_leela.runner import _bytecode_artifacts
+
+        source = tmp_path / "test_cached.py"
+        source.write_text("def test_cached():\n    assert 1 + 1 == 2\n")
+        cpython_cache = Path(py_compile.compile(str(source), doraise=True))
+        rewrite_cache = cpython_cache.parent / f"test_cached.{PYTEST_TAG}.pyc"
+        # The rewriter's cache is generated by an ordinary pytest run.
+        # Force bytecode writing regardless of any outer test-runner setting.
+        env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "0"}
+        subprocess.run(
+            [sys.executable, "-m", "pytest", str(source), "-q", "-p", "no:leela"],
+            check=True,
+            capture_output=True,
+            env=env,
+        )
+        assert rewrite_cache.is_file()
+        sibling = source.with_name("sibling.py")
+        sibling.write_text("value = 1\n")
+        sibling_cache = Path(py_compile.compile(str(sibling), doraise=True))
+
+        assert cpython_cache == Path(importlib.util.cache_from_source(str(source)))
+        assert _bytecode_artifacts(source) == [cpython_cache, rewrite_cache]
+        assert sibling_cache.is_file()
+
+    def it_returns_no_artifacts_for_uncached_source(tmp_path):
+        from pytest_leela.runner import _bytecode_artifacts
+
+        source = tmp_path / "uncached.py"
+        source.write_text("value = 1\n")
+        assert _bytecode_artifacts(source) == []
+
+
+def describe_prepare_fresh_dependencies():
+    def it_removes_stale_bytecode_only_once_per_source(tmp_path):
+        import py_compile
+        from pathlib import Path
+
+        from pytest_leela.runner import _prepare_fresh_dependencies
+
+        source = tmp_path / "dependency.py"
+        source.write_text("value = 1\n")
+        cache = Path(py_compile.compile(str(source), doraise=True))
+        prepared = set()
+
+        _prepare_fresh_dependencies({source}, prepared)
+
+        assert prepared == {source}
+        assert not cache.exists()
+        # A later import rebuilds bytecode; the same run must preserve it.
+        rebuilt = Path(py_compile.compile(str(source), doraise=True))
+        _prepare_fresh_dependencies({source}, prepared)
+        assert rebuilt.is_file()
+        assert prepared == {source}
+
+
+def describe_selection_source_files():
+    def it_includes_python_node_ids_and_ancestor_configuration(tmp_path):
+        from pytest_leela.runner import _selection_source_files
+
+        package = tmp_path / "checks"
+        package.mkdir()
+        source = package / "test_selected.py"
+        source.write_text("def test_selected():\n    assert True\n")
+        conftest = tmp_path / "conftest.py"
+        conftest.write_text("")
+        init = package / "__init__.py"
+        init.write_text("")
+        unselected = package / "test_other.py"
+        unselected.write_text("def test_other():\n    assert True\n")
+
+        files = _selection_source_files([f"{source}::test_selected"])
+
+        assert {source.resolve(), conftest.resolve(), init.resolve()} <= files
+        assert unselected.resolve() not in files
+
+    def it_ignores_missing_python_files_and_non_python_selections(tmp_path):
+        from pytest_leela.runner import _selection_source_files
+
+        text = tmp_path / "cases.txt"
+        text.write_text("case\n")
+        missing = tmp_path / "test_missing.py"
+
+        assert _selection_source_files([str(text), f"{missing}::test_missing"]) == set()
+
+
 def describe_causal_proof_for_inconclusive_failures():
     """Setup/teardown/collection/import failures are errors unless a clean
     unmutated control passes and the same failure recurs on mutant
@@ -3458,3 +3794,140 @@ def describe_same_failure_evidence():
         assert result.error is None
         assert result.tests_run == 1
         assert (tmp_path / "attempts.txt").read_text() == "2"  # no causal retries
+
+
+def describe_origin_freshness_causal_integration():
+    @pytest.mark.parametrize("ambient", [False, True], ids=["causal-import", "ambient-control"])
+    def it_combines_origin_loader_evidence_and_fresh_dependencies(
+        tmp_path, monkeypatch, ambient
+    ):
+        """The daemon's src-qualified identity meets pytest's late pythonpath.
+
+        A real plugin hides ConftestImportFailure, so only the origin-matched
+        loader's shared immutable evidence can establish an import kill.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        src = tmp_path / "src"
+        src.mkdir()
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tmp_path / "pytest.ini").write_text("[pytest]\npythonpath = src\n")
+        helper = src / "origin_dependency.py"
+        helper.write_text(f"READY = 0\nAMBIENT = {ambient!r}\n")
+        source = (
+            "from pathlib import Path\n"
+            "from origin_dependency import READY, AMBIENT\n"
+            "DIVISOR = 1 + 1\n"
+            "with Path(__file__).parents[1].joinpath('attempts.txt').open('a') as log:\n"
+            "    log.write(str(DIVISOR) + ':' + str(READY) + '\\n')\n"
+            "if READY and AMBIENT:\n"
+            "    raise RuntimeError('ambient service unavailable')\n"
+            "if READY:\n"
+            "    RATIO = 10 // DIVISOR\n"
+        )
+        target = src / "origin_contract.py"
+        target.write_text(source)
+        (tests / "conftest.py").write_text("import origin_contract\n")
+        (tests / "test_contract.py").write_text("def test_contract():\n    pass\n")
+        (tmp_path / "origin_bridge.py").write_text(
+            "import pytest\nfrom _pytest.config import ConftestImportFailure\n"
+            "@pytest.hookimpl(hookwrapper=True, trylast=True)\n"
+            "def pytest_load_initial_conftests():\n"
+            "    outcome = yield\n"
+            "    if outcome.excinfo and isinstance(outcome.excinfo[1], ConftestImportFailure):\n"
+            "        outcome.force_exception(pytest.UsageError('bridge replaced conftest wrapper'))\n"
+        )
+        monkeypatch.setenv("PYTEST_PLUGINS", "origin_bridge")
+        scope = ProjectModuleScope()
+        known = precompute_user_modules(scope)
+        baseline = run_baseline(None, str(tests), known, scope)
+        assert baseline.error() is None
+        assert baseline.failures() == []
+        cache = Path(py_compile.compile(str(helper), doraise=True))
+        stamp = helper.stat()
+        helper.write_text(helper.read_text().replace("READY = 0", "READY = 1"))
+        os.utime(helper, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+        assert cache.exists()
+        point = next(
+            p for p in find_mutation_points(source, str(target), "src.origin_contract")
+            if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        prepared = set()
+        result = run_tests_for_mutant(
+            Mutant(point, "Sub", 0),
+            {"src.origin_contract": source},
+            {"src.origin_contract": str(target)},
+            test_dir=str(tests), scope=scope, known_user_modules=known,
+            dependency_files={helper}, prepared_dependencies=prepared,
+        )
+        assert prepared == {helper}
+        attempts = (tmp_path / "attempts.txt").read_text().splitlines()
+        if ambient:
+            assert result.status == "error"
+            assert "control run also failed" in result.error
+            assert "RuntimeError: ambient service unavailable" in result.error
+            assert attempts == ["2:0", "0:1", "2:1"]
+            assert not result.killed
+        else:
+            assert result.status == "killed", result.error
+            assert result.error is None
+            assert result.killing_test.startswith("<import of origin_contract:")
+            assert "ZeroDivisionError" in result.killing_test
+            assert attempts == ["2:0", "0:1", "2:1", "0:1"]
+        assert result.tests_run == 0
+
+    @pytest.mark.parametrize("phase", ["call", "setup"])
+    def it_normalizes_origin_matched_verdicts_after_fresh_selected_tests(
+        tmp_path, monkeypatch, phase
+    ):
+        monkeypatch.chdir(tmp_path)
+        src = tmp_path / "src"
+        src.mkdir()
+        tests = tmp_path / "checks"
+        tests.mkdir()
+        # The inner root differs from cwd, including on the confirmed kill.
+        (tests / "pytest.ini").write_text("[pytest]\npythonpath = ../src\n")
+        source = "def add(a, b):\n    return a + b\n"
+        target = src / "normalized_origin.py"
+        target.write_text(source)
+        test = tests / "test_selected.py"
+        prefix = "from normalized_origin import add\n"
+        if phase == "setup":
+            prefix += "import pytest\n@pytest.fixture(autouse=True)\ndef three():\n    assert add(1, 2) == 3\n"
+            new = prefix + "def test_selected():\n    assert True\n"
+            old = new.replace("== 3", "!= 3")
+        else:
+            old = prefix + "def test_selected():\n    assert add(1, 2) != 3\n"
+            new = old.replace("!= 3", "== 3")
+        test.write_text(old)
+        stamp = test.stat()
+        import subprocess
+        from _pytest.assertion.rewrite import PYTEST_TAG
+
+        cached_run = subprocess.run(
+            [sys.executable, "-m", "pytest", str(test), "-q", "-p", "no:leela"],
+            capture_output=True, text=True,
+            env={**os.environ, "PYTHONDONTWRITEBYTECODE": "0"},
+        )
+        assert cached_run.returncode == 1, cached_run.stdout + cached_run.stderr
+        rewritten = test.parent / "__pycache__" / f"test_selected.{PYTEST_TAG}.pyc"
+        assert rewritten.is_file()
+        test.write_text(new)
+        os.utime(test, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+        point = next(
+            p for p in find_mutation_points(source, str(target), "src.normalized_origin")
+            if p.node_type == "BinOp"
+        )
+        result = run_tests_for_mutant(
+            Mutant(point, "Sub", 0),
+            {"src.normalized_origin": source},
+            {"src.normalized_origin": str(target)},
+            test_ids=[f"{test}::test_selected"],
+        )
+        nodeid = "checks/test_selected.py::test_selected"
+        assert result.status == "killed", result.error
+        assert result.error is None
+        assert result.killing_tests == [nodeid]
+        assert result.test_ids_run == [nodeid]
+        assert result.tests_run == int(phase == "call")
