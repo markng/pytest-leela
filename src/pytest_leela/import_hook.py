@@ -1,11 +1,18 @@
 """Import hook for in-memory AST mutation — zero file I/O."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` to this module.
+# Python inherits ``CO_FUTURE_ANNOTATIONS`` (0x1000000) into ``compile()``
+# calls made by flagged code, including ``MutatingLoader.exec_module``'s
+# ``compile(tree, ...)``. That would defer target annotations. Without the
+# flag, an invalid ``BitOr -> BitAnd`` mutation fails during definition on
+# Python <=3.13. Python 3.14 PEP 649 annotations remain lazy, so the
+# annotation-policy regression deliberately reads supported type hints there.
 
 import ast
 import importlib
 import importlib.abc
 import importlib.machinery
+import os
 import sys
 import types
 from typing import Any
@@ -268,16 +275,34 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         path: Any = None,
         target: Any = None,
     ) -> importlib.machinery.ModuleSpec | None:
-        if fullname in self.target_modules:
-            filename = self._module_to_file.get(fullname, f"<mutated:{fullname}>")
-            loader = MutatingLoader(
-                self.target_modules[fullname],
-                self.mutant,
-                filename,
-                self.import_errors,
+        module_name = fullname
+        if module_name not in self.target_modules:
+            # pytest may add a configured pythonpath only during the test
+            # session, after the engine named its targets. Resolve the import
+            # with the normal path finder and match its actual source origin.
+            spec = importlib.machinery.PathFinder.find_spec(fullname, path)
+            if (
+                spec is None
+                or spec.origin is None
+                or spec.submodule_search_locations is not None
+            ):
+                return None
+            origin = os.path.abspath(spec.origin)
+            module_name = next(
+                (name for name, file in self._module_to_file.items()
+                 if os.path.abspath(file) == origin and name in self.target_modules),
+                "",
             )
-            return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
-        return None
+            if not module_name:
+                return None
+        filename = self._module_to_file.get(module_name, f"<mutated:{module_name}>")
+        loader = MutatingLoader(
+            self.target_modules[module_name],
+            self.mutant,
+            filename,
+            self.import_errors,
+        )
+        return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
 
 
 def install_hook(

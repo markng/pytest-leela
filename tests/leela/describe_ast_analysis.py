@@ -573,3 +573,48 @@ def describe_find_mutation_points_in_file():
         assert len(points) >= 1
         # Module name should be the file stem
         assert all(p.module_name == "sample" for p in points)
+
+
+def describe_classify_return_value():
+    """The ``isinstance`` → ``is`` mutation at L247 falls through to ``expr``.
+
+    If the ``isinstance(node, ast.Constant)`` guard at the top of
+    ``_classify_return_value`` becomes ``isinstance(...) is
+    ast.Constant``, the comparison is always False (isinstance
+    returns a bool, not a class), so the function falls through to
+    the final ``return "expr"``. A constant True/False/None/int
+    must therefore come back with the specific literal label, not
+    the generic ``"expr"``.
+    """
+
+    def it_classifies_constant_true():
+        import ast
+
+        from pytest_leela.ast_analysis import _classify_return_value
+
+        node = ast.Constant(value=True)
+        assert _classify_return_value(node) == "True"
+
+    def it_classifies_constant_false():
+        import ast
+
+        from pytest_leela.ast_analysis import _classify_return_value
+
+        node = ast.Constant(value=False)
+        assert _classify_return_value(node) == "False"
+
+    def it_classifies_constant_none():
+        import ast
+
+        from pytest_leela.ast_analysis import _classify_return_value
+
+        node = ast.Constant(value=None)
+        assert _classify_return_value(node) == "None"
+
+    def it_classifies_int_literal():
+        import ast
+
+        from pytest_leela.ast_analysis import _classify_return_value
+
+        node = ast.Constant(value=42)
+        assert _classify_return_value(node) == "int_literal"
