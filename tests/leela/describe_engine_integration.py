@@ -16,6 +16,7 @@ in a few hundred milliseconds.
 
 from __future__ import annotations
 
+import io
 import json
 import time
 from pathlib import Path
@@ -818,10 +819,114 @@ def describe_progress_completion():
     def it_emits_done_without_symbol_events_when_no_mutants_exist(tmp_path, monkeypatch):
         src = tmp_path / "empty.py"
         src.write_text("# no mutants\n")
-        events = []
-        result = Engine(use_coverage=False, on_progress=events.append).run([str(src)])
-        assert result.mutants_tested == 0
+        events, cli = [], []
+
+        def unexpected_baseline(*args, **kwargs):
+            raise AssertionError("baseline must not run without mutants")
+
+        monkeypatch.setattr(Engine, "_check_baseline", unexpected_baseline)
+        result = Engine(
+            use_coverage=False,
+            on_progress=events.append,
+            on_cli_progress=cli.append,
+        ).run([str(src)])
+        assert result.mutants_tested == result.total_mutants == 0
         assert [event.kind for event in events] == ["done"]
+        assert [event.kind for event in cli] == [
+            "preparation-start", "preparation-done", "mutation-start", "done"
+        ]
+
+    def it_retains_confirmation_timeout_in_the_final_cli_event(tmp_path, monkeypatch):
+        from pytest_leela.models import MutantResult
+        from pytest_leela.plugin import _MutationProgressReporter
+
+        src = tmp_path / "timeout.py"
+        src.write_text("def value():\n    return 1\n")
+        events = []
+        output = io.StringIO()
+        reporter = _MutationProgressReporter(output)
+
+        def progress(event):
+            events.append(event)
+            reporter(event)
+
+        def fake_run(mutant, *args, on_phase=None, **kwargs):
+            assert on_phase is not None
+            on_phase("mutant", 5.0, False)
+            on_phase("mutant-done", 5.0, False)
+            on_phase("control", None, False)
+            on_phase("control-done", None, False)
+            on_phase("confirmation", 5.0, False)
+            on_phase("confirmation-done", 5.0, True)
+            return MutantResult(
+                mutant=mutant, killed=False, tests_run=0, killing_test=None,
+                time_seconds=5.1, error="inconclusive: confirmation timed out",
+            )
+
+        monkeypatch.setattr(Engine, "_check_baseline", lambda *args: None)
+        monkeypatch.setattr("pytest_leela.engine.run_tests_for_mutant", fake_run)
+        result = Engine(
+            use_types=False, use_coverage=False, on_cli_progress=progress
+        ).run([str(src)])
+        final = [event for event in events if event.kind == "mutant"][-1]
+        assert final.status == result.results[0].status == "error"
+        assert result.results[0].killing_test is None
+        assert final.timed_out is True
+        assert [event.timed_out for event in events if event.kind == "mutant-phase"][-1] is True
+        text = output.getvalue()
+        assert "confirmation-done timeout=yes" in text
+        assert "error timeout=yes elapsed=5.10s" in text
+
+    def it_does_not_leak_phase_timeout_to_the_next_mutant(tmp_path, monkeypatch):
+        from pytest_leela.models import MutantResult
+
+        src = tmp_path / "timeout.py"
+        src.write_text("def first():\n    return 1\n\ndef second():\n    return 2\n")
+        events, calls = [], []
+
+        def fake_run(mutant, *args, on_phase=None, **kwargs):
+            calls.append(mutant)
+            timed_out = len(calls) == 1
+            assert on_phase is not None
+            on_phase("mutant", 5.0, False)
+            on_phase("mutant-done", 5.0, timed_out)
+            return MutantResult(
+                mutant=mutant, killed=False, tests_run=1, killing_test=None,
+                time_seconds=0.1,
+            )
+
+        monkeypatch.setattr(Engine, "_check_baseline", lambda *args: None)
+        monkeypatch.setattr("pytest_leela.engine.run_tests_for_mutant", fake_run)
+        Engine(
+            use_types=False, use_coverage=False, on_cli_progress=events.append
+        ).run([str(src)])
+        finals = [event for event in events if event.kind == "mutant"]
+        assert len(finals) == 2
+        assert [event.timed_out for event in finals] == [True, False]
+
+    def it_emits_cli_stages_without_changing_existing_progress(tmp_path, monkeypatch):
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.chdir(tmp_path)
+        source = tmp_path / "simple.py"
+        source.write_text("def value():\n    return 1\n")
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        (tests / "test_simple.py").write_text(
+            "from simple import value\n\ndef test_value():\n    assert value() in (1, None)\n"
+        )
+        legacy, cli = [], []
+        result = Engine(use_coverage=False, on_progress=legacy.append, on_cli_progress=cli.append).run(
+            [str(source)], test_dir=str(tests)
+        )
+        assert result.mutants_tested > 0
+        assert [e.kind for e in legacy] == ["symbol-start", "mutant", "done"]
+        kinds = [e.kind for e in cli]
+        assert kinds[:4] == ["preparation-start", "preparation-done", "baseline-start", "baseline-done"]
+        assert kinds[4] == "mutation-start"
+        phases = [e for e in cli if e.kind == "mutant-phase"]
+        assert phases and phases[0].phase == "mutant"
+        assert phases[0].selected_tests is None
+        assert cli[-1].kind == "done"
 
 
 # ---------------------------------------------------------------------------

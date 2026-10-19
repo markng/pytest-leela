@@ -164,3 +164,10 @@ class EngineProgress:
     symbol_short: str = ""
     n_mutants_in_symbol: int = 0
     killing_test: str | None = None
+    ordinal: int = 0
+    total: int = 0
+    selected_tests: int | None = None
+    timeout_seconds: float | None = None
+    elapsed_seconds: float = 0.0
+    timed_out: bool = False
+    phase: str = ""

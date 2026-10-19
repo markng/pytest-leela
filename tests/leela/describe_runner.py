@@ -3074,6 +3074,79 @@ def describe_selection_source_files():
         assert _selection_source_files([str(text), f"{missing}::test_missing"]) == set()
 
 
+def describe_progress_timeout_budget():
+    from pytest_leela.runner import _timeout_budget
+
+    def it_matches_the_inner_session_budget_and_all_tests_fallback():
+        assert _timeout_budget(["a", "b"], {"a": 7.0}) == 17.0
+        assert _timeout_budget(["a"], {"a": 0.2}) == 5.0
+        assert _timeout_budget(None, {"a": 7.0}) is None
+        assert _timeout_budget(["a"], None) is None
+
+    def it_reports_confirmation_timeout_without_changing_the_error_result(monkeypatch):
+        source = "def value():\n    return 1\n"
+        point = find_mutation_points(source, "/tmp/progress_target.py", "progress_target")[0]
+        mutant = Mutant(point=point, replacement_op="None", mutant_id=0)
+        initial = MutantResult(
+            mutant=mutant, killed=False, tests_run=0, killing_test=None,
+            time_seconds=0.1, error="inconclusive: initial collection failure",
+        )
+        confirmation = MutantResult(
+            mutant=mutant, killed=True, tests_run=0, killing_test="<timeout>",
+            time_seconds=5.1, killing_tests=["<timeout>"],
+        )
+
+        class Session:
+            results = iter((initial, confirmation))
+
+            def __init__(self, *args, **kwargs):
+                self.timed_out = threading.Event()
+                self.collector = MagicMock(total=0)
+                self.elapsed = 5.1
+                self._result = next(self.results)
+                if self._result is confirmation:
+                    self.timed_out.set()
+
+            def run(self):
+                return self
+
+            def result_for(self, mutant):
+                return self._result
+
+            def inconclusive_failures(self):
+                return []
+
+            def _failure_diagnostics(self):
+                return ""
+
+        control = MagicMock()
+        control.error.return_value = None
+        control.failures.return_value = []
+        control.collector.total = 1
+        phases = []
+        monkeypatch.setattr("pytest_leela.runner.InnerSession", Session)
+        monkeypatch.setattr("pytest_leela.runner.install_hook", lambda *args: object())
+        monkeypatch.setattr("pytest_leela.runner.run_control", lambda *args: control)
+
+        result = run_tests_for_mutant(
+            mutant, {"progress_target": source},
+            {"progress_target": "/tmp/progress_target.py"},
+            test_ids=["test_progress.py::test_value"],
+            test_times={"test_progress.py::test_value": 1.0},
+            known_user_modules=frozenset({"progress_target"}),
+            dependency_files=set(), prepared_dependencies=set(),
+            on_phase=lambda phase, timeout, timed_out: phases.append(
+                (phase, timeout, timed_out)
+            ),
+        )
+
+        assert result.status == "error"
+        assert result.killing_test is None
+        assert result.killing_tests == []
+        assert "confirmation: killed" in (result.error or "")
+        assert phases[-1] == ("confirmation-done", 5.0, True)
+
+
 def describe_causal_proof_for_inconclusive_failures():
     """Setup/teardown/collection/import failures are errors unless a clean
     unmutated control passes and the same failure recurs on mutant
@@ -3116,13 +3189,20 @@ def describe_causal_proof_for_inconclusive_failures():
         point = next(p for p in points if p.node_type == "Return")
         mutant = Mutant(point=point, replacement_op="None", mutant_id=0)
 
+        phases = []
         result = run_tests_for_mutant(
             mutant,
             {"flaky_target": source},
             {"flaky_target": str(target)},
             test_dir=str(test_dir),
+            on_phase=lambda phase, timeout, timed_out: phases.append((phase, timeout, timed_out)),
         )
 
+        assert [phase for phase, _, _ in phases] == [
+            "mutant", "mutant-done", "control", "control-done",
+            "confirmation", "confirmation-done",
+        ]
+        assert all(timeout is None and not timed_out for _, timeout, timed_out in phases)
         assert result.status == "error"
         assert "inconclusive" in (result.error or "")
         assert "same-failure recurrence was not established" in result.error

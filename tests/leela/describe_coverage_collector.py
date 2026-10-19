@@ -1,6 +1,7 @@
 """Executable discovery contracts: no plain test twins or implicit plugins."""
 import importlib
 import json
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import subprocess
@@ -11,6 +12,21 @@ import pytest
 from pytest_leela.coverage_tracker import collect_coverage_subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@contextmanager
+def _restore_fixture_modules(names):
+    """Restore bindings that a nested in-process pytest fixture may replace."""
+    missing = object()
+    previous = {name: sys.modules.get(name, missing) for name in names}
+    try:
+        yield previous, missing
+    finally:
+        for name, module in previous.items():
+            if module is missing:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
 
 
 def _coverage_collector():
@@ -197,9 +213,31 @@ def test_nested_pytest_ini_normalizes_nodeids_and_relative_source_paths(tmp_path
         'from calc import add\ndef test_add():\n    assert add(1, 2) == 3\n'
     )
     monkeypatch.chdir(tmp_path)
-    cov = collect_coverage([str(source)], test_dir=str(tests))
-    assert cov.test_times == {'tests/test_calc.py::test_add': pytest.approx(0, abs=10)}
-    assert cov.tests_for(str(source), 2) == {'tests/test_calc.py::test_add'}
+    with _restore_fixture_modules(("calc", "test_calc")) as (previous, missing):
+        cov = collect_coverage([str(source)], test_dir=str(tests))
+        assert cov.test_times == {'tests/test_calc.py::test_add': pytest.approx(0, abs=10)}
+        assert cov.tests_for(str(source), 2) == {'tests/test_calc.py::test_add'}
+
+    # The in-process collector imports the fixture's uniquely named tests.
+    # Do not leak that transient basename to later nested pytest sessions.
+    assert sys.modules.get("test_calc", missing) is previous["test_calc"]
+
+
+def test_fixture_module_guard_restores_bindings_on_success_and_error():
+    original = sys.modules.get('test_calc')
+    sentinel = importlib.util.module_from_spec(
+        importlib.util.spec_from_loader('test_calc', loader=None)
+    )
+
+    with _restore_fixture_modules(('test_calc',)):
+        sys.modules['test_calc'] = sentinel
+    assert sys.modules.get('test_calc') is original
+
+    with pytest.raises(RuntimeError, match='fixture failure'):
+        with _restore_fixture_modules(('test_calc',)):
+            sys.modules['test_calc'] = sentinel
+            raise RuntimeError('fixture failure')
+    assert sys.modules.get('test_calc') is original
 
 
 def test_nodeid_outside_invocation_cwd_keeps_absolute_origin(tmp_path):

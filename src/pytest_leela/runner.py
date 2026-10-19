@@ -532,6 +532,15 @@ def _inner_run_error(exit_code: int, collector: _ResultCollector) -> str | None:
     return reason
 
 
+def _timeout_budget(
+    test_ids: list[str] | None, test_times: dict[str, float] | None,
+) -> float | None:
+    if test_times is None or not test_ids:
+        return None
+    total_expected = sum(test_times.get(test_id, 1.0) for test_id in test_ids)
+    return max(2 * total_expected + 1.0, 5.0)
+
+
 class InnerSession:
     """One in-process pytest run against the current import state.
 
@@ -648,9 +657,8 @@ class InnerSession:
         # Set up per-mutant timeout to prevent infinite loops from
         # control-flow mutations (e.g. break→continue).
         timer: threading.Timer | None = None
-        if self.test_times is not None and self.test_ids:
-            total_expected = sum(self.test_times.get(t, 1.0) for t in self.test_ids)
-            timeout_seconds = max(2 * total_expected + 1.0, 5.0)
+        timeout_seconds = _timeout_budget(self.test_ids, self.test_times)
+        if timeout_seconds is not None:
             timer = threading.Timer(timeout_seconds, self.timed_out.set)
             timer.daemon = True
             timer.start()
@@ -914,6 +922,7 @@ def run_tests_for_mutant(
     scope: ProjectModuleScope | None = None,
     dependency_files: set[Path] | None = None,
     prepared_dependencies: set[Path] | None = None,
+    on_phase: Callable[[str, float | None, bool], None] | None = None,
 ) -> MutantResult:
     """Run tests against a single mutant, return the result.
 
@@ -942,7 +951,14 @@ def run_tests_for_mutant(
         known_user_modules=known_user_modules,
         test_times=test_times,
     )
-    result = session.run().result_for(mutant)
+    timeout_seconds = _timeout_budget(test_ids, test_times)
+    if on_phase is not None:
+        on_phase("mutant", timeout_seconds, False)
+    try:
+        result = session.run().result_for(mutant)
+    finally:
+        if on_phase is not None:
+            on_phase("mutant-done", timeout_seconds, session.timed_out.is_set())
 
     if result.status != "error" or not (result.error or "").startswith(
         "inconclusive:"
@@ -952,7 +968,13 @@ def run_tests_for_mutant(
     inconclusive = session.inconclusive_failures()
     control_known = known_user_modules or precompute_user_modules(scope)
     _prepare_fresh_dependencies(dependency_files, set())
-    control = run_control(test_ids, test_dir, control_known, scope)
+    if on_phase is not None:
+        on_phase("control", None, False)
+    try:
+        control = run_control(test_ids, test_dir, control_known, scope)
+    finally:
+        if on_phase is not None:
+            on_phase("control-done", None, False)
     if control.error() is not None or control.failures():
         reason = control.error()
         if reason is None:
@@ -984,7 +1006,13 @@ def run_tests_for_mutant(
         known_user_modules=control_known,
         test_times=test_times,
     )
-    confirmation = session2.run().result_for(mutant)
+    if on_phase is not None:
+        on_phase("confirmation", timeout_seconds, False)
+    try:
+        confirmation = session2.run().result_for(mutant)
+    finally:
+        if on_phase is not None:
+            on_phase("confirmation-done", timeout_seconds, session2.timed_out.is_set())
     if (
         confirmation.status == "error"
         and (confirmation.error or "").startswith("inconclusive:")

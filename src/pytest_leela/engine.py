@@ -363,6 +363,7 @@ class Engine:
         enabled_categories: tuple[str, ...] | list[str] | None = None,
         index: IndexDB | None = None,
         on_progress: Callable[[EngineProgress], None] | None = None,
+        on_cli_progress: Callable[[EngineProgress], None] | None = None,
     ) -> None:
         self.use_types = use_types
         self.use_coverage = use_coverage
@@ -370,6 +371,7 @@ class Engine:
         self._allowed_keys = build_allowed_keys(enabled_categories)
         self.index = index
         self._on_progress = on_progress
+        self._on_cli_progress = on_cli_progress
 
     def run(
         self,
@@ -381,6 +383,8 @@ class Engine:
         pre_coverage_map: CoverageMap | None = None,
     ) -> RunResult:
         start = time.monotonic()
+        if self._on_cli_progress is not None:
+            self._on_cli_progress(EngineProgress(kind="preparation-start"))
 
         _clean_process_state()
         scope = ProjectModuleScope()
@@ -517,8 +521,14 @@ class Engine:
         # 9. Prove the tests pass with no mutation applied, through the same
         # in-process path every mutant uses.  Otherwise a test that fails
         # for an unrelated reason would score every mutant as killed.
+        if self._on_cli_progress is not None:
+            self._on_cli_progress(EngineProgress(kind="preparation-done"))
         if all_mutants:
+            if self._on_cli_progress is not None:
+                self._on_cli_progress(EngineProgress(kind="baseline-start"))
             self._check_baseline(mutant_test_ids, test_dir, known_user_modules, scope)
+            if self._on_cli_progress is not None:
+                self._on_cli_progress(EngineProgress(kind="baseline-done"))
 
         # 10. Run each mutant
         results: list[MutantResult] = []
@@ -541,7 +551,9 @@ class Engine:
                     completed_symbols.add(sid)
 
 
-        for mutant, test_ids in zip(all_mutants, mutant_test_ids):
+        if self._on_cli_progress is not None:
+            self._on_cli_progress(EngineProgress(kind="mutation-start", total=len(all_mutants)))
+        for ordinal, (mutant, test_ids) in enumerate(zip(all_mutants, mutant_test_ids), 1):
             # Check memory limits
             if limits is not None and not is_memory_ok(limits):
                 break
@@ -585,6 +597,23 @@ class Engine:
                     if test_dependencies is not None else None
                 )
                 try:
+                    phase_timed_out = False
+
+                    def on_phase(phase: str, timeout: float | None, timed_out: bool) -> None:
+                        nonlocal phase_timed_out
+                        phase_timed_out = phase_timed_out or timed_out
+                        if self._on_cli_progress is not None:
+                            self._on_cli_progress(EngineProgress(
+                                kind="mutant-phase", file_path=abs_path,
+                                lineno=mutant.point.lineno,
+                                op=f"{mutant.point.node_type}:{mutant.replacement_op}",
+                                ordinal=ordinal, total=len(all_mutants),
+                                selected_tests=len(test_ids) if test_ids is not None else None,
+                                timeout_seconds=timeout, timed_out=timed_out,
+                                phase=phase,
+                            ))
+
+                    runner_progress = {"on_phase": on_phase} if self._on_cli_progress else {}
                     result = run_tests_for_mutant(
                         mutant,
                         target_sources,
@@ -596,6 +625,7 @@ class Engine:
                         dependency_files=dependency_files,
                         prepared_dependencies=prepared_dependencies,
                         scope=scope,
+                        **runner_progress,
                     )
                 except Exception:
                     # The runner did not produce a result for this mutant,
@@ -608,6 +638,14 @@ class Engine:
                             lineno=mutant.point.lineno,
                             op=f"{mutant.point.node_type}:{mutant.replacement_op}",
                             status="error", symbol_id=symbol_id or None,
+                        ))
+                    if self._on_cli_progress is not None:
+                        self._on_cli_progress(EngineProgress(
+                            kind="mutant", file_path=abs_path,
+                            lineno=mutant.point.lineno,
+                            op=f"{mutant.point.node_type}:{mutant.replacement_op}",
+                            status="error", ordinal=ordinal, total=len(all_mutants),
+                            selected_tests=len(test_ids) if test_ids is not None else None,
                         ))
                     raise
                 status = result.status
@@ -638,17 +676,29 @@ class Engine:
                 ):
                     self.index.mark_symbol_clean(symbol_id)
                     completed_symbols.add(symbol_id)
+            event = EngineProgress(
+                kind="mutant", file_path=abs_path,
+                lineno=mutant.point.lineno,
+                op=f"{mutant.point.node_type}:{mutant.replacement_op}",
+                status=status, symbol_id=symbol_id or None,
+                killing_test=result.killing_test,
+                ordinal=ordinal, total=len(all_mutants),
+                selected_tests=len(test_ids) if test_ids is not None else None,
+                elapsed_seconds=result.time_seconds,
+                timed_out=(
+                    result.killing_test == "<timeout>"
+                    or (cached is None and phase_timed_out)
+                ),
+            )
             if self._on_progress is not None:
-                self._on_progress(EngineProgress(
-                    kind="mutant", file_path=abs_path,
-                    lineno=mutant.point.lineno,
-                    op=f"{mutant.point.node_type}:{mutant.replacement_op}",
-                    status=status, symbol_id=symbol_id or None,
-                    killing_test=result.killing_test,
-                ))
+                self._on_progress(event)
+            if self._on_cli_progress is not None:
+                self._on_cli_progress(event)
 
         if self._on_progress is not None:
             self._on_progress(EngineProgress(kind="done"))
+        if self._on_cli_progress is not None:
+            self._on_cli_progress(EngineProgress(kind="done"))
 
         wall_time = time.monotonic() - start
 

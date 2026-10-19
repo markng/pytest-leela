@@ -10,10 +10,14 @@
 import contextlib
 import fnmatch
 import glob as _glob
+import io
 import os
 import sys
+import threading
+import time
 from collections.abc import Generator
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -21,6 +25,7 @@ from pytest_leela.config import load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import BaselineFailure, Engine
 from pytest_leela.git_diff import changed_files
+from pytest_leela.models import EngineProgress
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
@@ -31,6 +36,113 @@ def _is_test_file(basename: str, python_files: list[str]) -> bool:
     return basename == "conftest.py" or any(
         fnmatch.fnmatch(basename, p) for p in python_files
     )
+
+
+class _MutationProgressReporter:
+    """Write bounded mutation progress to pytest's outer terminal stream."""
+
+    def __init__(self, writer: object) -> None:
+        self._stream = cast(io.TextIOBase, getattr(writer, "_file", writer))
+        self._stop = threading.Event()
+        self._lock = threading.Lock()
+        self._current = "mutation preparation"
+        self._started = 0.0
+        self._phase_started = 0.0
+        self._thread: threading.Thread | None = None
+        self._completed = 0
+        self._total = 0
+
+    def _write(self, message: str) -> None:
+        with self._lock:
+            self._stream.write(message + "\n")
+            self._stream.flush()
+
+    def start(self) -> None:
+        self._started = time.monotonic()
+        self._phase_started = self._started
+        self._write("leela: mutation preparation started")
+        self._thread = threading.Thread(
+            target=self._heartbeat, name="leela-progress", daemon=True
+        )
+        self._thread.start()
+
+    def _heartbeat(self) -> None:
+        while not self._stop.wait(30.0):
+            with self._lock:
+                phase = self._current
+                elapsed = time.monotonic() - self._phase_started
+                completed, total = self._completed, self._total
+            self._write(
+                f"leela: mutation heartbeat {completed}/{total} {phase} "
+                f"elapsed={elapsed:.0f}s"
+            )
+
+    def __call__(self, event: EngineProgress) -> None:
+        if event.kind == "preparation-done":
+            with self._lock:
+                self._current = "baseline preparation"
+                self._phase_started = time.monotonic()
+            self._write("leela: mutation preparation complete")
+        elif event.kind == "baseline-start":
+            with self._lock:
+                self._current = "baseline tests"
+                self._phase_started = time.monotonic()
+            self._write("leela: baseline started")
+        elif event.kind == "baseline-done":
+            with self._lock:
+                self._current = "mutation run preparation"
+                self._phase_started = time.monotonic()
+            self._write("leela: baseline complete")
+        elif event.kind == "mutation-start":
+            with self._lock:
+                self._total = event.total
+                self._current = "mutation run"
+                self._phase_started = time.monotonic()
+            self._write(f"leela: mutation run started ({event.total} mutants)")
+        elif event.kind == "mutant-phase":
+            timeout = (
+                f"{event.timeout_seconds:.1f}s"
+                if event.timeout_seconds is not None else "none"
+            )
+            if event.phase in {"mutant", "control", "confirmation"}:
+                with self._lock:
+                    self._current = (
+                        f"{event.phase} {event.file_path}:{event.lineno} {event.op} "
+                        f"tests={event.selected_tests if event.selected_tests is not None else 'all'} "
+                        f"timeout={timeout}"
+                    )
+                    self._phase_started = time.monotonic()
+            if event.phase in {"mutant", "control", "confirmation"}:
+                self._write(
+                    f"leela: mutant {event.ordinal}/{event.total} {self._current}"
+                )
+            elif event.phase in {"control-done", "confirmation-done"}:
+                self._write(
+                    f"leela: mutant {event.ordinal}/{event.total} "
+                    f"{event.phase} timeout={'yes' if event.timed_out else 'no'}"
+                )
+            elif event.timed_out:
+                self._write(
+                    f"leela: mutant {event.ordinal}/{event.total} timeout occurred"
+                )
+        elif event.kind == "mutant":
+            with self._lock:
+                self._completed = event.ordinal
+            locus = f"{event.file_path}:{event.lineno} {event.op}"
+            self._write(
+                f"leela: mutant {event.ordinal}/{event.total} {locus} "
+                f"tests={event.selected_tests if event.selected_tests is not None else 'all'} "
+                f"{event.status} timeout={'yes' if event.timed_out else 'no'} "
+                f"elapsed={event.elapsed_seconds:.2f}s"
+            )
+        elif event.kind == "done":
+            self._write("leela: mutation run complete")
+
+    def close(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join()
+            self._thread = None
 
 
 _SKIP_DIRS = {
@@ -258,7 +370,12 @@ class LeelaPlugin:
             else None
         )
 
-        engine = Engine(enabled_categories=enabled_categories)
+        progress = _MutationProgressReporter(tw if tw is not None else sys.stderr)
+        engine = Engine(
+            enabled_categories=enabled_categories,
+            on_cli_progress=progress,
+        )
+        progress.start()
         try:
             with self._outer_django_db_unblocked():
                 result = engine.run(
@@ -276,6 +393,8 @@ class LeelaPlugin:
                 print(message)
             session.exitstatus = 1
             return
+        finally:
+            progress.close()
 
         report = format_terminal_report(result)
 
