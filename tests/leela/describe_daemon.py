@@ -205,32 +205,11 @@ def describe_daemon_status():
             assert status.pending_reanalysis == 1
             # No mutants written yet, so no coverage gaps.
             assert status.with_gaps == 0
-            # ``covered`` is the operator-facing "fully tested"
-            # bucket: clean symbols with no surviving or
-            # uncovered mutants. With nothing in the mutants
-            # table, both are 0 except for the lone clean
-            # symbol.
+            # Retain the historical API count; this is not coverage proof.
             assert status.covered == 1
 
-    def it_renders_three_buckets_not_four_states(tmp_path: Path):
-        """Operator-visible status uses three buckets.
-
-        The DB stores four symbol states (``clean`` /
-        ``dirty`` / ``stale`` / ``error``). The status line
-        collapses those into three buckets the operator
-        actually cares about:
-
-        * ``covered`` — fully tested
-        * ``with gaps`` — needs more tests
-        * ``pending re-analysis`` — engine is on it
-
-        Operators asked for this because ``clean`` in the
-        DB means "analysis done", which is misleading — a
-        symbol with surviving mutants is still "clean" in
-        the DB even though it has real work to do. The new
-        display names the buckets after the action they
-        imply.
-        """
+    def it_renders_lifecycle_not_inferred_coverage(tmp_path: Path):
+        """The legacy value object's render names lifecycle, not coverage."""
         from pytest_leela.models import Mutant, MutationPoint
 
         db_path = tmp_path / "index.db"
@@ -238,7 +217,7 @@ def describe_daemon_status():
             db.reconcile_file("src/a.py", "def f():\n    return 1\n")
             db.reconcile_file("src/b.py", "def g():\n    return 1\n")
             db.reconcile_file("src/c.py", "def h():\n    return 1\n")
-            db.mark_state("src.a:f", STATE_CLEAN)  # covered
+            db.mark_state("src.a:f", STATE_CLEAN)  # lifecycle clean
             db.mark_state("src.b:g", STATE_CLEAN)  # has gaps
             db.mark_state("src.c:h", STATE_DIRTY)  # pending
             db.write_mutant_result(
@@ -275,17 +254,9 @@ def describe_daemon_status():
             assert status.covered == 1
             assert status.pending_reanalysis == 1
             rendered = status.render()
-            # The render line must use the three buckets,
-            # not the raw DB state names.
-            assert "1 covered" in rendered
-            assert "1 with gaps" in rendered
-            assert "1 pending re-analysis" in rendered
-            # The raw four-state breakdown is no longer the
-            # primary display — only the three buckets are.
-            assert "clean" not in rendered.split("—")[1]
-            assert "dirty" not in rendered.split("—")[1]
-            assert "stale" not in rendered.split("—")[1]
-            assert "error" not in rendered.split("—")[1]
+            assert rendered == "  status: 3 symbols  — 2 clean, 1 pending re-analysis"
+            assert "covered" not in rendered
+            assert "with gaps" not in rendered
 
     def it_counts_analyzing_symbols_in_total_and_pending(tmp_path: Path):
         """``STATE_ANALYZING`` symbols must be counted in
@@ -467,13 +438,11 @@ def describe_status_subcommand():
         captured = capsys.readouterr()
         # Same render format as the live daemon uses.
         assert "3 symbols" in captured.out
-        assert "covered" in captured.out
-        assert "with gaps" in captured.out
-        assert "pending re-analysis" in captured.out
-        # No gaps written → 2 covered, 0 with gaps, 1 pending.
-        assert "2 covered" in captured.out
-        assert "0 with gaps" in captured.out
-        assert "1 pending re-analysis" in captured.out
+        assert "2 clean, 1 pending (dirty/stale/error/analyzing)" in captured.out
+        assert "recorded indexed mutants: 0 (no results indexed)" in captured.out
+        assert "indexed test links: 0 (test coverage unknown)" in captured.out
+        assert "covered" not in captured.out
+        assert "with gaps" not in captured.out
         # 1 dirty → exit 1 (work to do).
         assert rc == 1
 
@@ -481,7 +450,7 @@ def describe_status_subcommand():
         index = tmp_path / ".leela" / "index.db"
         index.parent.mkdir(parents=True)
         with IndexDB(index) as db:
-            # One clean symbol, no gaps → 1 covered, 0 with gaps.
+            # One clean symbol, no evidence; retain legacy exit semantics.
             db.reconcile_file("src/a.py", "def f():\n    return 1\n")
             db.mark_state("src.a:f", STATE_CLEAN)
 
@@ -489,9 +458,9 @@ def describe_status_subcommand():
 
         rc = daemon_main(["status", str(tmp_path)])
         captured = capsys.readouterr()
-        assert "1 covered" in captured.out
-        assert "0 with gaps" in captured.out
-        assert "0 pending re-analysis" in captured.out
+        assert "1 clean, 0 pending (dirty/stale/error/analyzing)" in captured.out
+        assert "no results indexed" in captured.out
+        assert "test coverage unknown" in captured.out
         assert rc == 0
 
     def it_exits_two_when_index_missing(tmp_path: Path, capsys):
@@ -562,8 +531,9 @@ def describe_status_subcommand():
         # Both symbols listed.
         assert "src.a:f" in captured.out
         assert "src.b:g" in captured.out
-        # The gap count is right there in the status line.
-        assert "2 with gaps" in captured.out
+        # The snapshot counts records; the optional detail counts symbols.
+        assert "non-killed=0: 2" in captured.out
+        assert "symbols with gaps (2):" in captured.out
         # Both symbols have one uncovered mutant each.
         assert "(1 surviving/uncovered)" in captured.out
         # Exit 1 (work to do).
@@ -1209,7 +1179,7 @@ def describe_run_reanalysis_emits_per_symbol_log_lines():
     plus one line per mutant, so the operator can see *what* the
     daemon is doing — not just ``status: 30 clean, ...``."""
 
-    def it_prints_symbol_start_summary_and_done(tmp_path, capsys):
+    def it_prints_symbol_start_summary_and_done(tmp_path, capsys, monkeypatch):
         # Use a real Engine (not a mock) so the engine progress
         # callback actually fires against a tiny mutation. We
         # drive it via the daemon's _run_reanalysis path.
@@ -1228,6 +1198,8 @@ def describe_run_reanalysis_emits_per_symbol_log_lines():
             "from src.calc import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
         )
 
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
         out = io.StringIO()
         daemon = LeelaDaemon(
             project_root=tmp_path,
@@ -1531,8 +1503,11 @@ def describe_observer_mode():
         assert "[observer] symA" in captured
         assert "1 weak coverage" in captured
         assert "1 no coverage" in captured
-        # The good-news lines must NOT appear.
-        assert "killed" not in captured
+        # Killed progress is silent; the required status snapshot still counts
+        # indexed rows independently (this fake engine writes no results).
+        progress = "\n".join(line for line in captured.splitlines() if "status:" not in line)
+        assert "killed" not in progress
+        assert "killed=1: 0" in captured
         assert "cache-hit" not in captured
         # Non-dirty symbols must NOT appear in the output.
         assert "symB" not in captured
@@ -3185,7 +3160,7 @@ def describe_loop_poll_accounting():
             # Keep the loop's own work out of the output: a re-analysis
             # pass would print a status line of its own.
             monkeypatch.setattr(daemon, "_last_change_at", None)
-            expected_status = DaemonStatus.from_db(db).render()
+            expected_status = _daemon_symbol("_ConsoleStatus").from_db(db).render()
             polls = _run_polls(daemon, db, 10)
         assert polls == 10
         assert _read(daemon.out).count(expected_status) == 1
@@ -3198,7 +3173,7 @@ def describe_loop_poll_accounting():
         with IndexDB(daemon.index_path) as db:
             daemon._initial_build(db)
             monkeypatch.setattr(daemon, "_last_change_at", None)
-            expected_status = DaemonStatus.from_db(db).render()
+            expected_status = _daemon_symbol("_ConsoleStatus").from_db(db).render()
             polls = _run_polls(daemon, db, 9)
         assert polls == 9
         assert expected_status not in _read(daemon.out)

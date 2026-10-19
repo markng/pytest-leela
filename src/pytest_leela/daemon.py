@@ -108,25 +108,10 @@ class ChangeEvent:
 
 @dataclass
 class DaemonStatus:
-    """Snapshot of the daemon's state, suitable for printing.
+    """Legacy status counters retained for API and JSON compatibility.
 
-    The DB stores four symbol states (``clean``, ``dirty``,
-    ``stale``, ``error``) where ``clean`` simply means
-    "analysis is complete". For the operator's view, that
-    single boolean is split into two semantic buckets:
-
-    * ``covered`` — ``clean`` AND no surviving / uncovered
-      mutants. Fully tested. Zero work.
-    * ``with_gaps`` — ``clean`` AND has at least one
-      surviving or uncovered mutant. Work to do: add tests.
-
-    The internal ``clean`` / ``dirty`` / ``stale`` / ``error``
-    fields are kept for callers that need the raw DB state,
-    but ``render()`` shows the three buckets the operator
-    actually cares about (``covered`` / ``with_gaps`` /
-    ``pending_reanalysis``), so the status line tells them
-    how much work is outstanding without requiring a
-    glossary.
+    ``covered`` is a historical clean-minus-gap count, not verified test
+    coverage. Native console output uses the independent indexed snapshot.
     """
 
     total_symbols: int
@@ -148,9 +133,7 @@ class DaemonStatus:
         error = counts.get(STATE_ERROR, 0)
         analyzing = counts.get(STATE_ANALYZING, 0)
         with_gaps = db.coverage_gap_symbol_count()
-        # ``clean`` in the DB means "analysis done", not
-        # "fully tested". Subtract the ones with surviving or
-        # uncovered mutants to get the truly covered count.
+        # Preserve the legacy calculation for API / JSON callers.
         covered = max(0, clean - with_gaps)
         return cls(
             total_symbols=clean + dirty + stale + error + analyzing,
@@ -166,9 +149,58 @@ class DaemonStatus:
     def render(self) -> str:
         return (
             f"  status: {self.total_symbols} symbols  \u2014 "
-            f"{self.covered} covered, "
-            f"{self.with_gaps} with gaps, "
-            f"{self.pending_reanalysis} pending re-analysis"
+            f"{self.clean} clean, {self.pending_reanalysis} pending re-analysis"
+        )
+
+
+@dataclass(frozen=True)
+class _ConsoleStatus:
+    """One read snapshot; recorded rows include all lifecycle states.
+
+    Test links are symbol/test associations, not a count of tests executed
+    or proof of test coverage. NULL mutant scores are independent of NULL
+    symbol scores. No persistence or legacy status fields are changed.
+    """
+
+    total_symbols: int
+    clean: int
+    pending: int
+    indexed_mutants: int
+    killed: int
+    non_killed: int
+    unscored: int
+    stale_or_dirty_mutants: int
+    test_links: int
+
+    @classmethod
+    def from_db(cls, db: IndexDB) -> "_ConsoleStatus":
+        # A single statement keeps all aggregates on the same SQLite snapshot,
+        # including when a different WAL connection commits during this read.
+        row = db._execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM symbols), "
+            "(SELECT COUNT(*) FROM symbols WHERE state = 'clean'), "
+            "(SELECT COUNT(*) FROM symbols "
+            " WHERE state IN ('dirty', 'stale', 'error', 'analyzing')), "
+            "(SELECT COUNT(*) FROM mutants), "
+            "(SELECT COUNT(*) FROM mutants WHERE killed = 1), "
+            "(SELECT COUNT(*) FROM mutants WHERE killed = 0), "
+            "(SELECT COUNT(*) FROM mutants WHERE killed IS NULL), "
+            "(SELECT COUNT(*) FROM mutants WHERE state IN ('stale', 'dirty')), "
+            "(SELECT COUNT(*) FROM symbol_tests)"
+        ).fetchone()
+        return cls(*(int(value) for value in row))
+
+    def render(self) -> str:
+        evidence = "" if self.indexed_mutants else " (no results indexed)"
+        return (
+            f"  status: {self.total_symbols} symbols \u2014 {self.clean} clean, "
+            f"{self.pending} pending (dirty/stale/error/analyzing) | "
+            f"recorded indexed mutants: {self.indexed_mutants}{evidence} "
+            f"[killed=1: {self.killed}, non-killed=0: {self.non_killed}, "
+            f"unscored=NULL rows: {self.unscored}; "
+            f"stale/dirty records: {self.stale_or_dirty_mutants}] | "
+            f"indexed test links: {self.test_links} (test coverage unknown)"
         )
 
 
@@ -764,7 +796,7 @@ class LeelaDaemon:
                     # Flush the previous symbol's summary (if any
                     # non-cache-hit work happened for it) before
                     # moving on.
-                    if current is not None:
+                    if current is not None and current in tally:
                         if any(
                             v for k, v in tally[current].items() if k != "cache-hit"
                         ):
@@ -852,7 +884,7 @@ class LeelaDaemon:
                         v for k, v in tally[current].items() if k != "cache-hit"
                     ):
                         self._emit_symbol_summary(current, tally)
-                self._print(f"[analyze] done. {DaemonStatus.from_db(db).render()}")
+                self._print(f"[analyze] done. {_ConsoleStatus.from_db(db).render()}")
         finally:
             self._reanalyzing = False
 
@@ -1033,7 +1065,7 @@ class LeelaDaemon:
         with IndexDB(self.index_path) as db:
             self._initial_build(db)
             self._print(f"[watch] {self.project_root}  index: {self.index_path}")
-            self._print(DaemonStatus.from_db(db).render())
+            self._print(_ConsoleStatus.from_db(db).render())
             try:
                 self._loop(db)
             except KeyboardInterrupt:
@@ -1059,7 +1091,7 @@ class LeelaDaemon:
             self._maybe_spawn_reanalysis(db)
             polls += 1
             if polls % status_interval == 0:
-                self._print(DaemonStatus.from_db(db).render())
+                self._print(_ConsoleStatus.from_db(db).render())
             # Sleep with responsiveness to Ctrl-C.
             if self._stop.wait(self.poll_interval):
                 return
@@ -1162,7 +1194,7 @@ def main(argv: list[str] | None = None) -> int:
         description=(
             "Report the daemon's current view of the project "
             "without running any analysis. Reads the index DB "
-            "and prints the same three-bucket status line the "
+            "and prints the same lifecycle / recorded-evidence snapshot the "
             "daemon emits, plus optional detail."
         ),
     )
@@ -1259,7 +1291,7 @@ def _status(args: argparse.Namespace) -> int:
 
     Exit codes:
 
-    * ``0`` — every symbol is covered (no gaps, no pending).
+    * ``0`` — legacy no-gaps / no-pending check (not coverage proof).
     * ``1`` — there is work to do (gaps or pending re-analysis).
     * ``2`` — error (no index DB yet, can't read, etc.).
     """
@@ -1283,6 +1315,7 @@ def _status(args: argparse.Namespace) -> int:
     project = Path(args.project).resolve()
     with IndexDB(index_path) as db:
         status = DaemonStatus.from_db(db)
+        console_status = None if args.json else _ConsoleStatus.from_db(db)
         gaps: list[tuple[str, int]] = []
         gap_files: list[tuple[str, str, int]] = []
         show_gaps = args.gaps or args.by_file
@@ -1356,7 +1389,8 @@ def _status(args: argparse.Namespace) -> int:
             }
         print(_json.dumps(payload, indent=2))
     else:
-        print(status.render())
+        assert console_status is not None
+        print(console_status.render())
         if args.gaps and gaps:
             print(f"  symbols with gaps ({len(gaps)}):")
             for sid, n in gaps:

@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pytest_leela.engine import (
+    BaselineFailure,
     Engine,
     _TestDependencies,
     _clean_process_state,
@@ -28,6 +29,7 @@ from pytest_leela.models import (
 )
 from pytest_leela.operators import build_allowed_keys
 from pytest_leela.resources import ResourceLimits
+from pytest_leela.runner import ProjectModuleScope
 
 
 def describe_engine():
@@ -96,6 +98,29 @@ def describe_clean_process_state():
             assert "_stale_tmp_fixture_mod" not in sys.modules
         finally:
             sys.modules.pop("_stale_tmp_fixture_mod", None)
+
+    def it_keeps_installed_packages_from_a_venv_under_the_temp_dir(monkeypatch):
+        """A project whose virtualenv lives under /tmp must keep its packages:
+        evicting them breaks C-extension re-imports in every inner run."""
+        fake_mod = types.ModuleType("_tmp_venv_pkg_mod")
+        fake_mod.__file__ = os.path.join(
+            tempfile.gettempdir(), "proj", ".venv", "site-packages", "pkg.py"
+        )
+        monkeypatch.setitem(sys.modules, "_tmp_venv_pkg_mod", fake_mod)
+
+        _clean_process_state()
+
+        assert sys.modules["_tmp_venv_pkg_mod"] is fake_mod
+
+    def it_keeps_leela_modules_loaded_from_the_temp_dir(monkeypatch):
+        """A leela checkout under /tmp must not lose its own modules."""
+        fake_mod = types.ModuleType("pytest_leela._tmp_checkout_mod")
+        fake_mod.__file__ = os.path.join(tempfile.gettempdir(), "src", "m.py")
+        monkeypatch.setitem(sys.modules, "pytest_leela._tmp_checkout_mod", fake_mod)
+
+        _clean_process_state()
+
+        assert sys.modules["pytest_leela._tmp_checkout_mod"] is fake_mod
 
     def it_keeps_non_temp_modules():
         original_keys = set(sys.modules.keys())
@@ -282,6 +307,44 @@ def describe_Engine_run():
         assert 0 < result_diff.mutants_tested < result_all.mutants_tested
         tested_lines = {r.mutant.point.lineno for r in result_diff.results}
         assert tested_lines == {2}
+
+    def it_counts_candidates_and_pruned_over_changed_lines_only(tmp_path, monkeypatch):
+        """Regression: under --diff the summary counted every mutation point
+        in the file as a candidate ("159 candidates" for 88 run)."""
+        target = tmp_path / "t_diffcount.py"
+        target.write_text(
+            "def join(a: str, b: str) -> str:\n    return a + b\n\n"
+            "def add(a: int, b: int) -> int:\n    return a + b\n"
+        )
+        abs_target = os.path.abspath(str(target))
+        test_dir = tmp_path / "t_diffcount_tests"
+        test_dir.mkdir()
+        (test_dir / "test_diffcount.py").write_text(
+            "from t_diffcount import add, join\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n\n"
+            "def test_join():\n"
+            "    assert join('a', 'b') == 'ab'\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        engine = Engine(use_types=True, use_coverage=False)
+
+        result_all = engine.run([str(target)], str(test_dir))
+        with patch("pytest_leela.engine.changed_lines") as mock_cl:
+            mock_cl.return_value = {abs_target: {5}}
+            result_diff = engine.run([str(target)], str(test_dir), diff_base="main")
+
+        # Whole file: str + on line 2 loses Sub and Mult, and the int return
+        # on line 5 loses return None.  Line 5 alone: only the latter.
+        assert result_all.mutants_pruned == 3
+        assert result_diff.mutants_pruned == 1
+        assert result_diff.total_mutants == result_diff.mutants_tested + 1
+        # Enrichment covers the same lines: + and return on each of 2 lines.
+        assert result_all.enrichment_stats.from_annotations == 4
+        assert result_diff.enrichment_stats.from_annotations == 2
+        assert {r.mutant.point.lineno for r in result_diff.results} == {5}
+        mock_cl.assert_called_once_with("main")
 
     def it_stops_testing_when_memory_limit_exceeded(tmp_path, monkeypatch):
         """Engine breaks when is_memory_ok returns False.
@@ -574,6 +637,11 @@ def describe_Engine_enabled_categories():
         assert result_default.total_mutants == result_none.total_mutants
 
 
+def _skip_baseline():
+    """These tests pin test-id selection, not the baseline check."""
+    return patch.object(Engine, "_check_baseline")
+
+
 def describe_Engine_run_pre_coverage_map():
     """Tests for the pre_coverage_map parameter of Engine.run."""
 
@@ -589,7 +657,10 @@ def describe_Engine_run_pre_coverage_map():
         for lineno in range(1, 5):
             pre_cov.add(abs_target, lineno, "tests/test_precov.py::test_add")
 
-        with patch("pytest_leela.engine.collect_coverage") as mock_collect:
+        with (
+            patch("pytest_leela.engine.collect_coverage") as mock_collect,
+            _skip_baseline(),
+        ):
             engine = Engine(use_types=False, use_coverage=True)
             result = engine.run(
                 [str(target)],
@@ -613,9 +684,12 @@ def describe_Engine_run_pre_coverage_map():
 
         fake_cov = CoverageMap()
 
-        with patch(
-            "pytest_leela.engine.collect_coverage", return_value=fake_cov
-        ) as mock_collect:
+        with (
+            patch(
+                "pytest_leela.engine.collect_coverage", return_value=fake_cov
+            ) as mock_collect,
+            _skip_baseline(),
+        ):
             engine = Engine(use_types=False, use_coverage=True)
             result = engine.run(
                 [str(target)],
@@ -635,7 +709,10 @@ def describe_Engine_run_pre_coverage_map():
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
 
-        with patch("pytest_leela.engine.collect_coverage") as mock_collect:
+        with (
+            patch("pytest_leela.engine.collect_coverage") as mock_collect,
+            _skip_baseline(),
+        ):
             engine = Engine(use_types=False, use_coverage=False)
             result = engine.run(
                 [str(target)],
@@ -709,6 +786,7 @@ def describe_Engine_run_test_id_fallback():
                 "pytest_leela.engine.run_tests_for_mutant",
                 side_effect=_make_fake_runner(captured),
             ),
+            _skip_baseline(),
         ):
             engine = Engine(use_types=False, use_coverage=True)
             result = engine.run(
@@ -755,6 +833,7 @@ def describe_Engine_run_test_id_fallback():
                 "pytest_leela.engine.run_tests_for_mutant",
                 side_effect=_make_fake_runner(captured),
             ),
+            _skip_baseline(),
         ):
             engine = Engine(use_types=False, use_coverage=True)
             result = engine.run(
@@ -795,6 +874,7 @@ def describe_Engine_run_test_id_fallback():
                 "pytest_leela.engine.run_tests_for_mutant",
                 side_effect=_make_fake_runner(captured),
             ),
+            _skip_baseline(),
         ):
             engine = Engine(use_types=False, use_coverage=True)
             # No session tests available
@@ -1014,9 +1094,29 @@ def describe_Engine_index_completion():
         monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         cache = Path(py_compile.compile(str(target), doraise=True))
+        from pytest_leela.engine import run_baseline
+        unlink = Path.unlink
+        baseline_complete = False
+
+        def unlink_after_baseline(path, *args, **kwargs):
+            if baseline_complete:
+                raise PermissionError("cache unavailable")
+            return unlink(path, *args, **kwargs)
+
+        def baseline_then_unremovable_cache(*args, **kwargs):
+            nonlocal baseline_complete
+            session = run_baseline(*args, **kwargs)
+            # Baseline comes first; construct the filesystem failure only for
+            # subsequent mutant preparation, not for the unmutated session.
+            py_compile.compile(str(target), doraise=True)
+            baseline_complete = True
+            return session
+
         with IndexDB(tmp_path / "index.db") as db:
             with (
-                patch.object(Path, "unlink", side_effect=PermissionError("cache unavailable")),
+                patch("pytest_leela.engine.run_baseline", side_effect=baseline_then_unremovable_cache),
+                patch.object(Path, "unlink", unlink_after_baseline),
+                patch("pytest_leela.engine._TestDependencies.dependency_files", return_value={target}),
                 pytest.raises(PermissionError, match="cache unavailable"),
             ):
                 Engine(use_types=False, use_coverage=False, index=db).run(
@@ -1120,6 +1220,7 @@ def describe_Engine_symbol_attribution():
             "from module_scope_target import VALUE\n"
             "def test_value():\n    assert VALUE == 5\n"
         )
+        monkeypatch.chdir(tmp_path)
         monkeypatch.syspath_prepend(str(tmp_path))
         events = []
         result = Engine(use_types=False, use_coverage=False,
@@ -1131,3 +1232,360 @@ def describe_Engine_symbol_attribution():
         assert events[0].symbol_short == ""
         assert events[0].n_mutants_in_symbol == 2
         assert all(event.status == "killed" for event in events[1:-1])
+
+def _write_project(tmp_path, monkeypatch, name, test_body):
+    target = tmp_path / f"{name}.py"
+    target.write_text("def add(a, b):\n    return a + b\n")
+    test_dir = tmp_path / f"{name}_tests"
+    test_dir.mkdir()
+    (test_dir / f"test_{name}.py").write_text(test_body)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    return target, test_dir
+
+
+def describe_Engine_run_baseline():
+    """No mutant runs unless the selected tests pass with no mutation."""
+
+    def it_aborts_when_a_test_fails_without_any_mutation(tmp_path, monkeypatch):
+        target, test_dir = _write_project(
+            tmp_path,
+            monkeypatch,
+            "bl_failing",
+            "from bl_failing import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n\n"
+            "def test_broken_regardless():\n"
+            "    assert False\n",
+        )
+        engine = Engine(use_types=False, use_coverage=False)
+
+        with pytest.raises(BaselineFailure) as excinfo:
+            engine.run([str(target)], test_dir=str(test_dir))
+
+        assert str(excinfo.value) == (
+            "tests do not pass with no mutation applied (failed: "
+            "bl_failing_tests/test_bl_failing.py::test_broken_regardless); "
+            "mutant results would be meaningless, so no mutants were run"
+        )
+
+    def it_aborts_when_the_unmutated_run_errors(tmp_path, monkeypatch):
+        target, test_dir = _write_project(
+            tmp_path,
+            monkeypatch,
+            "bl_collect",
+            "import module_that_does_not_exist_anywhere\n\n"
+            "def test_never_runs():\n"
+            "    pass\n",
+        )
+        engine = Engine(use_types=False, use_coverage=False)
+
+        with pytest.raises(BaselineFailure, match=r"\(pytest exited with INTERRUPTED"):
+            engine.run([str(target)], test_dir=str(test_dir))
+
+    def it_runs_mutants_when_the_baseline_is_clean(tmp_path, monkeypatch):
+        target, test_dir = _write_project(
+            tmp_path,
+            monkeypatch,
+            "bl_clean",
+            "from bl_clean import add\n\ndef test_add():\n    assert add(1, 2) == 3\n",
+        )
+        engine = Engine(use_types=False, use_coverage=False)
+
+        result = engine.run([str(target)], test_dir=str(test_dir))
+
+        assert result.mutants_tested > 0
+        assert result.killed == result.mutants_tested
+
+    def it_skips_the_baseline_when_there_are_no_mutants(tmp_path, monkeypatch):
+        target = tmp_path / "bl_empty.py"
+        target.write_text("X = 1\n")
+        monkeypatch.chdir(tmp_path)
+
+        with patch.object(Engine, "_check_baseline") as mock_baseline:
+            Engine(use_types=False, use_coverage=False).run([str(target)])
+
+        mock_baseline.assert_not_called()
+
+
+def describe_Engine_check_baseline():
+    def _clean_session():
+        session = MagicMock()
+        session.failures.return_value = []
+        session.error.return_value = None
+        return session
+
+    def it_runs_the_sorted_union_of_all_mutants_tests_unmutated():
+        scope = ProjectModuleScope("/p")
+        with patch(
+            "pytest_leela.engine.run_baseline", return_value=_clean_session()
+        ) as mock_run:
+            Engine._check_baseline(
+                [["t::b", "t::a"], ["t::a", "t::c"]], "tests", frozenset({"m"}), scope
+            )
+
+        mock_run.assert_called_once_with(
+            ["t::a", "t::b", "t::c"], "tests", frozenset({"m"}), scope,
+            dependency_files=None,
+        )
+
+    def it_runs_the_whole_test_dir_when_any_mutant_has_no_test_ids():
+        with patch(
+            "pytest_leela.engine.run_baseline", return_value=_clean_session()
+        ) as mock_run:
+            Engine._check_baseline(
+                [["t::a"], None], "tests", frozenset(), ProjectModuleScope("/p")
+            )
+
+        assert mock_run.call_args.args[0] is None
+
+    def it_names_every_failing_test_from_a_real_run(tmp_path, monkeypatch):
+        """No ``-x``: both failures are reported, not just the first."""
+        test_dir = tmp_path / "bl_two_tests"
+        test_dir.mkdir()
+        (test_dir / "test_bl_two.py").write_text(
+            "def test_a_fails():\n    assert False\n\n"
+            "def test_b_passes():\n    pass\n\n"
+            "def test_c_fails():\n    assert False\n"
+        )
+        monkeypatch.chdir(tmp_path)
+
+        with pytest.raises(BaselineFailure) as excinfo:
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
+
+        assert "(failed: bl_two_tests/test_bl_two.py::test_a_fails, " in str(
+            excinfo.value
+        )
+        assert "bl_two_tests/test_bl_two.py::test_c_fails);" in str(excinfo.value)
+
+    def it_reports_the_error_reason_from_a_real_run(tmp_path, monkeypatch):
+        test_dir = tmp_path / "bl_empty_dir"
+        test_dir.mkdir()
+        monkeypatch.chdir(tmp_path)
+
+        with pytest.raises(
+            BaselineFailure, match=r"\(pytest exited with NO_TESTS_COLLECTED\);"
+        ):
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
+
+    def it_returns_quietly_for_a_clean_real_run(tmp_path, monkeypatch):
+        test_dir = tmp_path / "bl_ok"
+        test_dir.mkdir()
+        (test_dir / "test_ok.py").write_text("def test_ok():\n    pass\n")
+        monkeypatch.chdir(tmp_path)
+
+        assert (
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
+            is None
+        )
+
+    def it_never_installs_an_import_hook(tmp_path, monkeypatch):
+        """The baseline cannot mutate: no MutatingFinder is ever on meta_path."""
+        test_dir = tmp_path / "bl_hook"
+        test_dir.mkdir()
+        (test_dir / "test_hook.py").write_text(
+            "import sys\n\n"
+            "def test_no_mutating_finder():\n"
+            "    names = [type(f).__name__ for f in sys.meta_path]\n"
+            "    assert 'MutatingFinder' not in names\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        with patch(
+            "pytest_leela.runner.install_hook", side_effect=AssertionError
+        ) as mock_install:
+            Engine._check_baseline(
+                [None], str(test_dir), frozenset(), ProjectModuleScope()
+            )
+        mock_install.assert_not_called()
+
+
+def describe_Engine_tests_for():
+    def _mutant(lineno=3):
+        point = MutationPoint(
+            file_path="/p/m.py",
+            module_name="m",
+            lineno=lineno,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type=None,
+        )
+        return Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+    def it_returns_sorted_covering_tests():
+        cov = CoverageMap()
+        cov.add("/p/m.py", 3, "t::b")
+        cov.add("/p/m.py", 3, "t::a")
+        assert Engine._tests_for(_mutant(), cov, ["t::z"]) == ["t::a", "t::b"]
+
+    def it_falls_back_to_session_tests_for_an_uncovered_line():
+        assert Engine._tests_for(_mutant(), CoverageMap(), ["t::z"]) == ["t::z"]
+
+    def it_falls_back_to_session_tests_without_a_coverage_map():
+        assert Engine._tests_for(_mutant(), None, ["t::z"]) == ["t::z"]
+
+    def it_returns_none_with_neither():
+        assert Engine._tests_for(_mutant(), None, None) is None
+
+
+def describe_Engine_run_scope():
+    def it_builds_one_scope_and_hands_it_to_every_mutant(tmp_path, monkeypatch):
+        target, test_dir = _write_project(
+            tmp_path,
+            monkeypatch,
+            "one_scope",
+            "from one_scope import add\n\ndef test_add():\n    assert add(1, 2) == 3\n",
+        )
+        scopes = []
+        real = ProjectModuleScope
+
+        def counting_scope(*args, **kwargs):
+            scope = real(*args, **kwargs)
+            scopes.append(scope)
+            return scope
+
+        captured = []
+
+        def fake_run(*args, **kwargs):
+            captured.append(kwargs["scope"])
+            return MutantResult(
+                mutant=args[0],
+                killed=True,
+                tests_run=1,
+                killing_test="t",
+                time_seconds=0.0,
+            )
+
+        with (
+            patch("pytest_leela.engine.ProjectModuleScope", side_effect=counting_scope),
+            patch("pytest_leela.engine.run_tests_for_mutant", side_effect=fake_run),
+        ):
+            Engine(use_types=False, use_coverage=False).run(
+                [str(target)], test_dir=str(test_dir)
+            )
+
+        # _clean_process_state builds its own scope for the temp dir.
+        project_scopes = [s for s in scopes if s.cwd == str(tmp_path) + os.sep]
+        assert len(project_scopes) == 1
+        assert captured and all(s is project_scopes[0] for s in captured)
+
+
+def describe_Engine_PR12_index_compatibility():
+    def _project(tmp_path, monkeypatch):
+        return _write_project(
+            tmp_path, monkeypatch, "compat_calc",
+            "import builtins\nfrom compat_calc import add\n"
+            "def test_add():\n"
+            "    assert not getattr(builtins, '_leela_compat_baseline_fail', False)\n"
+            "    assert add(1, 2) == 3\n",
+        )
+
+    def _legacy_environment():
+        import importlib.metadata
+        from pytest_leela.index import compute_test_set_hash
+
+        packages = sorted(
+            f"{d.metadata['Name']}=={d.version}" for d in importlib.metadata.distributions()
+        )
+        return compute_test_set_hash([
+            str(Path(sys.executable).resolve()), sys.version, sys.platform,
+            str(sys.implementation.cache_tag), *packages,
+        ])
+
+    def _error(mutant, *args, **kwargs):
+        return MutantResult(mutant, False, 0, None, 0.0, error="no tests ran")
+
+    def it_executes_legacy_bool_rows_and_retains_current_revision_warm_reuse(
+        tmp_path, monkeypatch
+    ):
+        import pytest_leela.engine as engine_module
+
+        target, tests = _project(tmp_path, monkeypatch)
+        with IndexDB(tmp_path / "index.db") as db:
+            engine = Engine(use_types=False, use_coverage=False, index=db)
+            with patch("pytest_leela.engine._cache_environment_identity", side_effect=_legacy_environment):
+                legacy = engine.run([str(target)], str(tests))
+            legacy_hashes = {r[0] for r in db._conn.execute("SELECT test_set_hash FROM mutants")}
+            with patch("pytest_leela.engine.run_tests_for_mutant", wraps=engine_module.run_tests_for_mutant) as runner:
+                current = engine.run([str(target)], str(tests))
+            assert runner.call_count == current.mutants_tested == legacy.mutants_tested
+            current_hashes = {r[0] for r in db._conn.execute("SELECT test_set_hash FROM mutants")}
+            assert current_hashes.isdisjoint(legacy_hashes)
+            with (
+                patch("pytest_leela.engine.run_baseline", wraps=engine_module.run_baseline) as baseline,
+                patch("pytest_leela.engine.run_tests_for_mutant") as runner,
+            ):
+                warm = engine.run([str(target)], str(tests))
+            baseline.assert_called_once()
+            runner.assert_not_called()
+            assert warm.killed == current.killed
+
+    @pytest.mark.parametrize("legacy", [True, False])
+    def it_aborts_a_failed_baseline_before_either_cache_key_is_consulted(
+        tmp_path, monkeypatch, legacy
+    ):
+        import builtins
+
+        target, tests = _project(tmp_path, monkeypatch)
+        with IndexDB(tmp_path / "index.db") as db:
+            engine = Engine(use_types=False, use_coverage=False, index=db)
+            if legacy:
+                with patch("pytest_leela.engine._cache_environment_identity", side_effect=_legacy_environment):
+                    engine.run([str(target)], str(tests))
+            else:
+                engine.run([str(target)], str(tests))
+            monkeypatch.setattr(builtins, "_leela_compat_baseline_fail", True, raising=False)
+            with (
+                patch.object(db, "get_cached_result", wraps=db.get_cached_result) as lookup,
+                patch("pytest_leela.engine.run_tests_for_mutant") as runner,
+                pytest.raises(BaselineFailure, match="test_add"),
+            ):
+                engine.run([str(target)], str(tests))
+            lookup.assert_not_called()
+            runner.assert_not_called()
+
+    def it_never_caches_returned_errors_or_completes_their_symbol_clean(
+        tmp_path, monkeypatch
+    ):
+        target, tests = _project(tmp_path, monkeypatch)
+        events = []
+        with IndexDB(tmp_path / "index.db") as db:
+            engine = Engine(use_types=False, use_coverage=False, index=db, on_progress=events.append)
+            with patch("pytest_leela.engine.run_tests_for_mutant", side_effect=_error) as runner:
+                result = engine.run([str(target)], str(tests))
+                repeated = engine.run([str(target)], str(tests))
+            assert runner.call_count == result.mutants_tested + repeated.mutants_tested
+            assert len(result.errors) == result.mutants_tested > 0
+            assert result.mutation_score == 0.0
+            assert db._conn.execute("SELECT COUNT(*) FROM mutants").fetchone()[0] == 0
+            symbol_id = next(iter(extract_symbols(str(target), target.read_text())))
+            assert db.get_state(symbol_id) == "error"
+            assert {e.status for e in events if e.kind == "mutant"} == {"error"}
+
+    def it_keeps_a_symbol_error_after_a_later_successful_mutant(tmp_path, monkeypatch):
+        import pytest_leela.engine as engine_module
+
+        target, tests = _project(tmp_path, monkeypatch)
+        real_runner = engine_module.run_tests_for_mutant
+        calls = 0
+
+        def error_then_success(mutant, *args, **kwargs):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return _error(mutant)
+            return real_runner(mutant, *args, **kwargs)
+
+        with IndexDB(tmp_path / "index.db") as db:
+            with patch("pytest_leela.engine.run_tests_for_mutant", side_effect=error_then_success):
+                result = Engine(use_types=False, use_coverage=False, index=db).run([str(target)], str(tests))
+            assert len(result.errors) == 1
+            assert result.killed > 0
+            symbol_id = next(iter(extract_symbols(str(target), target.read_text())))
+            assert db.get_state(symbol_id) == "error"

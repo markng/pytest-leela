@@ -14,7 +14,7 @@ repair must succeed without advancing a fixture mtime, changing file size, or
 disabling bytecode.  They cover the cases the previous mtime heuristic missed:
 unchanged precise mtime, backward timestamps, a pre-existing stale helper and
 pre-existing stale fixture artifacts, sibling caches that must survive, a
-wholly-cached run whose origins are never touched, and fail-closed behavior when
+wholly-cached mutation loop that still refreshes the baseline, and fail-closed behavior when
 a needed artifact cannot be removed.
 """
 
@@ -168,7 +168,7 @@ def describe_execution_freshness():
         assert sibling_pyc.exists()
         assert sibling.read_bytes() == sibling_bytes
 
-    def it_leaves_origins_untouched_on_a_wholly_cached_run(tmp_path, monkeypatch):
+    def it_refreshes_baseline_origins_before_wholly_cached_mutants(tmp_path, monkeypatch):
         src = tmp_path / "calc.py"
         src.write_text("def is_positive(x: int) -> bool:\n    return x > 0\n")
         tests = tmp_path / "tests"
@@ -188,14 +188,25 @@ def describe_execution_freshness():
         with IndexDB(tmp_path / "index.db") as db:
             engine = Engine(use_coverage=False, index=db, on_progress=events.append)
             _cold_run(engine, src, tests)
-            cold_cached = [p for group in _cached(helper) for p in [group]]
-            snapshots = {p: (p.stat().st_mtime_ns, p.read_bytes()) for p in cold_cached}
+            from unittest.mock import patch
+            from pytest_leela.runner import _prepare_fresh_dependencies
+
+            cold_cached = _cached(helper)
+            snapshots = {p: p.read_bytes() for p in cold_cached}
             events.clear()
-            warm = _cold_run(engine, src, tests)
+            with (
+                patch("pytest_leela.runner._prepare_fresh_dependencies", wraps=_prepare_fresh_dependencies) as prepare,
+                patch("pytest_leela.engine.run_tests_for_mutant") as runner,
+            ):
+                warm = _cold_run(engine, src, tests)
+            # Every warm run still proves a fresh unmutated baseline first.
+            prepare.assert_called_once()
+            assert helper in prepare.call_args.args[0]
+            runner.assert_not_called()
         assert {e.status for e in events if e.kind == "mutant"} == {"cache-hit"}
         for path, before in snapshots.items():
             assert path.exists()
-            assert (path.stat().st_mtime_ns, path.read_bytes()) == before
+            assert path.read_bytes() == before
         assert warm.mutants_tested == len(warm.results)
 
     def it_fails_closed_when_a_needed_cache_cannot_be_removed(tmp_path, monkeypatch):
@@ -233,10 +244,12 @@ def describe_execution_freshness():
                 os.chmod(cache_dir, stat.S_IRWXU)
         # Removal is impossible -> abort with an error, never run stale code and
         # never record a mutant result as killed/survived.
+            assert db._conn.execute("SELECT COUNT(*) FROM mutants").fetchone()[0] == 0
+            assert {symbol.state for symbol in db.all_symbols()} == {"dirty"}
         assert blocked
-        assert "error" in {e.status for e in events}
-        assert "killed" not in {e.status for e in events}
-        assert "survived" not in {e.status for e in events}
+        # Freshness fails during the mandatory baseline, before any mutant or
+        # cache verdict can emit progress or complete a symbol.
+        assert events == []
 
     def it_recompiles_a_same_size_fixture_edit_for_node_id_selection(tmp_path, monkeypatch):
         src = tmp_path / "calc.py"

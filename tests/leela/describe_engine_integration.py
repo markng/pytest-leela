@@ -19,8 +19,29 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+import pytest
+from unittest.mock import MagicMock
+
 from pytest_leela.engine import Engine
 from pytest_leela.index import IndexDB
+
+
+@pytest.fixture(autouse=True)
+def project_import_root(tmp_path, monkeypatch):
+    # The unmutated baseline uses normal imports, not the target import hook.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+
+@pytest.fixture
+def baseline_passed(monkeypatch):
+    # These dependency-key units already double mutant execution and use dummy
+    # or unavailable test inputs. Real baseline/cache ordering is tested in
+    # describe_engine.py; do not recursively collect the enclosing test suite.
+    session = MagicMock()
+    session.failures.return_value = []
+    session.error.return_value = None
+    monkeypatch.setattr("pytest_leela.engine.run_baseline", MagicMock(return_value=session))
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +428,7 @@ def describe_content_aware_cache_and_progress():
             assert next(r for r in changed.results if r.mutant.replacement_op == "GtE").killed
             assert "cache-hit" not in {e.status for e in events}
 
-    def it_uses_the_per_mutant_coverage_selection_in_the_cache_key(tmp_path, monkeypatch):
+    def it_uses_the_per_mutant_coverage_selection_in_the_cache_key(tmp_path, monkeypatch, baseline_passed):
         from pytest_leela.models import CoverageMap, MutantResult
         import pytest_leela.engine as engine_module
 
@@ -437,7 +458,7 @@ def describe_content_aware_cache_and_progress():
             assert executions[1] == executions[0]
             assert executions[2] == 0
 
-    def it_reports_runner_error_before_reraising_the_same_exception(tmp_path, monkeypatch):
+    def it_reports_runner_error_before_reraising_the_same_exception(tmp_path, monkeypatch, baseline_passed):
         import pytest
         import pytest_leela.engine as engine_module
 
@@ -457,7 +478,7 @@ def describe_content_aware_cache_and_progress():
         assert events[-1].op
         assert events[-1].symbol_id == events[0].symbol_id
 
-    def it_bypasses_unresolved_discovery_and_unreadable_inputs(tmp_path, monkeypatch):
+    def it_bypasses_unresolved_discovery_and_unreadable_inputs(tmp_path, monkeypatch, baseline_passed):
         import pytest_leela.engine as engine_module
         from pytest_leela.models import MutantResult
 
@@ -555,7 +576,7 @@ def describe_targeted_dependency_cache():
             run(False, False, True)
             run(True, True, True)
 
-    def it_bypasses_dynamic_missing_ambiguous_and_out_of_scope_dependencies(tmp_path, monkeypatch):
+    def it_bypasses_dynamic_missing_ambiguous_and_out_of_scope_dependencies(tmp_path, monkeypatch, baseline_passed):
         import pytest_leela.engine as engine_module
         from pytest_leela.models import MutantResult
 
@@ -594,7 +615,7 @@ def describe_targeted_dependency_cache():
             engine.run([str(src)], test_dir=str(tests), test_node_ids=[str(tests / "deleted.py")])
             assert db._conn.execute("SELECT COUNT(*) FROM mutants").fetchone()[0] == 0
 
-    def it_invalidates_persisted_results_when_environment_identity_changes(tmp_path, monkeypatch):
+    def it_invalidates_persisted_results_when_environment_identity_changes(tmp_path, monkeypatch, baseline_passed):
         import pytest_leela.engine as engine_module
         from pytest_leela.models import MutantResult
 

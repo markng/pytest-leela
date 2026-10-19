@@ -40,7 +40,12 @@ from pytest_leela.models import (
 )
 from pytest_leela.operators import build_allowed_keys, count_pruned, mutations_for
 from pytest_leela.resources import ResourceLimits, apply_limits, is_memory_ok
-from pytest_leela.runner import precompute_user_modules, run_tests_for_mutant
+from pytest_leela.runner import (
+    ProjectModuleScope,
+    precompute_user_modules,
+    run_baseline,
+    run_tests_for_mutant,
+)
 from pytest_leela.type_extractor import enrich_mutation_points
 
 
@@ -92,16 +97,11 @@ def _clean_process_state() -> None:
     sys.meta_path[:] = [f for f in sys.meta_path if not isinstance(f, MutatingFinder)]
 
     # 2. Remove modules loaded from temp directories (left by test
-    #    fixtures that create throwaway target files).
-    tmp_prefix = tempfile.gettempdir() + os.sep
-    stale = [
-        name
-        for name, mod in sys.modules.items()
-        if mod is not None
-        and (f := getattr(mod, "__file__", None)) is not None
-        and f.startswith(tmp_prefix)
-    ]
-    for name in stale:
+    #    fixtures that create throwaway target files).  A project or
+    #    virtualenv that itself lives under the temp directory is not a
+    #    fixture: its installed packages and leela's own modules stay.
+    tmp_scope = ProjectModuleScope(tempfile.gettempdir())
+    for name in tmp_scope.module_names():
         sys.modules.pop(name, None)
 
 
@@ -324,15 +324,29 @@ class _TestDependencies:
             return None
 
 
+# Bool-only rows predating PR12 cannot prove the baseline/crash/skip contract.
+_EXECUTION_CLASSIFICATION_REVISION = "baseline-tristate-pr12-v1"
+
+
 def _cache_environment_identity() -> str:
     """Partition persisted cache by interpreter and installed package versions."""
     packages = sorted(
         f"{d.metadata['Name']}=={d.version}" for d in importlib.metadata.distributions()
     )
     return compute_test_set_hash([
+        _EXECUTION_CLASSIFICATION_REVISION,
         str(Path(sys.executable).resolve()), sys.version, sys.platform,
         str(sys.implementation.cache_tag), *packages,
     ])
+
+class BaselineFailure(Exception):
+    """The tests fail with no mutation applied.
+
+    Every mutant result would then be untrustworthy: a test failing for a
+    reason unrelated to the mutant (a fixture that cannot run in-process,
+    a broken import) would score every mutant as killed.
+    """
+
 
 class Engine:
     """Orchestrates a full mutation testing run."""
@@ -384,6 +398,10 @@ class Engine:
         total_enrichment_stats = EnrichmentStats()
         mutant_id = 0
 
+        # In diff mode only changed lines are mutated, so candidates, the
+        # pruned count and enrichment stats are taken over those lines too.
+        diff_lines = changed_lines(diff_base) if diff_base is not None else None
+
         for file_path in target_files:
             abs_path = os.path.abspath(file_path)
             with open(abs_path) as f:
@@ -423,6 +441,10 @@ class Engine:
             # AST analysis
             points = find_mutation_points(source, abs_path, module_name)
 
+            if diff_lines is not None:
+                file_lines = diff_lines.get(abs_path, set())
+                points = [p for p in points if p.lineno in file_lines]
+
             # Type extraction
             points, file_stats = enrich_mutation_points(source, points)
             total_enrichment_stats = total_enrichment_stats + file_stats
@@ -449,16 +471,6 @@ class Engine:
 
         total_mutants = len(all_mutants) + total_pruned
 
-        # 6. If diff_base: filter to only changed lines
-        if diff_base is not None:
-            diff_lines = changed_lines(diff_base)
-            all_mutants = [
-                m
-                for m in all_mutants
-                if m.point.file_path in diff_lines
-                and m.point.lineno in diff_lines[m.point.file_path]
-            ]
-
         # 7. Collect per-test coverage if enabled.
         # If a pre-built coverage map was provided (from the outer session),
         # skip the expensive re-run of all tests.
@@ -473,12 +485,26 @@ class Engine:
         # 8. Precompute user modules once before the mutation loop.
         # This turns O(N) scans of sys.modules into O(K) targeted pops
         # inside each run_tests_for_mutant call (K << N).
-        known_user_modules = precompute_user_modules()
+        scope = ProjectModuleScope()
+        known_user_modules = precompute_user_modules(scope)
         test_times = coverage_map.test_times if coverage_map is not None else None
 
         test_dependencies = _TestDependencies(test_dir) if self.index is not None else None
 
-        # 9. Run each mutant
+        mutant_test_ids = [
+            self._tests_for(mutant, coverage_map, test_node_ids)
+            for mutant in all_mutants
+        ]
+
+        # 9. Prove the tests pass with no mutation applied, through the same
+        # in-process path every mutant uses.  Otherwise a test that fails
+        # for an unrelated reason would score every mutant as killed.
+        if all_mutants:
+            self._check_baseline(
+                mutant_test_ids, test_dir, known_user_modules, scope, test_dependencies
+            )
+
+        # 10. Run each mutant
         results: list[MutantResult] = []
         # Origins whose derived bytecode has already been prepared this run, so
         # each selection recompiles at most once while executing mutants.
@@ -494,13 +520,14 @@ class Engine:
             all_target_symbols.update(file_symbols.get(fap, {}).values())
         remaining_by_symbol = Counter(symbol_counts)
         completed_symbols: set[str] = set()
+        errored_symbols: set[str] = set()
         if self.index is not None:
             for sid in all_target_symbols:
                 if remaining_by_symbol[sid] == 0:
                     self.index.mark_symbol_clean(sid)
                     completed_symbols.add(sid)
 
-        for mutant in all_mutants:
+        for mutant, test_ids in zip(all_mutants, mutant_test_ids):
             # Check memory limits
             if limits is not None and not is_memory_ok(limits):
                 break
@@ -509,19 +536,6 @@ class Engine:
             abs_path = os.path.abspath(mutant.point.file_path)
             symbol_id = mutant_to_symbol.get(mutant.mutant_id, "")
             source_hash = file_source_hash.get(abs_path, "")
-
-            # Look up relevant tests from coverage map
-            test_ids: list[str] | None = None
-            if coverage_map is not None:
-                covered = coverage_map.tests_for(
-                    mutant.point.file_path, mutant.point.lineno
-                )
-                if covered:
-                    test_ids = sorted(covered)
-
-            # Fallback: use all session tests when no coverage info available
-            if test_ids is None and test_node_ids is not None:
-                test_ids = test_node_ids
 
             # Only the selected test files and their transitive inputs
             # determine validity. Unresolved dependencies bypass the cache.
@@ -565,6 +579,7 @@ class Engine:
                         test_dir=test_dir,
                         known_user_modules=known_user_modules,
                         test_times=test_times,
+                        scope=scope,
                         dependency_files=dependency_files,
                         prepared_dependencies=prepared_dependencies,
                     )
@@ -581,18 +596,26 @@ class Engine:
                             status="error", symbol_id=symbol_id or None,
                         ))
                     raise
-                status = "killed" if result.killed else "survived"
-                if self.index is not None and symbol_id and test_set_hash is not None:
+                status = result.status
+                if (
+                    result.error is None and self.index is not None
+                    and symbol_id and test_set_hash is not None
+                ):
                     self.index.write_mutant_result(
                         symbol_id, mutant, result, source_hash, test_set_hash,
                     )
             results.append(result)
             if symbol_id:
+                if result.error is not None:
+                    errored_symbols.add(symbol_id)
+                    if self.index is not None:
+                        self.index.mark_symbol_error(symbol_id)
                 remaining_by_symbol[symbol_id] -= 1
                 if (
                     self.index is not None
                     and remaining_by_symbol[symbol_id] == 0
                     and symbol_id not in completed_symbols
+                    and symbol_id not in errored_symbols
                 ):
                     self.index.mark_symbol_clean(symbol_id)
                     completed_symbols.add(symbol_id)
@@ -623,4 +646,55 @@ class Engine:
             },
             enrichment_stats=total_enrichment_stats,
             diff_base=diff_base,
+        )
+
+    @staticmethod
+    def _tests_for(
+        mutant: Mutant,
+        coverage_map: CoverageMap | None,
+        test_node_ids: list[str] | None,
+    ) -> list[str] | None:
+        """Tests to run against *mutant*; None means the whole ``test_dir``."""
+        if coverage_map is not None:
+            covered = coverage_map.tests_for(
+                mutant.point.file_path, mutant.point.lineno
+            )
+            if covered:
+                return sorted(covered)
+        # Fallback: use all session tests when no coverage info available
+        return test_node_ids
+
+    @staticmethod
+    def _check_baseline(
+        mutant_test_ids: list[list[str] | None],
+        test_dir: str | None,
+        known_user_modules: frozenset[str],
+        scope: ProjectModuleScope,
+        test_dependencies: _TestDependencies | None = None,
+    ) -> None:
+        """Raise BaselineFailure unless every selected test passes unmutated.
+
+        Runs the union of all mutants' tests once, with no import hook
+        installed, so nothing can be mutated, and without ``-x``, so the
+        failure names every failing test.
+        """
+        baseline_ids: list[str] | None = None
+        if all(ids is not None for ids in mutant_test_ids):
+            baseline_ids = sorted({t for ids in mutant_test_ids for t in ids or ()})
+        dependency_files = (
+            test_dependencies.dependency_files(baseline_ids)
+            if test_dependencies is not None else None
+        )
+        session = run_baseline(
+            baseline_ids, test_dir, known_user_modules, scope,
+            dependency_files=dependency_files,
+        )
+        failures = session.failures()
+        error = session.error()
+        if not failures and error is None:
+            return
+        reason = f"failed: {', '.join(failures)}" if failures else error
+        raise BaselineFailure(
+            f"tests do not pass with no mutation applied ({reason}); "
+            "mutant results would be meaningless, so no mutants were run"
         )
