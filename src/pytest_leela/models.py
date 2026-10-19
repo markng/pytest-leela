@@ -1,6 +1,11 @@
 """Data models for mutation testing."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. ``EnrichmentStats`` keeps its self-reference
+# quoted because it is defined before the class name is bound.
 
 from dataclasses import dataclass, field
 
@@ -24,7 +29,7 @@ class EnrichmentStats:
     from_annotations: int = 0
     from_assignment_dataflow: int = 0
 
-    def __add__(self, other: EnrichmentStats) -> EnrichmentStats:
+    def __add__(self, other: "EnrichmentStats") -> "EnrichmentStats":
         return EnrichmentStats(
             from_annotations=self.from_annotations + other.from_annotations,
             from_assignment_dataflow=self.from_assignment_dataflow

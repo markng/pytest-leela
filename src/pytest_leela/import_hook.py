@@ -1,6 +1,12 @@
 """Import hook for in-memory AST mutation — zero file I/O."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` to this module.
+# Python inherits ``CO_FUTURE_ANNOTATIONS`` (0x1000000) into ``compile()``
+# calls made by flagged code, including ``MutatingLoader.exec_module``'s
+# ``compile(tree, ...)``. That would defer target annotations. Without the
+# flag, an invalid ``BitOr -> BitAnd`` mutation fails during definition on
+# Python <=3.13. Python 3.14 PEP 649 annotations remain lazy, so the
+# annotation-policy regression deliberately reads supported type hints there.
 
 import ast
 import importlib
