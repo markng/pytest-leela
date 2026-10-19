@@ -26,10 +26,18 @@ def apply_cpu_limit(max_cores: int) -> None:
     """Restrict this process to a set of CPU cores."""
     available = os.cpu_count() or 4
     cores = min(max_cores, available)
-    try:
-        os.sched_setaffinity(0, set(range(cores)))
-    except (AttributeError, OSError):
+    setaffinity = getattr(os, "sched_setaffinity", None)
+    if setaffinity is None:
         # Not available on all platforms (e.g., macOS)
+        return
+    try:
+        setaffinity(0, set(range(cores)))
+    except (AttributeError, OSError):
+        # ``AttributeError`` covers platforms where the attribute
+        # disappears between the ``getattr`` lookup and the call
+        # (e.g. mocked test environments that remove the attr on
+        # call). ``OSError`` covers kernels that refuse affinity
+        # changes (containers, seccomp, etc.).
         pass
 
 

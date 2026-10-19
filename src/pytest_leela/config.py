@@ -8,6 +8,13 @@ from pathlib import Path
 
 from pytest_leela.operators import ALL_OPERATORS, DEFAULT_OPERATORS
 
+__all__ = [
+    "ALL_OPERATORS",
+    "DEFAULT_OPERATORS",
+    "LeelaConfig",
+    "load_config",
+]
+
 
 @dataclass(frozen=True)
 class LeelaConfig:

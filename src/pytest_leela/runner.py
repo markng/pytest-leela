@@ -21,15 +21,15 @@ _STDLIB_PATH_MODULES = {
     "posixpath": sys.modules["posixpath"],
 }
 
-import pytest
+import pytest  # noqa: E402 — intentionally below the stdlib-path snapshot
 
-from pytest_leela.import_hook import (
+from pytest_leela.import_hook import (  # noqa: E402 — see comment above
     MutatingFinder,
     clear_target_modules,
     install_hook,
     remove_hook,
 )
-from pytest_leela.models import Mutant, MutantResult
+from pytest_leela.models import Mutant, MutantResult  # noqa: E402 — see comment above
 
 # Pre-cache Django's clear_url_caches at import time.  Doing the import
 # inside _clear_framework_caches() is fragile: during self-mutation the
@@ -143,6 +143,22 @@ class _ResultCollector:
         elif report.when in ("setup", "teardown") and report.failed:
             self.errors.append(report.nodeid)
 
+    def pytest_collectreport(self, report: Any) -> None:
+        # A collection error means the test file couldn't even be
+        # imported. For a mutation-testing run, that almost always
+        # means the mutation broke the import (e.g. ``int | None``
+        # → ``int & None`` raising ``TypeError`` at function def
+        # time). Without this hook, the mutant is misreported as
+        # SURVIVED with ``tests_run=0``.
+        if report.outcome == "failed":
+            self.errors.append(report.nodeid)
+            # ``tests_run`` measures collected runnable items; a
+            # collection failure contributes one to the count so
+            # downstream logic sees a non-empty test set and the
+            # post-loop kill check (``len(collector.failed) >
+            # 0 or len(collector.errors) > 0``) flips to True.
+            self.total += 1
+
 
 def run_tests_for_mutant(
     mutant: Mutant,
@@ -157,6 +173,8 @@ def run_tests_for_mutant(
     start = time.monotonic()
 
     module_names = list(target_sources.keys())
+
+    killing_test: str | None = None
 
     # Install mutating import hook
     finder = install_hook(target_sources, mutant, module_to_file)
@@ -282,7 +300,6 @@ def run_tests_for_mutant(
             )
 
         killed = len(collector.failed) > 0 or len(collector.errors) > 0
-        killing_test = None
         if collector.failed:
             killing_test = collector.failed[0]
         elif collector.errors:

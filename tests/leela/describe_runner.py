@@ -359,9 +359,7 @@ def describe_run_tests_for_mutant():
             return 0
 
         try:
-            with patch(
-                "pytest_leela.runner.pytest.main", side_effect=mock_pytest_main
-            ):
+            with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
                 run_tests_for_mutant(
                     mutant,
                     {"outside_cwd_target": source},
@@ -544,6 +542,48 @@ def describe_run_tests_for_mutant():
         finally:
             # Restore sys.meta_path if the mutation clobbered it
             sys.meta_path[:] = saved_meta_path
+
+    def it_kills_when_collection_fails_with_import_error(tmp_path, monkeypatch):
+        """Collection failure (import error) must register as a kill, not a survive.
+
+        Without the ``pytest_collectreport`` hook in ``_ResultCollector``, a
+        test module that fails to import (e.g. the mutation broke the import)
+        would be misreported as SURVIVED with ``tests_run=0``. The hook
+        increments ``total`` and appends to ``errors``, so the post-loop
+        kill check flips to True.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "collerr_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "collerr_tests"
+        test_dir.mkdir()
+        (test_dir / "test_collerr.py").write_text(
+            "import nonexistent_module_zzz\n\n"
+            "def test_add():\n"
+            "    assert True\n"
+        )
+
+        points = find_mutation_points(source, str(target), "collerr_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"collerr_target": source},
+            {"collerr_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.killed is True
+        assert result.tests_run >= 1
+        assert result.killing_test is not None
+        assert len(result.killing_tests) >= 1
 
 
 def describe_TimeoutPlugin():

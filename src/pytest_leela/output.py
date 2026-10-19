@@ -40,11 +40,11 @@ def _op_display(original: str, replacement: str) -> str:
 
     # Special return mutations
     if replacement in ("negate", "negate_expr"):
-        return f"return x \u2192 return -x"
+        return "return x \u2192 return -x"
     if replacement == "remove_negation":
-        return f"return -x \u2192 return x"
+        return "return -x \u2192 return x"
     if replacement == "empty_str":
-        return f'return "..." \u2192 return ""'
+        return 'return "..." \u2192 return ""'
     if replacement in ("True", "False", "None") and original in (
         "True",
         "False",

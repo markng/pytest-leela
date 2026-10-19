@@ -3,10 +3,14 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from pytest_leela.benchmark import (
     BenchmarkPlugin,
     _BenchmarkRow,
     _format_benchmark_report,
+    _find_default_targets,
+    _find_target_files,
 )
 
 
@@ -253,3 +257,48 @@ def describe_BenchmarkPlugin():
                 call_args = MockEngine.return_value.run.call_args
                 test_dir_arg = call_args[0][1]
                 assert test_dir_arg == str(Path("/project/root") / "tests")
+
+
+        @pytest.mark.parametrize("explicit_target", [True, False])
+        def it_honors_custom_python_files_in_target_discovery(tmp_path, explicit_target):
+            """Use real config and discovery: custom test files are not targets."""
+            source_dir = tmp_path / "src"
+            source_dir.mkdir()
+            source = source_dir / "calculator.py"
+            custom_test = source_dir / "check_calculator.py"
+            source.write_text("def add(a, b):\n    return a + b\n")
+            custom_test.write_text("def test_add():\n    assert True\n")
+
+            discovery_name = (
+                "_find_target_files" if explicit_target else "_find_default_targets"
+            )
+            discovery = _find_target_files if explicit_target else _find_default_targets
+            for pattern, expected in (
+                ("test_*.py", sorted([str(source), str(custom_test)])),
+                ("check_*.py", [str(source)]),
+            ):
+                args = ["--rootdir", str(tmp_path), "-o", f"python_files={pattern}"]
+                if explicit_target:
+                    args.extend(["--target", str(source_dir)])
+                config = pytest.Config.fromdictargs({}, args)
+                try:
+                    session = MagicMock()
+                    session.config = config
+                    with (
+                        patch(
+                            f"pytest_leela.benchmark.{discovery_name}", wraps=discovery
+                        ) as find_targets,
+                        patch("pytest_leela.benchmark.Engine") as engine,
+                        patch.object(config, "get_terminal_writer"),
+                    ):
+                        engine.return_value.run.return_value = MagicMock(
+                            wall_time_seconds=1.0, mutants_tested=1, mutants_pruned=0
+                        )
+                        BenchmarkPlugin(config).pytest_sessionfinish(session, exitstatus=0)
+                        discovery_root = str(source_dir) if explicit_target else tmp_path
+                        find_targets.assert_called_once_with(discovery_root, [pattern])
+                        assert engine.return_value.run.call_count == 4
+                        for call in engine.return_value.run.call_args_list:
+                            assert call.args == (expected, str(tmp_path / "tests"))
+                finally:
+                    config._ensure_unconfigure()

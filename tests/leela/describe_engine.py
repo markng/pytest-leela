@@ -145,7 +145,6 @@ def describe_module_name_from_path():
         """When file is not under any sys.path entry, use CWD-relative."""
         monkeypatch.chdir(tmp_path)
         # Clear sys.path of anything that matches
-        original_path = sys.path.copy()
         monkeypatch.setattr("sys.path", ["/nonexistent"])
 
         file_path = str(tmp_path / "standalone.py")
