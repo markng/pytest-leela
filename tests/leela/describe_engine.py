@@ -106,6 +106,42 @@ def describe_clean_process_state():
 
 
 def describe_module_name_from_path():
+    @pytest.mark.parametrize("matched", [True, False])
+    @pytest.mark.parametrize(
+        ("relative_path", "expected"),
+        [
+            ("pkg/__init__.py", "pkg"),
+            ("pkg/sub/__init__.py", "pkg.sub"),
+            ("__init__.py", "__init__"),
+            ("pkg/module.py", "pkg.module"),
+            ("pkg/__init__/helper.py", "pkg.__init__.helper"),
+            ("pkg/__init__/__init__.py", "pkg.__init__"),
+            ("pkg/__init__", "pkg.__init__"),
+            ("pkg/__init__.pyi", "pkg.__init__.pyi"),
+            ("pkg/foo.__init__.py", "pkg.foo.__init__"),
+            ("pkg/prefix__init__.py", "pkg.prefix__init__"),
+            ("pkg/__init__suffix.py", "pkg.__init__suffix"),
+            ("pkg/data", "pkg.data"),
+        ],
+    )
+    def it_resolves_package_initializers_without_changing_other_names(
+        tmp_path, monkeypatch, matched, relative_path, expected
+    ):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "path", [str(tmp_path) if matched else "/nonexistent"])
+        assert _module_name_from_path(str(tmp_path / relative_path)) == expected
+
+    def it_resolves_src_package_using_the_longest_root(tmp_path, monkeypatch):
+        src = tmp_path / "src"
+        monkeypatch.setattr(sys, "path", [str(tmp_path), str(src)])
+        assert _module_name_from_path(str(src / "pkg/sub/__init__.py")) == "pkg.sub"
+
+    def it_does_not_treat_a_sibling_path_prefix_as_an_import_root(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setattr(sys, "path", [str(tmp_path / "src")])
+        target = tmp_path / "src_other/pkg/__init__.py"
+        assert _module_name_from_path(str(target)) == "src_other.pkg"
+
     def it_converts_nested_path_to_dotted_name(tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
         file_path = str(tmp_path / "src" / "foo" / "bar.py")
@@ -154,6 +190,52 @@ def describe_module_name_from_path():
 
 
 def describe_Engine_run():
+    def it_mutates_the_canonical_package_initializer(tmp_path, monkeypatch):
+        import importlib
+
+        package = tmp_path / "eng_identity_pkg"
+        package.mkdir()
+        target = package / "__init__.py"
+        target.write_text("def configured(value):\n    return value is not None\n")
+        test_dir = tmp_path / "identity_tests"
+        test_dir.mkdir()
+        (test_dir / "test_identity.py").write_text(
+            "import eng_identity_pkg\n\n"
+            "def test_configured():\n"
+            "    assert eng_identity_pkg.configured(object()) is True\n"
+            "    assert eng_identity_pkg.configured(None) is False\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        try:
+            baseline = importlib.import_module("eng_identity_pkg")
+            assert baseline.__name__ == "eng_identity_pkg"
+            assert baseline.__file__ == str(target)
+            assert baseline.configured(object()) is True
+            assert baseline.configured(None) is False
+
+            result = Engine(
+                use_types=False, use_coverage=False, enabled_categories=("comparison",)
+            ).run([str(target)], str(test_dir))
+
+            assert result.mutants_tested == 1
+            mutation = result.results[0]
+            assert mutation.mutant.point.module_name == "eng_identity_pkg"
+            assert mutation.mutant.point.file_path == str(target)
+            assert mutation.mutant.point.original_op == "IsNot"
+            assert mutation.mutant.replacement_op == "Is"
+            assert mutation.killed
+            assert mutation.tests_run == 1
+            assert mutation.killing_test.endswith("test_identity.py::test_configured")
+
+            control = importlib.import_module("eng_identity_pkg")
+            assert control.__file__ == str(target)
+            assert control.__path__ == [str(package)]
+            assert control.configured(object()) is True
+            assert control.configured(None) is False
+        finally:
+            sys.modules.pop("eng_identity_pkg", None)
+
     def it_finds_and_kills_mutants_in_a_tiny_module(tmp_path, monkeypatch):
         target = tmp_path / "eng_target.py"
         target.write_text("def add(a, b):\n    return a + b\n")

@@ -6,6 +6,7 @@ import ast
 import importlib
 import importlib.abc
 import importlib.machinery
+import os.path
 import sys
 import types
 from typing import Any
@@ -263,7 +264,15 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
                 self.mutant,
                 filename,
             )
-            return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
+            spec = importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
+            if (
+                os.path.basename(filename) == "__init__.py"
+                and importlib.machinery.SourceFileLoader(fullname, filename).is_package(
+                    fullname
+                )
+            ):
+                spec.submodule_search_locations = [os.path.dirname(filename)]
+            return spec
         return None
 
 

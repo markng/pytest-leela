@@ -5,6 +5,8 @@ import importlib.machinery
 import sys
 import types
 
+import pytest
+
 from pytest_leela.import_hook import (
     MutantApplier,
     apply_mutation,
@@ -1202,6 +1204,98 @@ def describe_MutatingFinder():
         spec = finder.find_spec("mymod")
         assert spec is not None
         assert spec.origin == "/real/path/mymod.py"
+
+
+def describe_package_spec_metadata():
+    @pytest.mark.parametrize(
+        "fullname, filename, locations",
+        [
+            ("pkg", "/project/pkg/__init__.py", ["/project/pkg"]),
+            ("pkg.nested", "/project/pkg/nested/__init__.py", ["/project/pkg/nested"]),
+            ("pkg", "pkg/__init__.py", ["pkg"]),
+            ("pkg", "__init__.py", [""]),
+            ("__init__", "/project/pkg/__init__.py", None),
+            ("pkg.__init__", "/project/pkg/__init__.py", None),
+            ("pkg.nested.__init__", "/project/pkg/nested/__init__.py", None),
+            ("pkg.__init__.child", "/project/pkg/child.py", None),
+            ("pkg.__init__.child", "/project/pkg/child/__init__.py", ["/project/pkg/child"]),
+            ("pkg.__init__extra", "/project/pkg/__init__.py", ["/project/pkg"]),
+            ("pkg", "/project/pkg/module.py", None),
+            ("pkg", "/project/pkg/prefix__init__.py", None),
+            ("pkg", "/project/__init__.py/child.py", None),
+            ("pkg", "/project/pkg/__init__", None),
+            ("pkg", "/project/pkg/__init__.other", None),
+            ("pkg", "/project/pkg/__init__.pyc", None),
+            ("pkg", "/project/pkg/__init__.so", None),
+            ("pkg", "/project/pkg/__init__.py.other", None),
+            ("pkg", "<mutated:pkg>", None),
+        ],
+    )
+    def it_preserves_loader_origin_and_exact_package_identity(fullname, filename, locations):
+        from pytest_leela.import_hook import MutatingFinder, MutatingLoader
+
+        source = "raise AssertionError('spec lookup must not execute source')\n"
+        mutant = _make_mutant()
+        finder = MutatingFinder({fullname: source}, mutant)
+        finder.set_file_paths({fullname: filename})
+        spec = finder.find_spec(fullname, path=["/unrelated/search/root"], target=object())
+        assert spec is not None
+        assert spec.name == fullname
+        assert spec.origin == filename
+        assert spec.submodule_search_locations == locations
+        assert spec.has_location is False
+        assert spec.cached is None
+        assert isinstance(spec.loader, MutatingLoader)
+        assert spec.loader.source == source
+        assert spec.loader.filename == filename
+        assert spec.loader.mutant is mutant
+        assert finder.find_spec(fullname + ".untargeted") is None
+
+    def it_keeps_the_default_synthetic_spec_non_package():
+        from pytest_leela.import_hook import MutatingFinder, MutatingLoader
+
+        finder = MutatingFinder({"pkg": "value = 1\n"}, _make_mutant())
+        spec = finder.find_spec("pkg")
+        assert spec is not None
+        assert spec.origin == "<mutated:pkg>"
+        assert spec.submodule_search_locations is None
+        assert isinstance(spec.loader, MutatingLoader)
+
+    @pytest.mark.parametrize("fullname", ["leela_metadata_pkg", "leela_metadata_pkg.nested"])
+    def it_imports_relative_children_with_the_actual_mutating_loader(tmp_path, monkeypatch, fullname):
+        import importlib
+
+        from pytest_leela.import_hook import MutatingLoader, clear_target_modules
+
+        parent = tmp_path / "leela_metadata_pkg"
+        parent.mkdir()
+        (parent / "__init__.py").write_text("")
+        directory = tmp_path.joinpath(*fullname.split("."))
+        directory.mkdir(exist_ok=True)
+        initializer = directory / "__init__.py"
+        initializer.write_text("raise AssertionError('must use in-memory initializer')\n")
+        (directory / "config.py").write_text("TOKEN = 6\n")
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "from .config import TOKEN\nVALUE = TOKEN + 1\n"
+        mutant = _make_mutant(lineno=2, col_offset=8)
+        finder = install_hook({fullname: source}, mutant, {fullname: str(initializer)})
+        try:
+            module = importlib.import_module(fullname)
+            assert module.VALUE == 5
+            assert module.TOKEN == 6
+            assert module.__name__ == fullname
+            assert module.__package__ == fullname
+            assert module.__file__ == str(initializer)
+            assert module.__path__ == [str(directory)]
+            assert module.__spec__.submodule_search_locations == [str(directory)]
+            assert module.__spec__.origin == str(initializer)
+            assert module.__spec__.loader is module.__loader__
+            assert isinstance(module.__loader__, MutatingLoader)
+            assert module.__loader__.mutant is mutant
+            assert sys.modules[fullname + ".config"].__file__ == str(directory / "config.py")
+        finally:
+            remove_hook(finder)
+            clear_target_modules(["leela_metadata_pkg"])
 
 
 def describe_MutatingLoader():

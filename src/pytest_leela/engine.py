@@ -53,12 +53,12 @@ def _module_name_from_path(file_path: str) -> str:
         base = candidates[0][1]
         rel = os.path.relpath(abs_path, base)
         if rel.endswith(".py"):
-            rel = rel[:-3]
+            rel = rel[:-3].removesuffix(os.sep + "__init__")
         return rel.replace(os.sep, ".")
     # Fallback: CWD-relative
     rel = os.path.relpath(abs_path)
     if rel.endswith(".py"):
-        rel = rel[:-3]
+        rel = rel[:-3].removesuffix(os.sep + "__init__")
     return rel.replace(os.sep, ".")
 
 
