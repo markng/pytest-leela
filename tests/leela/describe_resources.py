@@ -67,18 +67,35 @@ def describe_apply_cpu_limit():
             apply_cpu_limit(2)
             mock_set.assert_called_once_with(0, {0, 1})
 
+    def it_handles_missing_sched_setaffinity(monkeypatch):
+        monkeypatch.delattr("pytest_leela.resources.os.sched_setaffinity", raising=False)
+        with patch("pytest_leela.resources.os.cpu_count", return_value=4):
+            assert apply_cpu_limit(2) is None
+
     def it_handles_attribute_error():
-        """Gracefully handles platforms without sched_setaffinity."""
+        """Gracefully handles AttributeError from an available affinity API."""
         with (
             patch("pytest_leela.resources.os.cpu_count", return_value=4),
             patch(
                 "pytest_leela.resources.os.sched_setaffinity",
                 create=True,
                 side_effect=AttributeError,
-            ),
+            ) as mock_set,
         ):
-            # Should not raise
-            apply_cpu_limit(2)
+            assert apply_cpu_limit(2) is None
+            mock_set.assert_called_once_with(0, {0, 1})
+
+    def it_handles_os_error():
+        with (
+            patch("pytest_leela.resources.os.cpu_count", return_value=4),
+            patch(
+                "pytest_leela.resources.os.sched_setaffinity",
+                create=True,
+                side_effect=OSError("affinity unavailable"),
+            ) as mock_set,
+        ):
+            assert apply_cpu_limit(2) is None
+            mock_set.assert_called_once_with(0, {0, 1})
 
 
 def describe_check_memory_usage():

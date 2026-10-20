@@ -58,6 +58,30 @@ class _MutationPointCollector(ast.NodeVisitor):
         self.file_path = file_path
         self.module_name = module_name
         self.points: list[MutationPoint] = []
+        self._in_function = False
+
+    def visit_FunctionDef(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        enclosing = self._in_function
+        self._in_function = True
+        self.generic_visit(node)
+        self._in_function = enclosing
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        enclosing = self._in_function
+        self._in_function = False
+        self.generic_visit(node)
+        self._in_function = enclosing
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        # Function-body annotations are never evaluated, even for attributes
+        # and subscripts. Their assignment targets and values still execute.
+        self.visit(node.target)
+        if not self._in_function:
+            self.visit(node.annotation)
+        if node.value is not None:
+            self.visit(node.value)
 
     def visit_BinOp(self, node: ast.BinOp) -> None:
         op_name = _BINOP_NAMES.get(type(node.op))

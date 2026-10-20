@@ -233,6 +233,7 @@ def run_tests_for_mutant(
             # A mutation that crashes the test runner (or times out)
             # counts as killed.
             elapsed = time.monotonic() - start
+            killing_test: str | None
             killing_test = "<timeout>" if timed_out.is_set() else "<crashed>"
             return MutantResult(
                 mutant=mutant,

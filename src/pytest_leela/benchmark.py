@@ -29,14 +29,15 @@ class BenchmarkPlugin:
         if exitstatus != 0:
             return
 
+        python_files = self.config.getini("python_files")
         targets = self.config.getoption("target", default=[])
         if targets:
             target_files: list[str] = []
             for t in targets:
-                target_files.extend(_find_target_files(t))
+                target_files.extend(_find_target_files(t, python_files))
             target_files = sorted(set(target_files))
         else:
-            target_files = _find_default_targets(session.config.rootpath)
+            target_files = _find_default_targets(session.config.rootpath, python_files)
 
         if not target_files:
             return

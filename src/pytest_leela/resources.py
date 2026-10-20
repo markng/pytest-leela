@@ -27,7 +27,7 @@ def apply_cpu_limit(max_cores: int) -> None:
     available = os.cpu_count() or 4
     cores = min(max_cores, available)
     try:
-        os.sched_setaffinity(0, set(range(cores)))
+        getattr(os, "sched_setaffinity")(0, set(range(cores)))
     except (AttributeError, OSError):
         # Not available on all platforms (e.g., macOS)
         pass

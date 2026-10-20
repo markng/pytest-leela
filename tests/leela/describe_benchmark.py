@@ -221,6 +221,58 @@ def describe_BenchmarkPlugin():
                 plugin.pytest_sessionfinish(session, exitstatus=0)
             config.getoption.assert_called()
 
+        def it_passes_declared_python_files_to_explicit_target_discovery(tmp_path):
+            config = MagicMock()
+            patterns = ["test_*.py", "describe_*.py"]
+            config.getini.return_value = patterns
+            target_dir = tmp_path / "target"
+            target_dir.mkdir()
+            (target_dir / "app.py").write_text("x = 1\n")
+            (target_dir / "describe_app.py").write_text("def it_is_a_test(): pass\n")
+            config.getoption.return_value = [str(target_dir)]
+            plugin = BenchmarkPlugin(config)
+            session = MagicMock()
+            session.config = config
+            session.config.rootpath = tmp_path
+
+            mock_result = MagicMock(
+                wall_time_seconds=1.0, mutants_tested=1, mutants_pruned=0
+            )
+            with patch("pytest_leela.benchmark.Engine") as MockEngine:
+                MockEngine.return_value.run.return_value = mock_result
+                plugin.pytest_sessionfinish(session, exitstatus=0)
+
+            assert MockEngine.return_value.run.call_args_list == [
+                (([str(target_dir / "app.py")], str(tmp_path / "tests")), {})
+            ] * 4
+            config.getini.assert_called_once_with("python_files")
+
+        def it_passes_declared_python_files_to_default_discovery(tmp_path):
+            config = MagicMock()
+            patterns = ["test_*.py", "describe_*.py"]
+            config.getini.return_value = patterns
+            config.getoption.return_value = []
+            target_dir = tmp_path / "target"
+            target_dir.mkdir()
+            (target_dir / "app.py").write_text("x = 1\n")
+            (target_dir / "describe_app.py").write_text("def it_is_a_test(): pass\n")
+            plugin = BenchmarkPlugin(config)
+            session = MagicMock()
+            session.config = config
+            session.config.rootpath = tmp_path
+
+            mock_result = MagicMock(
+                wall_time_seconds=1.0, mutants_tested=1, mutants_pruned=0
+            )
+            with patch("pytest_leela.benchmark.Engine") as MockEngine:
+                MockEngine.return_value.run.return_value = mock_result
+                plugin.pytest_sessionfinish(session, exitstatus=0)
+
+            assert MockEngine.return_value.run.call_args_list == [
+                (([str(target_dir / "app.py")], str(tmp_path / "tests")), {})
+            ] * 4
+            config.getini.assert_called_once_with("python_files")
+
         def it_constructs_test_dir_using_path_division():
             """Kills: line 41 / → * and / → //.
 

@@ -104,6 +104,43 @@ def describe_clear_framework_caches():
 
 
 def describe_run_tests_for_mutant():
+    @pytest.mark.parametrize(
+        ("when", "passed", "failed", "expected_killing_test"),
+        [
+            ("call", True, False, None),
+            ("call", False, True, "test_target"),
+            ("setup", False, True, "test_target"),
+        ],
+    )
+    def it_preserves_optional_killing_test_from_reports(
+        tmp_path, monkeypatch, when, passed, failed, expected_killing_test
+    ):
+        monkeypatch.chdir(tmp_path)
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "optional_killing_test.py"
+        points = find_mutation_points(source, str(target), "optional_killing_test")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        def report_result(args, plugins):
+            collector = next(p for p in plugins if isinstance(p, _ResultCollector))
+            collector.pytest_runtest_logreport(
+                _FakeReport("test_target", when=when, passed=passed, failed=failed)
+            )
+            return 0
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=report_result):
+            result = run_tests_for_mutant(
+                mutant,
+                {"optional_killing_test": source},
+                {"optional_killing_test": str(target)},
+                test_dir=str(tmp_path),
+            )
+
+        assert result.killing_test == expected_killing_test
+        assert result.killed is (expected_killing_test is not None)
+        assert result.killing_tests == ([] if passed else ["test_target"])
+
     def it_calls_clear_framework_caches_at_both_call_sites(tmp_path, monkeypatch):
         source = "def add(a, b):\n    return a + b\n"
         target = tmp_path / "runner_caches.py"

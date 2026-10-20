@@ -15,6 +15,24 @@ from pytest_leela.plugin import (
 )
 
 
+def describe_plugin_operator_binding():
+    def it_preserves_the_shared_operator_binding():
+        from pytest_leela import config, operators, plugin
+
+        assert plugin.ALL_OPERATORS is operators.ALL_OPERATORS
+        assert config.ALL_OPERATORS is operators.ALL_OPERATORS
+
+    def it_imports_operators_independently_of_the_config_binding(monkeypatch):
+        import runpy
+
+        from pytest_leela import config, operators, plugin
+
+        monkeypatch.setattr(config, "ALL_OPERATORS", ())
+        loaded = runpy.run_path(plugin.__file__)
+
+        assert loaded["ALL_OPERATORS"] is operators.ALL_OPERATORS
+
+
 def describe_is_test_file():
     DEFAULT_PATTERNS = ["test_*.py", "describe_*.py"]
 
@@ -984,7 +1002,8 @@ def describe_LeelaPlugin():
     def it_resolves_all_keyword_in_operators():
         """When config contains 'all', it should expand to ALL_OPERATORS."""
         from pytest_leela.plugin import LeelaPlugin
-        from pytest_leela.config import ALL_OPERATORS, LeelaConfig
+        from pytest_leela.config import LeelaConfig
+        from pytest_leela.operators import ALL_OPERATORS
 
         config = MagicMock()
         config.getoption.side_effect = lambda key, default=None: {
@@ -1019,6 +1038,7 @@ def describe_LeelaPlugin():
 
         # Engine was constructed with ALL_OPERATORS (expanded from "all")
         mock_engine_cls.assert_called_once_with(enabled_categories=ALL_OPERATORS)
+        assert mock_engine_cls.call_args.kwargs["enabled_categories"] is ALL_OPERATORS
 
     def it_applies_exclude_patterns_from_config():
         """Files matching exclude patterns should be filtered out before engine."""
