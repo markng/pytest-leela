@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -105,6 +106,31 @@ def _read(out: io.StringIO) -> str:
     return out.read()
 
 
+_DYNAMIC_IMPORT_MUTANTS_SQL = (
+    "SELECT replacement_op, killed, test_set_hash, analyzed_at "
+    "FROM mutants ORDER BY replacement_op"
+)
+_PACKAGE_MUTANTS_SQL = (
+    "SELECT mutants.replacement_op, mutants.killed "
+    "FROM mutants JOIN symbols ON symbols.id = mutants.symbol_id "
+    "WHERE symbols.file = ? AND symbols.state = 'clean' "
+    "ORDER BY mutants.replacement_op"
+)
+
+
+def _watch_rows(index: Path, query: str, parameters: tuple[str, ...] = ()) -> list[tuple]:
+    if not index.exists():
+        return []
+    with closing(sqlite3.connect(index)) as connection:
+        ready = connection.execute(
+            "SELECT 1 FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'mutants'"
+        ).fetchone()
+        if ready is None:
+            return []
+        return connection.execute(query, parameters).fetchall()
+
+
 def test_standalone_src_watch_reanalyzes_dynamic_import_after_test_edit(tmp_path: Path):
     """Public watch must mutate calc even when pytest adds src only per session."""
     project = tmp_path / "project"
@@ -129,13 +155,7 @@ def test_standalone_src_watch_reanalyzes_dynamic_import_after_test_edit(tmp_path
     )
 
     def rows():
-        if not index.exists():
-            return []
-        with sqlite3.connect(index) as connection:
-            return connection.execute(
-                "SELECT replacement_op, killed, test_set_hash, analyzed_at "
-                "FROM mutants ORDER BY replacement_op"
-            ).fetchall()
+        return _watch_rows(index, _DYNAMIC_IMPORT_MUTANTS_SQL)
 
     def await_rows(predicate):
         deadline = time.monotonic() + 30
@@ -210,16 +230,7 @@ def test_standalone_src_watch_preserves_packages_during_origin_matching(
     )
 
     def rows():
-        if not index.exists():
-            return []
-        with sqlite3.connect(index) as connection:
-            return connection.execute(
-                "SELECT mutants.replacement_op, mutants.killed "
-                "FROM mutants JOIN symbols ON symbols.id = mutants.symbol_id "
-                "WHERE symbols.file = ? AND symbols.state = 'clean' "
-                "ORDER BY mutants.replacement_op",
-                (str(source),),
-            ).fetchall()
+        return _watch_rows(index, _PACKAGE_MUTANTS_SQL, (str(source),))
 
     try:
         deadline = time.monotonic() + 30
@@ -241,6 +252,58 @@ def test_standalone_src_watch_preserves_packages_during_origin_matching(
             watch.send_signal(__import__("signal").SIGINT)
         stdout, stderr = watch.communicate(timeout=30)
         assert watch.returncode == 0, (stdout, stderr)
+
+
+@pytest.mark.parametrize("query,parameters", [
+    (_DYNAMIC_IMPORT_MUTANTS_SQL, ()),
+    (_PACKAGE_MUTANTS_SQL, ("src/pkg/calc.py",)),
+])
+def test_watch_rows_waits_for_schema_and_closes_connection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    query: str, parameters: tuple[str, ...],
+):
+    index = tmp_path / "index.db"
+    real_connect = sqlite3.connect
+    connections = []
+
+    class TrackedConnection:
+        def __init__(self, path):
+            self.connection = real_connect(path)
+            self.closed = False
+            connections.append(self)
+
+        def execute(self, statement, values=()):
+            return self.connection.execute(statement, values)
+
+        def close(self):
+            self.closed = True
+            self.connection.close()
+
+    monkeypatch.setattr(sqlite3, "connect", TrackedConnection)
+
+    assert _watch_rows(index, query, parameters) == []
+    assert connections == []
+    with closing(real_connect(index)) as writer:
+        assert _watch_rows(index, query, parameters) == []
+        assert connections[-1].closed
+        assert writer.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'"
+        ).fetchall() == []
+        writer.executescript(
+            "CREATE TABLE symbols (id TEXT, file TEXT, state TEXT);"
+            "CREATE TABLE mutants (symbol_id TEXT, replacement_op TEXT, "
+            "killed INTEGER, test_set_hash TEXT, analyzed_at TEXT);"
+            "INSERT INTO symbols VALUES ('calc', 'src/pkg/calc.py', 'clean');"
+            "INSERT INTO mutants VALUES ('calc', 'Sub', 0, '', 'now');"
+        )
+    expected = [("Sub", 0, "", "now")] if not parameters else [("Sub", 0)]
+    assert _watch_rows(index, query, parameters) == expected
+    assert connections[-1].closed
+    assert all(connection.closed for connection in connections)
+
+    with pytest.raises(sqlite3.OperationalError, match="no such column"):
+        _watch_rows(index, "SELECT missing_column FROM mutants", parameters)
+    assert connections[-1].closed
 
 
 def describe_module_entry_point():
