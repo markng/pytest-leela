@@ -1,8 +1,13 @@
 """Tests for pytest_leela.plugin — target file discovery and plugin behavior."""
 
+import contextlib
+import io
 import os
+import threading
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from pytest_leela.plugin import (
     _SKIP_DIRS,
@@ -10,9 +15,20 @@ from pytest_leela.plugin import (
     _find_default_targets,
     _find_target_files,
     _is_test_file,
+    _MutationProgressReporter,
     pytest_addoption,
     pytest_configure,
 )
+
+
+def _assert_stopped_heartbeat_writes_nothing():
+    stream = MagicMock(spec=["write", "flush"])
+    stream.write.side_effect = AssertionError("heartbeat must not write after stop")
+    reporter = _MutationProgressReporter(stream)
+    reporter._stop.set()
+    reporter._heartbeat()
+    stream.write.assert_not_called()
+    stream.flush.assert_not_called()
 
 
 def describe_is_test_file():
@@ -371,6 +387,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine),
             patch("pytest_leela.plugin.format_terminal_report", return_value="report"),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Engine.run MUST have been called — the `not target_files` guard
@@ -415,6 +432,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Verify engine.run was called with test_node_ids from session.items
@@ -484,6 +502,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Verify exitstatus was set to 1
@@ -549,6 +568,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Verify exitstatus remained 0
@@ -597,6 +617,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Verify exitstatus remained 0
@@ -759,6 +780,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Verify pre_coverage_map was passed to engine.run
@@ -801,6 +823,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         call_kwargs = mock_engine.run.call_args.kwargs
@@ -888,6 +911,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
             patch("pytest_leela.html_report.generate_html_report", mock_generate),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         mock_generate.assert_called_once_with(run_result, "/tmp/report.html")
@@ -937,6 +961,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
             patch("pytest_leela.html_report.generate_html_report", mock_generate),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         mock_generate.assert_not_called()
@@ -976,10 +1001,14 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Engine was constructed with enabled_categories from config
-        mock_engine_cls.assert_called_once_with(enabled_categories=custom_operators)
+        assert (
+            mock_engine_cls.call_args.kwargs["enabled_categories"] == custom_operators
+        )
+        assert callable(mock_engine_cls.call_args.kwargs["on_cli_progress"])
 
     def it_resolves_all_keyword_in_operators():
         """When config contains 'all', it should expand to ALL_OPERATORS."""
@@ -1015,10 +1044,12 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Engine was constructed with ALL_OPERATORS (expanded from "all")
-        mock_engine_cls.assert_called_once_with(enabled_categories=ALL_OPERATORS)
+        assert mock_engine_cls.call_args.kwargs["enabled_categories"] == ALL_OPERATORS
+        assert callable(mock_engine_cls.call_args.kwargs["on_cli_progress"])
 
     def it_applies_exclude_patterns_from_config():
         """Files matching exclude patterns should be filtered out before engine."""
@@ -1060,6 +1091,7 @@ def describe_LeelaPlugin():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
         # Engine.run should have been called with only the non-excluded file
@@ -1138,7 +1170,6 @@ def describe_apply_excludes():
     def it_normalizes_backslash_paths(monkeypatch):
         """When os.sep is backslash, relpath uses backslashes but
         patterns use forward slashes — normalization handles this."""
-        import pytest_leela.plugin as plugin_mod
 
         original_relpath = os.path.relpath
 
@@ -1193,6 +1224,7 @@ def describe_exit_status_with_errored_mutants():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report", return_value=""),
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             plugin.pytest_sessionfinish(session, exitstatus=0)
         return session.exitstatus
 
@@ -1334,6 +1366,7 @@ def describe_baseline_failure_handling():
             patch("pytest_leela.plugin.Engine", mock_engine_cls),
             patch("pytest_leela.plugin.format_terminal_report") as mock_report,
         ):
+            _assert_stopped_heartbeat_writes_nothing()
             LeelaPlugin(config).pytest_sessionfinish(session, exitstatus=0)
         return mock_report
 
@@ -1358,3 +1391,180 @@ def describe_baseline_failure_handling():
 
         assert "\nleela: aborted: boom\n" in capsys.readouterr().out
         assert session.exitstatus == 1
+
+
+def describe_mutation_progress_reporter():
+    from pytest_leela.models import EngineProgress
+
+    class Writer:
+        def __init__(self):
+            self._file = io.StringIO()
+            self.messages = []
+            self.flushes = 0
+
+        def write(self, message):
+            raise AssertionError("TerminalWriter.write must not be used inside capture")
+
+    class Stream(io.StringIO):
+        def __init__(self):
+            super().__init__()
+            self.flushes = 0
+
+        def flush(self):
+            self.flushes += 1
+            super().flush()
+
+    def it_reports_bounded_mutant_progress_and_flushes_outer_stream():
+        writer = Writer()
+        writer._file = Stream()
+        reporter = _MutationProgressReporter(writer)
+        reporter(EngineProgress(kind="mutation-start", total=2))
+        reporter(
+            EngineProgress(
+                kind="mutant",
+                ordinal=1,
+                total=2,
+                file_path="sample.py",
+                lineno=4,
+                op="BinOp:Add",
+                selected_tests=3,
+                elapsed_seconds=1.5,
+                status="killed",
+            )
+        )
+        assert writer._file.getvalue() == (
+            "leela: mutation run started (2 mutants)\n"
+            "leela: mutant 1/2 sample.py:4 BinOp:Add tests=3 "
+            "killed timeout=no elapsed=1.50s\n"
+        )
+        assert writer._file.flushes == 2
+
+    def it_bypasses_inner_redirected_streams():
+        writer = Writer()
+        reporter = _MutationProgressReporter(writer)
+        with contextlib.redirect_stdout(io.StringIO()) as captured_stdout, contextlib.redirect_stderr(io.StringIO()) as captured_stderr:
+            reporter(EngineProgress(kind="baseline-start"))
+        assert "leela: baseline started\n" == writer._file.getvalue()
+        assert captured_stdout.getvalue() == captured_stderr.getvalue() == ""
+
+    def it_writes_no_heartbeat_after_stop_is_signaled():
+        _assert_stopped_heartbeat_writes_nothing()
+
+    def it_closes_and_joins_heartbeat_thread():
+        _assert_stopped_heartbeat_writes_nothing()
+        writer = Writer()
+        reporter = _MutationProgressReporter(writer)
+        reporter.start()
+        thread = reporter._thread
+        reporter.close()
+        assert thread is not None
+        assert not thread.is_alive()
+        assert reporter._thread is None
+
+    def it_joins_the_heartbeat_when_engine_raises():
+        from pytest_leela.plugin import LeelaPlugin
+
+        _assert_stopped_heartbeat_writes_nothing()
+        config = MagicMock()
+        config.getoption.side_effect = lambda key, default=None: {
+            "target": ["/fake/mod.py"], "diff": None,
+            "max_cores": None, "max_memory": None,
+        }.get(key, default)
+        terminal = Writer()
+        config.get_terminal_writer.return_value = terminal
+        session = MagicMock(config=config, items=[])
+        session.config.rootpath = Path("/tmp/project")
+        stopped = []
+        original_close = _MutationProgressReporter.close
+
+        def close(reporter):
+            thread = reporter._thread
+            original_close(reporter)
+            stopped.append(thread is not None and not thread.is_alive())
+
+        with (
+            patch("pytest_leela.plugin.load_config"),
+            patch("pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]),
+            patch("pytest_leela.plugin.Engine") as engine,
+            patch.object(_MutationProgressReporter, "close", close),
+        ):
+            engine.return_value.run.side_effect = RuntimeError("runner crashed")
+            with pytest.raises(RuntimeError, match="runner crashed"):
+                LeelaPlugin(config).pytest_sessionfinish(session, exitstatus=0)
+        assert stopped == [True]
+
+    def it_reports_stage_order_transitions_all_tests_and_timeout():
+        writer = Writer()
+        reporter = _MutationProgressReporter(writer)
+        for kind in ("preparation-done", "baseline-start", "baseline-done", "mutation-start"):
+            reporter(EngineProgress(kind=kind, total=1))
+        for phase, timed_out in (("mutant", False), ("mutant-done", True), ("control", False), ("confirmation", False), ("confirmation-done", True)):
+            reporter(EngineProgress(
+                kind="mutant-phase", phase=phase, timed_out=timed_out,
+                file_path="sample.py", lineno=4, op="BinOp:Add",
+                ordinal=1, total=1, timeout_seconds=5.0,
+            ))
+        reporter(EngineProgress(kind="mutant", ordinal=1, total=1, file_path="sample.py", lineno=4, op="BinOp:Add", status="killed", timed_out=True))
+        reporter(EngineProgress(kind="done"))
+        text = writer._file.getvalue()
+        for marker in ("preparation complete", "baseline started", "baseline complete", "run started", "mutant 1/1 control", "mutant 1/1 confirmation", "timeout occurred", "tests=all", "killed timeout=yes", "run complete"):
+            assert marker in text
+        assert text.index("baseline started") < text.index("baseline complete") < text.index("run started")
+        assert text.count("mutant 1/1") <= 7
+
+    def it_emits_a_heartbeat_for_a_blocked_mutant_and_stops_on_close(monkeypatch):
+        _assert_stopped_heartbeat_writes_nothing()
+        writer = Writer()
+        reporter = _MutationProgressReporter(writer)
+        wake = threading.Event()
+        first_wait = threading.Event()
+        real_wait = reporter._stop.wait
+
+        def short_wait(seconds):
+            assert seconds == 30.0
+            if not first_wait.is_set():
+                first_wait.set()
+                assert wake.wait(5.0)
+                return False
+            return real_wait(seconds)
+
+        monkeypatch.setattr(reporter._stop, "wait", short_wait)
+        reporter.start()
+        reporter(EngineProgress(
+            kind="mutant-phase", phase="mutant", ordinal=1, total=2,
+            file_path="sample.py", lineno=7, op="BinOp:Add",
+            selected_tests=2, timeout_seconds=5.0,
+        ))
+        assert first_wait.wait(5.0)
+        wake.set()
+        try:
+            for _ in range(500):
+                if "heartbeat" in writer._file.getvalue():
+                    break
+                assert not reporter._stop.is_set()
+                threading.Event().wait(0.001)
+            assert "mutation heartbeat 0/0 mutant sample.py:7 BinOp:Add" in writer._file.getvalue()
+        finally:
+            reporter.close()
+        assert reporter._thread is None
+        assert writer._file.getvalue().count("heartbeat") == 1
+
+    def it_emits_a_bounded_heartbeat(monkeypatch):
+        writer = Writer()
+        reporter = _MutationProgressReporter(writer)
+        reporter._started = reporter._phase_started = 1.0
+        reporter._current = "mutant sample.py:7 BinOp:Add tests=all timeout=5.0s"
+        waits = iter((False, True))
+
+        class StopEvent:
+            def wait(self, seconds):
+                assert seconds == 30.0
+                return next(waits)
+
+        reporter._stop = StopEvent()
+        monkeypatch.setattr("pytest_leela.plugin.time.monotonic", lambda: 31.0)
+        reporter._heartbeat()
+        assert writer._file.getvalue() == (
+            "leela: mutation heartbeat 0/0 mutant sample.py:7 BinOp:Add "
+            "tests=all timeout=5.0s elapsed=30s\n"
+        )
