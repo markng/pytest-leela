@@ -4011,3 +4011,114 @@ def describe_origin_freshness_causal_integration():
         assert result.killing_tests == [nodeid]
         assert result.test_ids_run == [nodeid]
         assert result.tests_run == int(phase == "call")
+
+
+def describe_mutation_import_priority():
+    def _project(tmp_path, monkeypatch, import_phase, extra_target=False, broken=False):
+        import pluggy
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setenv("PYTEST_PLUGINS", "finder_order_plugin")
+        (tmp_path / "pytest.ini").write_text("[pytest]\n")
+        source = (
+            "import json\nfrom pathlib import Path\n"
+            "def add(a, b):\n    return a + b\n"
+            "with Path('target-imports.jsonl').open('a') as log:\n"
+            "    log.write(json.dumps({'module': __name__, "
+            "'loader': type(__loader__).__name__, 'value': add(1, 2)}) + '\\n')\n"
+        )
+        target = tmp_path / "rewrite_target.py"
+        target.write_text(source)
+        sources = {"rewrite_target": source}
+        files = {"rewrite_target": str(target)}
+        if extra_target:
+            other = tmp_path / "rewrite_other.py"
+            other.write_text("VALUE = 7\n")
+            sources["rewrite_other"] = other.read_text()
+            files["rewrite_other"] = str(other)
+        (tmp_path / "finder_order_plugin.py").write_text(
+            "import os\nimport pytest\n"
+            "pytest.register_assert_rewrite('rewrite_target', 'rewrite_other')\n"
+            "def pytest_configure(config):\n"
+            "    assert config.getoption('assertmode') == 'rewrite'\n"
+            "    assert not os.environ.get('PYTEST_DISABLE_PLUGIN_AUTOLOAD')\n"
+            "    assert any(getattr(p, '__name__', '').startswith('pytest_describe') "
+            "for p in config.pluginmanager.get_plugins())\n"
+        )
+        tests = tmp_path / "tests"
+        tests.mkdir()
+        imports = "from rewrite_target import add\n"
+        if extra_target:
+            imports += "from rewrite_other import VALUE\n"
+        if import_phase == "conftest":
+            (tests / "conftest.py").write_text(
+                imports + ("raise RuntimeError('broken initial conftest')\n" if broken else "")
+            )
+            imports = "from conftest import add\n"
+            if extra_target:
+                imports += "from conftest import VALUE\n"
+        (tests / "test_rewrite_target.py").write_text(
+            imports + "import pytest\nimport pluggy\n"
+            "def test_add():\n"
+            f"    assert id(pytest.Item) == {id(pytest.Item)}\n"
+            f"    assert id(pluggy.PluginManager) == {id(pluggy.PluginManager)}\n"
+            + ("    assert VALUE == 7\n" if extra_target else "")
+            + "    assert add(1, 2) == 3\n"
+        )
+        point = next(
+            p for p in find_mutation_points(source, str(target), "rewrite_target")
+            if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        return Mutant(point, "Sub", 0), sources, files, tests
+
+    @pytest.mark.parametrize("import_phase", ["collection", "conftest"])
+    @pytest.mark.parametrize("extra_target", [False, True], ids=["single", "multiple"])
+    def it_applies_mutations_before_assertion_rewriting_imports(
+        tmp_path, monkeypatch, record_property, import_phase, extra_target
+    ):
+        mutant, sources, files, tests = _project(
+            tmp_path, monkeypatch, import_phase, extra_target
+        )
+        saved_meta_path = sys.meta_path[:]
+        scope = ProjectModuleScope()
+        control = run_baseline(None, str(tests), precompute_user_modules(scope), scope)
+        assert control.error() is None
+        assert control.collector.total == 1
+        assert control.failures() == []
+        assert sys.meta_path == saved_meta_path
+        for _ in range(2):
+            phases = []
+            result = run_tests_for_mutant(
+                mutant, sources, files, test_dir=str(tests), scope=scope,
+                on_phase=lambda phase, budget, timed_out: phases.append((phase, timed_out)),
+            )
+            assert result.status == "killed", result
+            assert result.tests_run == 1
+            assert result.killing_test == "tests/test_rewrite_target.py::test_add"
+            assert result.error is None
+            assert not any(timed_out for _, timed_out in phases)
+            assert sys.meta_path == saved_meta_path
+            assert not any(isinstance(f, MutatingFinder) for f in sys.meta_path)
+        imports = [json.loads(line) for line in (tmp_path / "target-imports.jsonl").read_text().splitlines()]
+        target_imports = [row for row in imports if row["module"] == "rewrite_target"]
+        record_property("target_imports", json.dumps(target_imports))
+        assert target_imports == [
+            {"module": "rewrite_target", "loader": "AssertionRewritingHook", "value": 3},
+            {"module": "rewrite_target", "loader": "MutatingLoader", "value": -1},
+            {"module": "rewrite_target", "loader": "MutatingLoader", "value": -1},
+        ]
+
+    def it_restores_import_state_when_initial_conftest_raises(tmp_path, monkeypatch):
+        mutant, sources, files, tests = _project(
+            tmp_path, monkeypatch, "conftest", broken=True
+        )
+        saved_meta_path = sys.meta_path[:]
+        finder = install_hook(sources, mutant, files)
+        session = InnerSession(finder, None, str(tests), ProjectModuleScope()).run()
+        assert session.error() is not None
+        assert session.collector.total == 0
+        assert sys.meta_path == saved_meta_path
+        assert "rewrite_target" not in sys.modules
+        imports = [json.loads(line) for line in (tmp_path / "target-imports.jsonl").read_text().splitlines()]
+        assert imports[-1] == {"module": "rewrite_target", "loader": "MutatingLoader", "value": -1}

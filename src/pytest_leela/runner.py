@@ -327,6 +327,21 @@ def _clear_user_modules(scope: ProjectModuleScope | None = None) -> None:
         sys.modules.pop(name, None)
 
 
+class _MutationImportPriority:
+    """Keep mutation loading ahead of pytest's newly installed rewrite hook."""
+
+    def __init__(self, finder: MutatingFinder) -> None:
+        self.finder = finder
+
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+    def pytest_load_initial_conftests(self) -> Generator[None, None, None]:
+        # Pytest installs assertion rewriting inside pytest.main(), after the
+        # mutation finder. Restore priority before conftest or test imports.
+        sys.meta_path.remove(self.finder)
+        sys.meta_path.insert(0, self.finder)
+        yield
+
+
 class _TimeoutPlugin:
     """Pytest plugin that aborts the run when a timeout event fires."""
 
@@ -666,6 +681,8 @@ class InnerSession:
         plugins: list[Any] = [self.collector]
         if timer is not None:
             plugins.append(_TimeoutPlugin(self.timed_out))
+        if self.finder is not None:
+            plugins.append(_MutationImportPriority(self.finder))
 
         # Run pytest in-process (suppress noisy output)
         try:
