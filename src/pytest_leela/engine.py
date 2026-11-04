@@ -83,6 +83,38 @@ def _module_name_from_path(file_path: str) -> str:
     return rel.replace(os.sep, ".")
 
 
+class _TemporaryModuleScope(ProjectModuleScope):
+    """Compare temporary origins and environment exclusions in one real path space."""
+
+    def __init__(self, root: str) -> None:
+        super().__init__(os.path.realpath(root))
+        roots = {
+            (r, os.path.join(os.path.realpath(r), ""))
+            for r in self.environment_roots
+            if not self.cwd.startswith(os.path.join(os.path.realpath(r), ""))
+        }
+        self._lexical_environment_roots = tuple(sorted(r for r, _ in roots))
+        self.environment_roots = tuple(sorted({r for _, r in roots}))
+
+    def contains(self, file_path: str) -> bool:
+        from pytest_leela.runner import _PACKAGE_DIR_NAMES
+
+        # A package directory may itself link to a cache under the temp root;
+        # resolving that link must not discard its installed-package identity.
+        if file_path.startswith(self._lexical_environment_roots + self.environment_roots):
+            return False
+        if not _PACKAGE_DIR_NAMES.isdisjoint(file_path.split(os.sep)) or not super().contains(
+            os.path.realpath(file_path)
+        ):
+            return False
+        # Resolve ancestors separately: an environment's library or directory
+        # symlink can escape its environment after an aliased root is resolved.
+        return not any(
+            os.path.join(os.path.realpath(parent), "").startswith(self.environment_roots)
+            for parent in Path(file_path).parents
+        )
+
+
 def _clean_process_state() -> None:
     """Remove stale state left by prior test runs.
 
@@ -101,7 +133,9 @@ def _clean_process_state() -> None:
     #    fixtures that create throwaway target files).  A project or
     #    virtualenv that itself lives under the temp directory is not a
     #    fixture: its installed packages and leela's own modules stay.
-    tmp_scope = ProjectModuleScope(tempfile.gettempdir())
+    # Resolve both root and origins, but keep one candidate set so Django's
+    # referenced-module closure can cross alias/canonical path spellings.
+    tmp_scope = _TemporaryModuleScope(tempfile.gettempdir())
     for name in tmp_scope.module_names():
         sys.modules.pop(name, None)
 

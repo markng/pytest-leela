@@ -1,5 +1,6 @@
 """Tests for pytest_leela.engine."""
 
+import importlib.machinery
 import importlib.util
 import os
 import py_compile
@@ -124,6 +125,182 @@ def describe_clean_process_state():
         _clean_process_state()
 
         assert sys.modules["pytest_leela._tmp_checkout_mod"] is fake_mod
+
+    @pytest.fixture
+    def aliased_temp_root(tmp_path):
+        real_root = tmp_path.resolve() / "real-temp"
+        real_root.mkdir()
+        alias_root = tmp_path / "temp-alias"
+        alias_root.symlink_to(real_root, target_is_directory=True)
+        return alias_root, real_root
+
+    @pytest.mark.parametrize("root_spelling", ["alias", "canonical"])
+    def it_cleans_both_temp_origin_spellings_and_keeps_protected_identities(
+        aliased_temp_root, root_spelling, monkeypatch
+    ):
+        alias_root, real_root = aliased_temp_root
+        root = alias_root if root_spelling == "alias" else real_root
+        monkeypatch.setattr(tempfile, "gettempdir", lambda: str(root))
+        modules = {}
+        for spelling, origin_root in [("alias", alias_root), ("canonical", real_root)]:
+            for kind, relative_path in [
+                ("fixture", "fixture.py"),
+                ("installed", ".venv/site-packages/pkg.py"),
+                ("dist", ".venv/dist-packages/pkg.py"),
+                ("environment", "environment/lib/library.py"),
+                ("kept", "src/kept.py"),
+            ]:
+                prefix = "pytest_leela." if kind == "kept" else "_temp_cleanup_"
+                name = f"{prefix}{kind}_{spelling}"
+                module = types.ModuleType(name)
+                origin = origin_root / relative_path
+                origin.parent.mkdir(parents=True, exist_ok=True)
+                origin.touch()
+                module.__file__ = str(origin)
+                monkeypatch.setitem(sys.modules, name, module)
+                modules[name] = module
+        outside_root = real_root.parent / "outside"
+        outside_root.mkdir()
+        (real_root / "escape").symlink_to(outside_root, target_is_directory=True)
+        outside = types.ModuleType("_temp_cleanup_outside")
+        outside.__file__ = str(alias_root / "escape" / "outside.py")
+        (outside_root / "outside.py").touch()
+        monkeypatch.setitem(sys.modules, outside.__name__, outside)
+        modules[outside.__name__] = outside
+        pytest_identity = sys.modules["pytest"]
+        with monkeypatch.context() as environment_patch:
+            environment_patch.setattr(sys, "prefix", str(alias_root / "environment"))
+            _clean_process_state()
+
+        for name, module in modules.items():
+            if name.startswith("_temp_cleanup_fixture_"):
+                assert name not in sys.modules
+            else:
+                assert sys.modules[name] is module
+        assert sys.modules["pytest"] is pytest_identity
+
+    @pytest.mark.parametrize("package_dir", ["site-packages", "dist-packages"])
+    @pytest.mark.parametrize("protected_spelling", ["lexical", "canonical"])
+    def it_keeps_installed_package_identities_through_directory_symlinks(
+        aliased_temp_root, package_dir, protected_spelling, monkeypatch
+    ):
+        alias_root, real_root = aliased_temp_root
+        monkeypatch.setattr(tempfile, "gettempdir", lambda: str(alias_root))
+        cache_name = "download-cache" if protected_spelling == "lexical" else package_dir
+        link_name = package_dir if protected_spelling == "lexical" else "package-link"
+        cache = real_root / cache_name
+        cache.mkdir()
+        (cache / "package.py").touch()
+        (real_root / link_name).symlink_to(cache, target_is_directory=True)
+        installed = types.ModuleType("_temp_cleanup_symlinked_package")
+        installed.__file__ = str(alias_root / link_name / "package.py")
+        monkeypatch.setitem(sys.modules, installed.__name__, installed)
+        fixture = types.ModuleType("_temp_cleanup_ordinary_fixture")
+        fixture.__file__ = str(real_root / "fixture.py")
+        Path(fixture.__file__).touch()
+        monkeypatch.setitem(sys.modules, fixture.__name__, fixture)
+
+        _clean_process_state()
+
+        assert sys.modules.get(installed.__name__) is installed
+        assert fixture.__name__ not in sys.modules
+
+    @pytest.mark.parametrize("root_spelling", ["alias", "canonical"])
+    @pytest.mark.parametrize("environment_spelling", ["alias", "canonical"])
+    @pytest.mark.parametrize("origin_spelling", ["alias", "canonical"])
+    @pytest.mark.parametrize("symlink_kind", ["file", "directory"])
+    @pytest.mark.parametrize("environment_contains_temp", [False, True])
+    def it_preserves_lexical_environment_libraries_unless_the_environment_contains_temp(
+        aliased_temp_root,
+        root_spelling,
+        environment_spelling,
+        origin_spelling,
+        symlink_kind,
+        environment_contains_temp,
+        monkeypatch,
+    ):
+        alias_root, real_root = aliased_temp_root
+        root = alias_root if root_spelling == "alias" else real_root
+        environment_root = alias_root if environment_spelling == "alias" else real_root
+        origin_root = alias_root if origin_spelling == "alias" else real_root
+        monkeypatch.setattr(tempfile, "gettempdir", lambda: str(root))
+        cache = real_root / "cache" / "library.py"
+        cache.parent.mkdir()
+        cache.touch()
+        library_path = origin_root / "environment" / "lib" / "library.py"
+        if symlink_kind == "file":
+            library_path.parent.mkdir(parents=True)
+            library_path.symlink_to(cache)
+        else:
+            library_path.parent.parent.mkdir()
+            library_path.parent.symlink_to(cache.parent, target_is_directory=True)
+        library = types.ModuleType("_temp_cleanup_environment_library")
+        library.__file__ = str(library_path)
+        monkeypatch.setitem(sys.modules, library.__name__, library)
+        fixture = types.ModuleType("_temp_cleanup_unrelated_fixture")
+        fixture.__file__ = str(real_root / "fixture.py")
+        Path(fixture.__file__).touch()
+        monkeypatch.setitem(sys.modules, fixture.__name__, fixture)
+        environment = (
+            environment_root
+            if environment_contains_temp
+            else environment_root / "environment"
+        )
+
+        with monkeypatch.context() as environment_patch:
+            environment_patch.setattr(sys, "prefix", str(environment))
+            _clean_process_state()
+
+        if environment_contains_temp:
+            assert library.__name__ not in sys.modules
+        else:
+            assert sys.modules.get(library.__name__) is library
+        assert fixture.__name__ not in sys.modules
+
+    def it_does_not_exclude_the_temp_root_when_its_alias_is_an_environment_root(
+        aliased_temp_root, monkeypatch
+    ):
+        alias_root, real_root = aliased_temp_root
+        monkeypatch.setattr(tempfile, "gettempdir", lambda: str(real_root))
+        module = types.ModuleType("_temp_cleanup_below_environment_root")
+        module.__file__ = str(real_root / "fixture.py")
+        Path(module.__file__).touch()
+        monkeypatch.setitem(sys.modules, module.__name__, module)
+        with monkeypatch.context() as environment_patch:
+            environment_patch.setattr(sys, "prefix", str(alias_root))
+            _clean_process_state()
+        assert module.__name__ not in sys.modules
+
+    def it_keeps_django_reference_chains_across_temp_origin_aliases(
+        aliased_temp_root, monkeypatch
+    ):
+        alias_root, real_root = aliased_temp_root
+        monkeypatch.setattr(tempfile, "gettempdir", lambda: str(alias_root))
+        modules = []
+        for name, origin_root in [
+            ("_temp_cleanup_app.models", real_root),
+            ("_temp_cleanup_intermediate", alias_root),
+            ("_temp_cleanup_leaf", real_root),
+            ("_temp_cleanup_unreferenced", real_root),
+        ]:
+            module = types.ModuleType(name)
+            origin = origin_root / f"{name}.py"
+            origin.touch()
+            module.__file__ = str(origin)
+            monkeypatch.setitem(sys.modules, name, module)
+            modules.append(module)
+        models, intermediate, leaf, unreferenced = modules
+        models.dependency = intermediate
+        intermediate.dependency = leaf
+        config = types.SimpleNamespace(name="_temp_cleanup_app", models_module=models)
+        registry = types.SimpleNamespace(ready=True, get_app_configs=lambda: [config])
+        monkeypatch.setattr("pytest_leela.runner._django_apps", registry)
+
+        _clean_process_state()
+
+        for module in (models, intermediate, leaf):
+            assert sys.modules[module.__name__] is module
+        assert unreferenced.__name__ not in sys.modules
 
     def it_keeps_non_temp_modules():
         original_keys = set(sys.modules.keys())
@@ -1004,7 +1181,17 @@ def describe_Engine_baseline_source_freshness():
         }[changed_input]
         cache = Path(importlib.util.cache_from_source(str(changed)))
         if changed_input == "test":
-            cache = next(cache.parent.glob("test_fresh.*-pytest-*.pyc"))
+            # Pytest may use checked-hash rewrite caches. Plant a separate,
+            # real CPython timestamp cache without changing its rewritten cache.
+            cache = Path(
+                py_compile.compile(
+                    str(changed),
+                    doraise=True,
+                    invalidation_mode=py_compile.PycInvalidationMode.TIMESTAMP,
+                )
+            )
+        loader = importlib.machinery.SourceFileLoader(changed.stem, str(changed))
+        cached_code = loader.get_code(changed.stem)
         raw = cache.read_bytes()
         flags, timestamp, size = struct.unpack("<III", raw[4:16])
         before = changed.stat()
@@ -1015,6 +1202,8 @@ def describe_Engine_baseline_source_freshness():
         os.utime(changed, ns=(before.st_atime_ns, before.st_mtime_ns))
         assert changed.stat().st_size == size
         assert changed.stat().st_mtime_ns == before.st_mtime_ns
+        assert loader.get_code(changed.stem) == cached_code
+        assert compile(changed.read_bytes(), str(changed), "exec") != cached_code
         print(
             f"freshness input={changed_input} selected={selected} cache={cache} "
             f"flags={flags} timestamp={timestamp} size={size} mtime_ns={before.st_mtime_ns}"
@@ -1025,6 +1214,10 @@ def describe_Engine_baseline_source_freshness():
             with pytest.raises(BaselineFailure, match="no mutants were run"):
                 Engine(use_types=False, use_coverage=False).run([str(target)], **options)
             real_mutants.assert_not_called()
+        if changed_input == "test":
+            # Pytest uses its separate rewrite cache, so this artifact stays
+            # absent only if baseline preparation actually removed it.
+            assert not cache.exists()
         print("freshness outcome=BaselineFailure real_mutant_calls=0")
 
 
@@ -1447,9 +1640,19 @@ def describe_Engine_index_completion():
 
         def failing_runner(*args, **kwargs):
             runner_calls.append(args[0])
-            with patch.object(
-                Path, "unlink", side_effect=PermissionError("cache unavailable")
-            ):
+            # Baseline cleanup removes caches; create the failing artifact even
+            # when PYTHONDONTWRITEBYTECODE disables incidental import caches.
+            cache = Path(
+                py_compile.compile(str(tests / "test_failure.py"), doraise=True)
+            )
+            real_unlink = Path.unlink
+
+            def unlink_cache(path, *unlink_args, **unlink_kwargs):
+                if path == cache:
+                    raise PermissionError("cache unavailable")
+                return real_unlink(path, *unlink_args, **unlink_kwargs)
+
+            with patch.object(Path, "unlink", new=unlink_cache):
                 return real_runner(*args, **kwargs)
 
         monkeypatch.setattr(engine_module, "run_tests_for_mutant", failing_runner)
