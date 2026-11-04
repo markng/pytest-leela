@@ -1,6 +1,11 @@
 """Parse git diff to find changed files and lines."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+# its ``compile()`` call must also remain unflagged.
 
 import fnmatch
 import os

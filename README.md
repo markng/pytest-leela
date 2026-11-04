@@ -97,8 +97,8 @@ pytest --leela-benchmark
   trip your tests (e.g. won't swap `+` to `-` on a `str` operand)
 - **Per-test coverage mapping** — each mutant runs only the tests that exercise its lines,
   not the whole suite
-- **In-process execution via import hooks** — mutations applied via `sys.meta_path`, zero
-  filesystem writes, fast loop
+- **In-process execution via import hooks** — mutations are applied via `sys.meta_path`,
+  without rewriting source files; freshness checks may refresh local bytecode caches
 - **Git diff mode** — `--diff <ref>` limits mutations to lines changed since that ref
 - **Framework-aware** — clears Django URL caches between mutants so view reloads work correctly
 - **Resource limits** — `--max-cores N` caps parallelism; `--max-memory MB` guards memory
@@ -230,6 +230,14 @@ with `leela: aborted: tests do not pass with no mutation applied (...)` and a no
 and no mutants are scored. Without this check, a test that fails for an unrelated reason (a
 fixture that cannot run in-process, a missing service) would score every mutant as killed.
 
+To make that baseline execute current source, engine entry and baseline preparation may remove
+and recreate local CPython and pytest bytecode caches. Source file contents and mtimes are not
+changed. Mutation preparation is narrower: it removes only the exact cached artifacts for the
+selected test inputs, never same-prefix sibling modules. A warm indexed run still executes the
+real baseline, but cache-hit mutants do not execute the mutant runner or mutation-preparation
+step. This phase-local boundary is intentional; preserving every project `.pyc` across a whole
+engine run is not part of the current experimental watcher contract.
+
 ### pytest-django
 
 pytest-django blocks database access for the whole session and only restores it at
@@ -293,6 +301,86 @@ not string literals or docstrings that happen to contain the text.
 - Test source overlay — click any test name to see its source code
 
 Uses the Catppuccin Mocha dark theme.
+
+---
+
+## Experimental: Watcher / Discovery
+
+> **Status: experimental.** The watcher subsystem is under active
+> development and is not yet part of the stable public API. It is
+> invoked via ``python -m``, not via a console script, and may
+> change without notice.
+
+The watcher tracks source and test changes in a SQLite index. This experimental
+path is separate from `pytest --leela`; cache correctness and progress depend on
+the matching engine/index implementation.
+
+### Usage and interpreter selection
+
+Run from the project root, using its **development environment**, with pytest-leela and that
+project's configured test dependencies installed. For this repository:
+
+```bash
+python -m venv .venv
+.venv/bin/python -m pip install -e ".[dev]"
+.venv/bin/python -m pytest_leela.daemon --help
+.venv/bin/python -m pytest_leela.daemon watch /path/to/project
+.venv/bin/python -m pytest_leela.daemon status /path/to/project --json
+```
+
+The experimental mutation engine also uses the current working directory for
+relative test IDs: run from the watched project root, not an unrelated checkout.
+
+Coverage subprocesses use `sys.executable` (the invoking interpreter), with the
+project root as cwd and normal pytest plugin discovery. There is **no automatic
+venv selection** and no runtime installation of dependencies. `describe_*` suites
+require pytest-describe in that environment with plugin autoload enabled. Missing
+plugins, import failures, and failed tests are reported as collection failures,
+not successful zero coverage. A genuinely empty test suite returns empty coverage;
+passing tests that touch no tracked source return timings but no source lines.
+The coverage subprocess has a 120-second timeout. It disables mutation plugin
+recursion and project `addopts`, while retaining discovery/configuration settings.
+
+Bare invocation defaults to watching the current directory. Use explicit `watch`
+and a project path to avoid accidentally watching the wrong directory. `watch
+--verbose` prints progress; `watch --observer` reports outstanding test work.
+
+### Subcommands
+
+* ``watch`` (default) — run the long-lived daemon. Polls the
+  filesystem at ``--poll-interval`` seconds (default: 1.0) and
+  re-analyzes dirty symbols after a debounce period
+  (``--reanalyze-debounce``, default: 2.0 s). Use Ctrl-C to stop.
+* ``status`` — read the index DB and print the current state
+  without running any analysis. Exit code 0 means everything is
+  covered; 1 means there is work to do; 2 means an error (e.g.,
+  no index DB yet). Useful for CI status checks.
+
+### Source discovery
+
+The daemon discovers source files by walking the configured
+``target_dirs`` (default: ``src/``). It skips directories that
+typically contain non-source code:
+``.venv``, ``venv``, ``.tox``, ``build``, ``dist``, ``.git``,
+``.hg``, ``__pycache__``, ``node_modules``, ``.eggs``, ``target``,
+``tests``, and ``.leela``.
+
+### Known limitations
+
+* **Experimental only.** No ``[project.scripts]`` entry point is
+  declared — the daemon is reached via
+  ``python -m pytest_leela.daemon``. It is not installed as a
+  console script.
+* **Polling-based.** The daemon uses ``os.path.getmtime`` polling
+  rather than inotify/FSEvents, so it has a configurable poll
+  interval but not instant reaction.
+* **Persistent state.** The index DB (``.leela/index.db``) and
+  logs are written under the project root. Add ``.leela/`` to
+  your ``.gitignore``.
+* **Shutdown drains work.** Ctrl-C stops polling and scheduling, then waits for
+  the current analysis pass before closing its DB. Engine has no cancellation
+  API; user tests can hang, so shutdown is not globally time-bounded. Use an
+  external process timeout where a hard deadline is required.
 
 ---
 

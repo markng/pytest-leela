@@ -7,7 +7,6 @@ against the target.
 
 from __future__ import annotations
 
-import pytest
 
 from target.assignment_targets import (
     accumulate_score,

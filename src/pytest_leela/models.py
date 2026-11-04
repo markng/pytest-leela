@@ -1,6 +1,11 @@
 """Data models for mutation testing."""
 
-from __future__ import annotations
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. ``EnrichmentStats`` keeps its self-reference
+# quoted because it is defined before the class name is bound.
 
 from dataclasses import dataclass, field
 from typing import Literal
@@ -27,7 +32,7 @@ class EnrichmentStats:
     from_annotations: int = 0
     from_assignment_dataflow: int = 0
 
-    def __add__(self, other: EnrichmentStats) -> EnrichmentStats:
+    def __add__(self, other: "EnrichmentStats") -> "EnrichmentStats":
         return EnrichmentStats(
             from_annotations=self.from_annotations + other.from_annotations,
             from_assignment_dataflow=self.from_assignment_dataflow
@@ -144,3 +149,25 @@ class RunResult:
         if self.mutants_scored == 0:
             return 0.0
         return self.killed / self.mutants_scored * 100.0
+
+
+@dataclass(frozen=True)
+class EngineProgress:
+    """A single progress event emitted by the engine."""
+
+    kind: str  # "symbol-start", "mutant", "done" (successful completion)
+    file_path: str = ""
+    lineno: int = 0
+    op: str = ""
+    status: str = ""  # mutant: "killed", "survived", "cache-hit", "error"
+    symbol_id: str | None = None
+    symbol_short: str = ""
+    n_mutants_in_symbol: int = 0
+    killing_test: str | None = None
+    ordinal: int = 0
+    total: int = 0
+    selected_tests: int | None = None
+    timeout_seconds: float | None = None
+    elapsed_seconds: float = 0.0
+    timed_out: bool = False
+    phase: str = ""

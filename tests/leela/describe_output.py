@@ -211,9 +211,11 @@ def describe_format_terminal_report():
         report = format_terminal_report(run)
         lines = report.split("\n")
         # The pruning detail line appears in the overall summary only when pruned > 0
-        overall_idx = next(i for i, l in enumerate(lines) if l.startswith("Overall:"))
+        overall_idx = next(
+            i for i, line in enumerate(lines) if line.startswith("Overall:")
+        )
         # Next non-empty line after Overall should not be a pruning line
-        remaining = [l for l in lines[overall_idx + 1 :] if l.strip()]
+        remaining = [line for line in lines[overall_idx + 1 :] if line.strip()]
         if remaining:
             assert "pruned by type analysis" not in remaining[0]
 
@@ -265,7 +267,7 @@ def describe_format_terminal_report():
             wall_time_seconds=1.0,
         )
         report = format_terminal_report(run)
-        per_file_lines = [l for l in report.split("\n") if "app.py" in l]
+        per_file_lines = [line for line in report.split("\n") if "app.py" in line]
         assert len(per_file_lines) == 1
         assert "1/3 killed (33.3%)" in per_file_lines[0]
 

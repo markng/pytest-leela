@@ -620,7 +620,10 @@ def describe_changed_files():
         from pytest_leela.git_diff import changed_files
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            app_path = os.path.join(tmpdir, "myapp.py")
+            # macOS exposes the temporary root through both /var and /private/var.
+            # changed_files uses abspath after chdir, so canonicalize the fixture
+            # input through the same filesystem identity before exact comparison.
+            app_path = os.path.realpath(os.path.join(tmpdir, "myapp.py"))
             open(app_path, "w").close()
 
             # repo_root is None; git reports a relative name
