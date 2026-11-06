@@ -1,0 +1,2005 @@
+diff --git a/README.md b/README.md
+index a412f32..e7d65d3 100644
+--- a/README.md
++++ b/README.md
+@@ -225,7 +225,8 @@ Known limits of these rules:
+ ### Clean baseline before any mutant
+ 
+ Before the first mutant, leela runs the selected tests once with no mutation applied, through
+-the same in-process path every mutant uses. If anything fails or errors there, the run aborts
++the unmutated pytest path. Budgeted mutants run pytest in isolated interpreters; runs without
++a timeout budget retain the in-process path. If anything fails or errors in the baseline, the run aborts
+ with `leela: aborted: tests do not pass with no mutation applied (...)` and a non-zero exit,
+ and no mutants are scored. Without this check, a test that fails for an unrelated reason (a
+ fixture that cannot run in-process, a missing service) would score every mutant as killed.
+@@ -245,8 +246,10 @@ unconfigure, after leela has run. Leela lifts that outer block for the duration
+ (through pytest-django's own `django_db_blocker.unblock()`), so database tests in the inner
+ sessions can open connections as they do in a normal run.
+ 
+-Django model and admin modules are never reloaded between mutants (unless one is itself a
+-`--target`), and neither is any project module they reference. Re-executing them registers
++Within each interpreter, Django model and admin modules are not reloaded (unless one is itself a
++`--target`), and neither is any project module they reference. Budgeted mutants use fresh
++interpreters: startup hooks and module-level side effects repeat once per worker, not once
++per campaign. Registry/model/reference identity remains consistent within each process. Re-executing them registers
+ models and admin classes a second time, which Django rejects, and re-importing a module they
+ reference would split class identity (a kept model subclassing the old copy of a reloaded
+ mixin). The trade-off: if a model or admin module imports a function from your target at
+@@ -255,7 +258,8 @@ survivor, never as a fake kill.
+ 
+ ### Installed packages are never reloaded
+ 
+-Between mutants leela evicts the project's own modules so that mutated code is re-imported.
++For in-process runs leela evicts the project's own modules so that mutated code is re-imported.
++Budgeted runs start fresh interpreters instead.
+ Installed packages are left loaded, even when the virtualenv sits inside the project directory
+ (uv's default `.venv`): anything under `sys.prefix`, `sys.base_prefix`, `site.getsitepackages()`,
+ `site.getusersitepackages()`, or a `site-packages` / `dist-packages` directory. Re-importing them
+@@ -313,7 +317,12 @@ Uses the Catppuccin Mocha dark theme.
+ 
+ The watcher tracks source and test changes in a SQLite index. This experimental
+ path is separate from `pytest --leela`; cache correctness and progress depend on
+-the matching engine/index implementation.
++the matching engine/index implementation. Content-based polls continue during
++analysis, including test/helper/config edits and deletions. A single analysis
++worker publishes only while its input generation is current; newer edits stay
++pending for a later pass. This coordinates one daemon and its IndexDB connection,
++not competing writers/processes. User tests are not cancelled: shutdown drains the
++worker and can wait indefinitely for hanging tests.
+ 
+ ### Usage and interpreter selection
+ 
+@@ -377,6 +386,15 @@ typically contain non-source code:
+ * **Persistent state.** The index DB (``.leela/index.db``) and
+   logs are written under the project root. Add ``.leela/`` to
+   your ``.gitignore``.
++* **Per-mutant deadlines.** With selected test IDs and measured test times, each mutant
++  runs in an owned interpreter with budget `max(2 * sum(test times) + 1, 5)` seconds
++  (unknown test durations default to one second). The deadline includes worker startup,
++  collection, tests and teardown; an exec guardian stops and reaps the worker on timeout
++  or caller exit. Cleanup includes ordinary subprocesses in the owned process group and
++  Leela's nested workers. Deliberately detached user processes (for example POSIX `setsid`)
++  and external side effects are outside this reliability boundary: it is not a sandbox.
++  Clean controls and confirmations use the same budget. No budget is enabled when test
++  IDs or timing data are absent. A timeout verdict is not a call-phase assertion failure.
+ * **Shutdown drains work.** Ctrl-C stops polling and scheduling, then waits for
+   the current analysis pass before closing its DB. Engine has no cancellation
+   API; user tests can hang, so shutdown is not globally time-bounded. Use an
+@@ -386,6 +404,9 @@ typically contain non-source code:
+ 
+ ## Requirements
+ 
++POSIX operating system (for example Linux or macOS). Windows is not supported;
++budgeted execution rejects unsupported platforms before running user tests.
++
+ - Python >= 3.12
+ - pytest >= 7.0
+ 
+diff --git a/pyproject.toml b/pyproject.toml
+index c7437d5..cf78bd1 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -16,7 +16,7 @@ classifiers = [
+     "Framework :: Pytest",
+     "Intended Audience :: Developers",
+     "License :: OSI Approved :: MIT License",
+-    "Operating System :: OS Independent",
++    "Operating System :: POSIX",
+     "Programming Language :: Python :: 3",
+     "Programming Language :: Python :: 3.12",
+     "Programming Language :: Python :: 3.13",
+diff --git a/src/pytest_leela/runner.py b/src/pytest_leela/runner.py
+index 158e479..e3b8aa7 100644
+--- a/src/pytest_leela/runner.py
++++ b/src/pytest_leela/runner.py
+@@ -10,6 +10,7 @@
+ import contextlib
+ import importlib.util
+ import io
++import json
+ import ntpath  # noqa: F401 — keep in sys.modules (see engine.py comment)
+ import os
+ import posixpath  # noqa: F401 — same as ntpath
+@@ -19,7 +20,7 @@ import threading
+ import time
+ import types
+ from collections.abc import Callable, Generator
+-from dataclasses import dataclass, field
++from dataclasses import asdict, dataclass, field
+ from pathlib import Path
+ from typing import TYPE_CHECKING, Any, cast
+ 
+@@ -327,17 +328,6 @@ def _clear_user_modules(scope: ProjectModuleScope | None = None) -> None:
+         sys.modules.pop(name, None)
+ 
+ 
+-class _TimeoutPlugin:
+-    """Pytest plugin that aborts the run when a timeout event fires."""
+-
+-    def __init__(self, event: threading.Event) -> None:
+-        self.event = event
+-
+-    def pytest_runtest_protocol(self, item: Any, nextitem: Any) -> None:
+-        if self.event.is_set():
+-            raise SystemExit("leela: mutant timeout")
+-
+-
+ @dataclass(frozen=True)
+ class _FailureEvidence:
+     phase: str
+@@ -350,6 +340,12 @@ class _FailureEvidence:
+         return f"{self.phase}: {self.nodeid}: {self.diagnostic}"
+ 
+ 
++def _tuple_fingerprint(value: list[Any] | None) -> tuple[object, ...] | None:
++    if value is None:
++        return None
++    return tuple(_tuple_fingerprint(item) if isinstance(item, list) else item for item in value)
++
++
+ def _failure_evidence(phase: str, nodeid: str, exc: BaseException) -> _FailureEvidence:
+     fingerprint, diagnostic = _exception_evidence(exc)
+     return _FailureEvidence(phase, nodeid, fingerprint, diagnostic)
+@@ -617,6 +613,9 @@ class InnerSession:
+     def run(self) -> "InnerSession":
+         """Evict, run pytest in-process, restore interpreter state."""
+         start = time.monotonic()
++        timeout = _timeout_budget(self.test_ids, self.test_times)
++        if timeout is not None:
++            return self._run_isolated(timeout)
+         self._evict()
+         try:
+             self._run_pytest()
+@@ -640,6 +639,64 @@ class InnerSession:
+         self.elapsed = time.monotonic() - start
+         return self
+ 
++    def _run_isolated(self, timeout: float) -> "InnerSession":
++        from pytest_leela._timeout_process import DeadlineExpired, TestProcess
++
++        start = time.monotonic()
++        finder = self.finder
++        # The parent never executes the mutation, including during worker
++        # bootstrap/serialization; publication and callbacks remain here.
++        if finder is not None:
++            remove_hook(finder)
++        request = {
++            "path": sys.path,
++            "prefixes": {
++                name: getattr(sys, name)
++                for name in ("prefix", "base_prefix", "exec_prefix", "base_exec_prefix")
++            },
++            "cwd": self.scope.cwd,
++            "mutation": None if finder is None else asdict(finder.mutant),
++            "sources": {} if finder is None else finder.target_modules,
++            "files": {} if finder is None else finder._module_to_file,
++            "test_ids": self.test_ids,
++            "test_dir": self.test_dir,
++            "exitfirst": self.exitfirst,
++        }
++        try:
++            response = TestProcess().run(json.dumps(request).encode(), timeout)
++            self._restore_worker_result(json.loads(response))
++        except DeadlineExpired:
++            self.timed_out.set()
++        except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
++            self.crash = f"test worker failed: {type(exc).__name__}: {exc}"
++        finally:
++            self.elapsed = time.monotonic() - start
++        return self
++
++    def _restore_worker_result(self, response: dict[str, Any]) -> None:
++        collector = response["collector"]
++        evidence = collector.pop("failure_evidence")
++        for key, value in collector.items():
++            setattr(self.collector, key, value)
++        self.collector.failure_evidence = {
++            (item["phase"], item["nodeid"]): _FailureEvidence(
++                item["phase"], item["nodeid"],
++                _tuple_fingerprint(item["fingerprint"]), item["diagnostic"],
++            ) for item in evidence
++        }
++        self.collector.conftest_failure_ids = set(collector["conftest_failure_ids"])
++        self.collector.exit_ids = set(collector["exit_ids"])
++        root = collector["_rootpath"]
++        self.collector._rootpath = None if root is None else Path(root)
++        self.exit_code = response["exit_code"]
++        self.crash = response["crash"]
++        if self.finder is not None:
++            self.finder.import_errors[:] = response["import_errors"]
++            self.finder._import_failures[:] = [
++                (name, _tuple_fingerprint(fingerprint), diagnostic)
++                for name, fingerprint, diagnostic in response["import_failures"]
++            ]
++
+     def _run_pytest(self) -> None:
+         # Snapshot sys.meta_path and sys.modules right BEFORE the inner
+         # pytest.main() call.  Each inner run adds its own hooks
+@@ -654,18 +711,7 @@ class InnerSession:
+         saved_meta_path = sys.meta_path[:]
+         saved_modules = dict(sys.modules)
+ 
+-        # Set up per-mutant timeout to prevent infinite loops from
+-        # control-flow mutations (e.g. break→continue).
+-        timer: threading.Timer | None = None
+-        timeout_seconds = _timeout_budget(self.test_ids, self.test_times)
+-        if timeout_seconds is not None:
+-            timer = threading.Timer(timeout_seconds, self.timed_out.set)
+-            timer.daemon = True
+-            timer.start()
+-
+         plugins: list[Any] = [self.collector]
+-        if timer is not None:
+-            plugins.append(_TimeoutPlugin(self.timed_out))
+ 
+         # Run pytest in-process (suppress noisy output)
+         try:
+@@ -683,9 +729,6 @@ class InnerSession:
+             # raise at import and pytest.main does not catch.
+             self.crash = f"pytest crashed: {type(exc).__name__}: {exc}"
+         finally:
+-            if timer is not None:
+-                timer.cancel()
+-
+             # Restore meta_path: removes hooks that inner pytest.main()
+             # added (AssertionRewritingHook etc.).  The saved snapshot
+             # includes our MutatingFinder + the outer session's hooks,
+@@ -713,6 +756,8 @@ class InnerSession:
+         """Why the run did not test anything, or None if tests completed."""
+         if self.crash is not None:
+             return self.crash
++        if self.timed_out.is_set():
++            return "leela: mutant timeout"
+         if self.collector.deliberate_exit is not None:
+             return self.collector.deliberate_exit
+         return _inner_run_error(self.exit_code, self.collector)
+@@ -776,8 +821,7 @@ class InnerSession:
+             self._normalize(n) for n in collector.passed + collector.failed + collector.errors
+         ]
+         if self.timed_out.is_set():
+-            # An infinite loop introduced by the mutant, whether pytest
+-            # caught the timeout's SystemExit or let it escape: a real kill.
++            # Preserve the native timeout verdict, distinct from CALL evidence.
+             return MutantResult(
+                 mutant=mutant,
+                 killed=True,
+@@ -893,6 +937,7 @@ def run_control(
+     test_dir: str | None,
+     known_user_modules: frozenset[str],
+     scope: ProjectModuleScope,
++    test_times: dict[str, float] | None = None,
+ ) -> InnerSession:
+     """Run the same test selection with no mutation applied.
+ 
+@@ -906,6 +951,7 @@ def run_control(
+         test_dir,
+         scope,
+         known_user_modules=known_user_modules,
++        test_times=test_times,
+         exitfirst=False,
+     )
+     return session.run()
+@@ -969,12 +1015,16 @@ def run_tests_for_mutant(
+     control_known = known_user_modules or precompute_user_modules(scope)
+     _prepare_fresh_dependencies(dependency_files, set())
+     if on_phase is not None:
+-        on_phase("control", None, False)
++        on_phase("control", timeout_seconds, False)
++    control = None
+     try:
+-        control = run_control(test_ids, test_dir, control_known, scope)
++        control = run_control(test_ids, test_dir, control_known, scope, test_times)
+     finally:
+         if on_phase is not None:
+-            on_phase("control-done", None, False)
++            on_phase(
++                "control-done", timeout_seconds,
++                control is not None and control.timed_out.is_set(),
++            )
+     if control.error() is not None or control.failures():
+         reason = control.error()
+         if reason is None:
+diff --git a/tests/leela/describe_end_to_end.py b/tests/leela/describe_end_to_end.py
+index ce42ff4..8117031 100644
+--- a/tests/leela/describe_end_to_end.py
++++ b/tests/leela/describe_end_to_end.py
+@@ -304,9 +304,9 @@ def describe_clean_project():
+ 
+ 
+ _LOGGED = (
+-    "from pathlib import Path\n\n"
++    "from pathlib import Path\nimport os\n\n"
+     "with Path('imports.log').open('a') as log:\n"
+-    "    log.write(__name__ + '\\n')\n\n"
++    "    log.write(str(os.getpid()) + ':' + __name__ + '\\n')\n\n"
+ )
+ 
+ 
+@@ -446,12 +446,12 @@ def describe_django_project():
+         assert "leela: aborted" not in result.stdout.str()
+         result.stdout.fnmatch_lines(["*line 2: + * SURVIVED"])
+ 
+-    def it_never_re_executes_models_admin_or_what_they_reference(pytester):
++    def it_imports_models_admin_and_references_once_per_process(pytester):
+         """Each pinning mechanism keeps one module loaded: shop.models and
+         stock.models as model modules, shop.admin as an ``<app>.admin``,
+         shop.backoffice through the admin registry walk, shop.mixins through
+-        the reference closure.  Each must execute exactly once across the
+-        outer and inner sessions.
++        the reference closure. Each executes once per interpreter: the
++        outer/baseline interpreter and one isolated interpreter per mutant.
+         """
+         project = _django_project(
+             pytester,
+@@ -475,12 +475,20 @@ def describe_django_project():
+         result = _leela_django(project)
+ 
+         executions = (project.path / "imports.log").read_text().split()
+-        assert sorted(executions) == [
+-            "shop.admin",
+-            "shop.backoffice",
+-            "shop.mixins",
+-            "shop.models",
+-            "stock.models",
+-        ]
++        by_process = {}
++        for execution in executions:
++            pid, module = execution.split(":", 1)
++            by_process.setdefault(pid, []).append(module)
++        # One outer/baseline process and three actual budgeted mutant workers.
++        assert len(by_process) == 4
++        assert len(executions) == 20
++        for modules in by_process.values():
++            assert sorted(modules) == [
++                "shop.admin",
++                "shop.backoffice",
++                "shop.mixins",
++                "shop.models",
++                "stock.models",
++            ]
+         result.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
+         assert result.ret == 0
+diff --git a/tests/leela/describe_runner.py b/tests/leela/describe_runner.py
+index 5245633..241a75f 100644
+--- a/tests/leela/describe_runner.py
++++ b/tests/leela/describe_runner.py
+@@ -818,322 +818,25 @@ def describe_nested_pytest_project_configuration():
+         record_property("nested_root_config_events", json.dumps(events))
+ 
+ 
+-def describe_TimeoutPlugin():
+-    def it_raises_system_exit_when_event_is_set():
+-        """_TimeoutPlugin.pytest_runtest_protocol raises when the event fires."""
+-        from pytest_leela.runner import _TimeoutPlugin
+-
+-        event = threading.Event()
+-        event.set()
+-        plugin = _TimeoutPlugin(event)
+-        with pytest.raises(SystemExit, match="leela: mutant timeout"):
+-            plugin.pytest_runtest_protocol(item=None, nextitem=None)
+-
+-    def it_does_not_raise_when_event_is_not_set():
+-        """_TimeoutPlugin.pytest_runtest_protocol returns None when no timeout."""
+-        from pytest_leela.runner import _TimeoutPlugin
+-
+-        event = threading.Event()
+-        plugin = _TimeoutPlugin(event)
+-        result = plugin.pytest_runtest_protocol(item=None, nextitem=None)
+-        assert result is None
+-
+-
+ def describe_run_tests_for_mutant_timeout():
+-    """Tests for the timeout computation and timeout-related code paths."""
+-
+-    def _make_mutant_fixture(tmp_path):
+-        source = "def add(a, b):\n    return a + b\n"
+-        target = tmp_path / "timeout_target.py"
+-        target.write_text(source)
+-        points = find_mutation_points(source, str(target), "timeout_target")
+-        binop_point = next(
+-            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+-        )
+-        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+-        return source, mutant
+-
+-    def it_computes_timeout_correctly_from_test_times(tmp_path, monkeypatch):
+-        """Kills line 218: ``+ → -``, ``* → +``, ``* → /``, ``+ → *``.
+-
+-        timeout_seconds = max(2 * total_expected + 1.0, 5.0)
+-        total_expected = sum(test_times.get(t, 1.0) for t in test_ids)
+-
+-        With test_times = {"t1": 2.0, "t2": 3.0}, total_expected = 5.0
+-        Correct: max(2 * 5.0 + 1.0, 5.0) = max(11.0, 5.0) = 11.0
+-
+-        Mutant ``2 * total_expected - 1.0``: max(10.0 - 1.0, 5.0) = max(9.0, 5.0) = 9.0
+-        Mutant ``2 + total_expected + 1.0``: max(2 + 5.0 + 1.0, 5.0) = max(8.0, 5.0) = 8.0
+-        Mutant ``2 * total_expected * 1.0``: max(10.0, 5.0) = 10.0
+-        """
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        test_times = {"test_a": 2.0, "test_b": 3.0}
+-        test_ids = ["test_a", "test_b"]
+-
+-        created_timer = []
+-
+-        original_timer_init = threading.Timer.__init__
+-
+-        def capture_timer(self, interval, function, *args, **kwargs):
+-            created_timer.append(interval)
+-            original_timer_init(self, interval, function, *args, **kwargs)
+-
+-        with (
+-            patch("pytest_leela.runner.pytest.main", return_value=0),
+-            patch.object(threading.Timer, "__init__", capture_timer),
+-        ):
+-            run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=test_ids,
+-                test_times=test_times,
+-            )
+-
+-        assert len(created_timer) == 1
+-        # Correct: max(2 * 5.0 + 1.0, 5.0) = 11.0
+-        assert created_timer[0] == pytest.approx(11.0)
+-
+-    def it_uses_default_time_for_unknown_tests(tmp_path, monkeypatch):
+-        """Tests that test_times.get(t, 1.0) uses 1.0 default for unknown tests."""
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        test_times = {"test_a": 2.0}  # test_b is unknown
+-        test_ids = ["test_a", "test_b"]
+-
+-        created_timer = []
+-        original_timer_init = threading.Timer.__init__
+-
+-        def capture_timer(self, interval, function, *args, **kwargs):
+-            created_timer.append(interval)
+-            original_timer_init(self, interval, function, *args, **kwargs)
+-
+-        with (
+-            patch("pytest_leela.runner.pytest.main", return_value=0),
+-            patch.object(threading.Timer, "__init__", capture_timer),
+-        ):
+-            run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=test_ids,
+-                test_times=test_times,
+-            )
+-
+-        assert len(created_timer) == 1
+-        # total_expected = 2.0 + 1.0 = 3.0
+-        # timeout = max(2 * 3.0 + 1.0, 5.0) = max(7.0, 5.0) = 7.0
+-        assert created_timer[0] == pytest.approx(7.0)
+-
+-    def it_does_not_create_timer_without_test_times(tmp_path, monkeypatch):
+-        """Kills line 224: ``is not → is`` on timer guard.
+-
+-        When test_times is None, no timer should be created and
+-        _TimeoutPlugin should NOT be in the plugins list.
+-        """
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        captured_plugins = []
+-
+-        def mock_pytest_main(args, plugins=None):
+-            captured_plugins.extend(plugins or [])
+-            return 0
+-
+-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+-            run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=["test_a"],
+-                test_times=None,  # No test_times
+-            )
+-
+-        from pytest_leela.runner import _TimeoutPlugin
+-
+-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
+-        assert timeout_plugins == [], (
+-            "TimeoutPlugin should not be added without test_times"
+-        )
+-
+-    def it_includes_timeout_plugin_when_timer_is_created(tmp_path, monkeypatch):
+-        """Positive case: when test_times is provided, TimeoutPlugin IS added."""
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        captured_plugins = []
+-
+-        def mock_pytest_main(args, plugins=None):
+-            captured_plugins.extend(plugins or [])
+-            return 0
+-
+-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+-            run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=["test_a"],
+-                test_times={"test_a": 1.0},
+-            )
++    def it_computes_the_original_budget_without_a_cooperative_timer():
++        from pytest_leela.runner import _timeout_budget
+ 
+-        from pytest_leela.runner import _TimeoutPlugin
+-
+-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
+-        assert len(timeout_plugins) == 1
+-
+-    def it_returns_timeout_result_when_timed_out_flag_is_set(tmp_path, monkeypatch):
+-        """Kills lines 274-283: timed_out.is_set() post-run check.
+-
+-        When the timeout fires but pytest catches the SystemExit internally,
+-        the post-run check at line 274 should detect it and return a killed result.
+-        """
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        def mock_pytest_main(args, plugins=None):
+-            # Simulate: one test passes, then the timeout fires and pytest
+-            # swallows the SystemExit
+-            plugins[0].pytest_runtest_logreport(
+-                _FakeReport("test_a", "call", passed=True, failed=False)
+-            )
+-            for p in plugins or []:
+-                if hasattr(p, "event"):
+-                    p.event.set()  # Set the timed_out event
+-            return 0  # pytest returns normally
+-
+-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+-            result = run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=["test_a"],
+-                test_times={"test_a": 1.0},
+-            )
++        assert _timeout_budget(["a", "b"], {"a": 2.0, "b": 3.0}) == 11.0
++        assert _timeout_budget(["a", "b"], {"a": 2.0}) == 7.0
++        assert _timeout_budget(["a"], {"a": 0.001}) == 5.0
++        assert _timeout_budget(["a"], None) is None
++        assert _timeout_budget(None, {"a": 1.0}) is None
+ 
++    def it_preserves_native_timeout_classification_without_call_kill_credit():
++        session = InnerSession(None, ["a"], None, ProjectModuleScope())
++        session.timed_out.set()
++        result = session.result_for(_probe_mutant())
+         assert result.killed is True
+-        assert result.killing_test == "<timeout>"
+-        assert "<timeout>" in result.killing_tests
+-        # The run did not crash, so the tests it ran are still reported.
+-        assert result.test_ids_run == ["test_a"]
+-        # Elapsed should be reasonable (not a huge value from wrong arithmetic)
+-        assert 0 <= result.time_seconds < 60
+-
+-    def it_reports_no_tests_run_when_the_timeout_escapes_as_a_crash(
+-        tmp_path, monkeypatch
+-    ):
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        def mock_pytest_main(args, plugins=None):
+-            plugins[0].pytest_runtest_logreport(
+-                _FakeReport("test_a", "call", passed=True, failed=False)
+-            )
+-            plugins[1].event.set()
+-            raise SystemExit("leela: mutant timeout")
+-
+-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+-            result = run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=["test_a"],
+-                test_times={"test_a": 1.0},
+-            )
+-
+-        assert result.killing_test == "<timeout>"
++        assert result.killing_tests == ["<timeout>"]
++        assert result.tests_run == 0
+         assert result.test_ids_run == []
+-
+-    def it_returns_timeout_result_when_system_exit_is_raised(tmp_path, monkeypatch):
+-        """When timeout causes SystemExit to propagate, result should be killed."""
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        def mock_pytest_main(args, plugins=None):
+-            for p in plugins or []:
+-                if hasattr(p, "event"):
+-                    p.event.set()
+-            raise SystemExit("leela: mutant timeout")
+-
+-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+-            result = run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=["test_a"],
+-                test_times={"test_a": 1.0},
+-            )
+-
+-        assert result.killed is True
+-        assert result.killing_test == "<timeout>"
+-
+-    def it_enforces_minimum_timeout_of_5_seconds(tmp_path, monkeypatch):
+-        """Timeout should be at least 5.0 seconds even for very fast tests."""
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        test_times = {"test_a": 0.001}
+-        test_ids = ["test_a"]
+-
+-        created_timer = []
+-        original_timer_init = threading.Timer.__init__
+-
+-        def capture_timer(self, interval, function, *args, **kwargs):
+-            created_timer.append(interval)
+-            original_timer_init(self, interval, function, *args, **kwargs)
+-
+-        with (
+-            patch("pytest_leela.runner.pytest.main", return_value=0),
+-            patch.object(threading.Timer, "__init__", capture_timer),
+-        ):
+-            run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_ids=test_ids,
+-                test_times=test_times,
+-            )
+-
+-        assert len(created_timer) == 1
+-        # max(2 * 0.001 + 1.0, 5.0) = max(1.002, 5.0) = 5.0
+-        assert created_timer[0] == pytest.approx(5.0)
+-
+-    def it_does_not_create_timer_without_test_ids(tmp_path, monkeypatch):
+-        """When test_ids is None/empty, no timer should be created."""
+-        monkeypatch.chdir(tmp_path)
+-        monkeypatch.syspath_prepend(str(tmp_path))
+-        source, mutant = _make_mutant_fixture(tmp_path)
+-
+-        captured_plugins = []
+-
+-        def mock_pytest_main(args, plugins=None):
+-            captured_plugins.extend(plugins or [])
+-            return 0
+-
+-        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+-            run_tests_for_mutant(
+-                mutant,
+-                {"timeout_target": source},
+-                {"timeout_target": str(tmp_path / "timeout_target.py")},
+-                test_dir=str(tmp_path),
+-                test_times={"test_a": 1.0},
+-                # test_ids is None by default
+-            )
+-
+-        from pytest_leela.runner import _TimeoutPlugin
+-
+-        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
+-        assert timeout_plugins == []
++        assert session.error() == "leela: mutant timeout"
+ 
+ 
+ def describe_clear_user_modules():
+@@ -3806,7 +3509,8 @@ def describe_same_failure_evidence():
+             "def test_last():\n    pass\n")
+         ids = [f"evidence_tests/test_b_evidence.py::test_{name}" for name in ("first", "last")]
+         result = _baseline_then_mutant(tmp_path, project, ids, dict.fromkeys(ids, 0.0))
+-        assert result.tests_run == 1
++        # A hard deadline preempts fixture setup; the first call never ran.
++        assert result.tests_run == 0
+         _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+             "setup:", "OSError: initial setup outage", "confirmation: killed", "<timeout>",
+         ])
+diff --git a/src/pytest_leela/_timeout_worker.py b/src/pytest_leela/_timeout_worker.py
+new file mode 100644
+index 0000000..1f501de
+--- /dev/null
++++ b/src/pytest_leela/_timeout_worker.py
+@@ -0,0 +1,66 @@
++"""Private exec worker: no project imports until the parent sends a request."""
++
++import json
++import sys
++import threading
++from dataclasses import asdict
++from typing import Any
++
++
++def execute(request: dict[str, Any]) -> dict[str, Any]:
++    # Reproduce the caller's import paths before importing the runner. This
++    # includes pytest's configured pythonpath and editable source locations.
++    sys.path[:] = request["path"]
++    # Python <=3.13 -S omits venv prefix setup along with site hooks. Restore
++    # the caller's interpreter identity without executing uncontained .pth.
++    for name, value in request["prefixes"].items():
++        setattr(sys, name, value)
++    from pytest_leela.import_hook import install_hook
++    from pytest_leela.models import Mutant, MutationPoint
++    from pytest_leela.runner import InnerSession, ProjectModuleScope
++
++    mutation = request["mutation"]
++    finder = None
++    if mutation is not None:
++        mutant = Mutant(
++            MutationPoint(**mutation["point"]),
++            mutation["replacement_op"],
++            mutation["mutant_id"],
++        )
++        finder = install_hook(request["sources"], mutant, request["files"])
++    session = InnerSession(
++        finder, request["test_ids"], request["test_dir"],
++        ProjectModuleScope(request["cwd"]),
++        exitfirst=request["exitfirst"],
++    ).run()
++    collector = vars(session.collector).copy()
++    collector["failure_evidence"] = [
++        asdict(evidence) for evidence in session.collector.failure_evidence.values()
++    ]
++    collector["conftest_failure_ids"] = sorted(session.collector.conftest_failure_ids)
++    collector["exit_ids"] = sorted(session.collector.exit_ids)
++    root = session.collector._rootpath
++    collector["_rootpath"] = None if root is None else str(root)
++    return {
++        "collector": collector,
++        "exit_code": int(session.exit_code),
++        "crash": session.crash,
++        "import_errors": session.import_errors,
++        "import_failures": [] if finder is None else finder._import_failures,
++    }
++
++
++def main() -> None:
++    # A single JSON message, not pickle: test code must not gain a new route
++    # to execute serialized objects in the publication/SQLite-owning parent.
++    request = json.loads(sys.stdin.buffer.read())
++    response = execute(request)
++    sys.stdout.write(json.dumps(response) + "\n")
++    sys.stdout.flush()
++    # Keep the group leader owned and unreaped until the parent has killed
++    # the entire group, including any subprocesses left by the tests.
++    threading.Event().wait()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/src/pytest_leela/_timeout_process.py b/src/pytest_leela/_timeout_process.py
+new file mode 100644
+index 0000000..08c7946
+--- /dev/null
++++ b/src/pytest_leela/_timeout_process.py
+@@ -0,0 +1,177 @@
++"""Owned exec-process lifetime for budgeted test sessions."""
++
++import os
++import json
++import queue
++import selectors
++import signal
++import subprocess
++import sys
++import threading
++import tempfile
++import time
++from pathlib import Path
++from typing import BinaryIO, Union
++
++
++class DeadlineExpired(TimeoutError):
++    """Only the parent-owned deadline, never a worker or transport exception."""
++
++
++class ParentExited(RuntimeError):
++    """The caller lifetime pipe closed before the test session completed."""
++
++
++class DirectTestProcess:
++    """Keep the worker unreaped until all its contained processes are stopped."""
++
++    def __init__(self) -> None:
++        self.process: Union[subprocess.Popen[bytes], None] = None
++        self.exchange_thread: Union[threading.Thread, None] = None
++        self.reply: queue.Queue[Union[bytes, Exception]] = queue.Queue()
++
++    def _exchange(self, request: bytes) -> None:
++        process = self.process
++        assert process is not None
++        assert process.stdin is not None
++        assert process.stdout is not None
++        try:
++            process.stdin.write(request)
++            process.stdin.close()
++            response = process.stdout.readline()
++            self.reply.put(response)
++        except Exception as exc:
++            self.reply.put(exc)
++
++    def run(self, request: bytes, timeout: float) -> bytes:
++        deadline = time.monotonic() + timeout
++        worker = Path(__file__).with_name("_timeout_worker.py")
++        try:
++            self.process = subprocess.Popen(
++                [sys.executable, "-I", "-S", str(worker)],
++                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
++                stderr=subprocess.DEVNULL, start_new_session=True,
++            )
++            self.exchange_thread = threading.Thread(
++                target=self._exchange, args=(request,), daemon=False,
++            )
++            self.exchange_thread.start()
++            try:
++                response = self.reply.get(timeout=max(0, deadline - time.monotonic()))
++            except queue.Empty as exc:
++                raise DeadlineExpired("leela: mutant timeout") from exc
++            if isinstance(response, Exception):
++                raise response
++            if not response:
++                raise RuntimeError("leela: test worker exited without a result")
++            return response
++        finally:
++            self.close()
++
++    def _group_exited(self, group: int) -> bool:
++        snapshot = subprocess.run(
++            ["/bin/ps", "-axo", "pid=,pgid=,stat="],
++            check=True, capture_output=True, text=True, timeout=1,
++        )
++        members = []
++        for line in snapshot.stdout.splitlines():
++            pid, pgid, state = line.split()
++            if int(pgid) == group:
++                members.append((int(pid), state))
++        return bool(members) and all(state.startswith("Z") for _, state in members)
++
++    def close(self) -> None:
++        process = self.process
++        if process is None:
++            return
++        # No poll/communicate/wait before this signal: a dead group leader
++        # remains our unreaped child, so its numeric ID cannot be recycled.
++        try:
++            try:
++                os.killpg(process.pid, signal.SIGKILL)
++            except ProcessLookupError:
++                pass
++            except PermissionError:
++                # Darwin reports EPERM for an existing zombie-only group.
++                # Never swallow a permission failure involving live members.
++                if sys.platform != "darwin" or not self._group_exited(process.pid):
++                    raise
++        finally:
++            try:
++                process.wait(timeout=2)
++            finally:
++                # Once wait returned (or failed), never signal this numeric PID
++                # again from a later close, including delayed IPC cleanup.
++                self.process = None
++                thread = self.exchange_thread
++                if thread is not None:
++                    thread.join(timeout=2)
++                    if thread.is_alive():
++                        raise RuntimeError("leela: worker IPC did not stop after termination")
++                assert process.stdin is not None
++                assert process.stdout is not None
++                process.stdin.close()
++                process.stdout.close()
++
++
++class TestProcess:
++    """Caller-side lifetime channel; an exec guardian owns group termination."""
++
++    def run(self, request: bytes, timeout: float) -> bytes:
++        if os.name != "posix":
++            raise RuntimeError("leela: bounded test execution requires POSIX")
++        payload = json.loads(request)
++        payload["deadline"] = time.monotonic() + timeout
++        guardian = Path(__file__).with_name("_timeout_guardian.py")
++        with tempfile.TemporaryDirectory(prefix="leela-worker-") as directory:
++            request_file = Path(directory, "request.json")
++            request_file.write_text(json.dumps(payload))
++            return self._run_guardian(guardian, request_file, timeout)
++
++    def _run_guardian(self, guardian: Path, request_file: Path, timeout: float) -> bytes:
++        with tempfile.TemporaryFile() as diagnostics:
++            return self._exchange_guardian(guardian, request_file, timeout, diagnostics)
++
++    def _exchange_guardian(
++        self, guardian: Path, request_file: Path, timeout: float, diagnostics: BinaryIO,
++    ) -> bytes:
++        process = subprocess.Popen(
++            [sys.executable, "-I", "-S", str(guardian), str(request_file)],
++            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
++            stderr=diagnostics, start_new_session=True,
++        )
++        assert process.stdin is not None
++        assert process.stdout is not None
++        try:
++            deadline = time.monotonic() + timeout + 5
++            reply = bytearray()
++            with selectors.DefaultSelector() as selector:
++                selector.register(process.stdout, selectors.EVENT_READ)
++                while b"\n" not in reply:
++                    if not selector.select(timeout=max(0, deadline - time.monotonic())):
++                        raise RuntimeError("leela: guardian failed to enforce deadline")
++                    chunk = os.read(process.stdout.fileno(), 65536)
++                    if not chunk:
++                        break
++                    reply.extend(chunk)
++            envelope = json.loads(reply)
++            if "failure" in envelope:
++                if envelope["failure"] == "DeadlineExpired":
++                    raise DeadlineExpired(envelope["message"])
++                raise RuntimeError(envelope["message"])
++            return json.dumps(envelope["result"]).encode()
++        finally:
++            process.stdin.close()
++            try:
++                process.wait(timeout=5)
++            except subprocess.TimeoutExpired:
++                process.kill()
++                process.wait(timeout=2)
++                raise RuntimeError("leela: guardian cleanup failed")
++            process.stdout.close()
++            if process.returncode != 0:
++                diagnostics.seek(0)
++                detail = diagnostics.read(4096).decode(errors="replace")
++                raise RuntimeError(
++                    f"leela: guardian exited with status {process.returncode}: {detail}"
++                )
+diff --git a/src/pytest_leela/_timeout_guardian.py b/src/pytest_leela/_timeout_guardian.py
+new file mode 100644
+index 0000000..72b5cfb
+--- /dev/null
++++ b/src/pytest_leela/_timeout_guardian.py
+@@ -0,0 +1,54 @@
++"""Private exec guardian: caller pipe EOF cancels and reaps its worker group."""
++
++import json
++import os
++import selectors
++import sys
++import threading
++import time
++from pathlib import Path
++
++
++def main() -> None:
++    request = json.loads(Path(sys.argv[1]).read_text())
++    sys.path[:] = request["path"]
++    for name, value in request["prefixes"].items():
++        setattr(sys, name, value)
++    from pytest_leela._timeout_process import DirectTestProcess, ParentExited
++
++    worker = DirectTestProcess()
++
++    stop_read, stop_write = os.pipe()
++
++    def watch_parent() -> None:
++        with selectors.DefaultSelector() as selector:
++            selector.register(sys.stdin.fileno(), selectors.EVENT_READ)
++            selector.register(stop_read, selectors.EVENT_READ)
++            ready = selector.select()
++            if any(key.fd == stop_read for key, _ in ready):
++                return
++            worker.reply.put(ParentExited("leela: caller exited"))
++
++    watcher = threading.Thread(target=watch_parent, daemon=False)
++    watcher.start()
++    try:
++        try:
++            response = worker.run(
++                json.dumps(request).encode(), max(0, request["deadline"] - time.monotonic()),
++            )
++            envelope = {"result": json.loads(response)}
++        except Exception as exc:
++            envelope = {"failure": type(exc).__name__, "message": str(exc)}
++    finally:
++        os.write(stop_write, b"x")
++        watcher.join(timeout=2)
++        os.close(stop_write)
++        os.close(stop_read)
++        if watcher.is_alive():
++            raise RuntimeError("leela: parent lifetime watcher did not stop")
++    sys.stdout.write(json.dumps(envelope) + "\n")
++    sys.stdout.flush()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/tests/leela/describe_a_timeout_engine_contract.py b/tests/leela/describe_a_timeout_engine_contract.py
+new file mode 100644
+index 0000000..93559ee
+--- /dev/null
++++ b/tests/leela/describe_a_timeout_engine_contract.py
+@@ -0,0 +1,34 @@
++"""Early CALL contract before self-mutation can enter recursive test discovery."""
++
++from pathlib import Path
++
++import pytest
++
++from pytest_leela.engine import Engine
++
++
++def test_engine_without_diff_does_not_request_changed_lines(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    target = tmp_path / "empty_target.py"
++    # Parsed input only: no supported mutation points, no user test execution.
++    target.write_text("class Marker:\n    pass\n")
++
++    def unexpected_diff(reference: str) -> dict[str, set[int]]:
++        raise AssertionError(f"diff discovery requested without --diff: {reference!r}")
++
++    monkeypatch.setattr("pytest_leela.engine.changed_lines", unexpected_diff)
++    result = Engine(use_coverage=False).run([str(target)])
++    assert result.diff_base is None
++    assert result.total_mutants == 0
++    assert result.results == []
++
++
++def test_engine_diff_contract_negative_control(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
++    def requests_diff(self: Engine, *args: object, **kwargs: object) -> None:
++        from pytest_leela.engine import changed_lines
++        changed_lines(None)
++
++    monkeypatch.setattr(Engine, "run", requests_diff)
++    with pytest.raises(AssertionError, match="diff discovery requested without --diff"):
++        test_engine_without_diff_does_not_request_changed_lines(tmp_path, monkeypatch)
+diff --git a/tests/leela/describe_runner_timeout.py b/tests/leela/describe_runner_timeout.py
+new file mode 100644
+index 0000000..18f3436
+--- /dev/null
++++ b/tests/leela/describe_runner_timeout.py
+@@ -0,0 +1,100 @@
++"""Hard-deadline contracts, including actual background-thread execution."""
++
++import json
++import os
++from pathlib import Path
++import signal
++import subprocess
++import sys
++
++import pytest
++
++
++_BOOTSTRAP = """
++import json, os, sys, threading
++from pytest_leela.runner import InnerSession, ProjectModuleScope
++sys.path.insert(0, os.getcwd())
++def run():
++    session = InnerSession(None, ['test_subject.py::test_subject'], None,
++                           ProjectModuleScope(), test_times={'test_subject.py::test_subject': 0.0})
++    session.run()
++    print(json.dumps({'timeout': session.timed_out.is_set(),
++                      'passed': session.collector.passed,
++                      'failed': session.collector.failed,
++                      'crash': session.crash}), flush=True)
++thread = threading.Thread(target=run)
++thread.start()
++thread.join()
++"""
++
++
++@pytest.mark.parametrize("phase", ["call", "collection", "teardown"])
++def test_inner_session_terminates_nonreturning_execution(tmp_path, phase):
++    block = "from pathlib import Path\nimport inspect\nPath('entered').write_text(inspect.currentframe().f_code.co_name)\nimport threading\nthreading.Event().wait()\n"
++    if phase == "call":
++        source = "def test_subject():\n" + "".join("    " + line + "\n" for line in block.splitlines())
++    elif phase == "collection":
++        source = block + "def test_subject():\n    assert True\n"
++    else:
++        source = "import pytest\n@pytest.fixture(autouse=True)\ndef cleanup():\n    yield\n"
++        source += "".join("    " + line + "\n" for line in block.splitlines())
++        source += "def test_subject():\n    assert True\n"
++    (tmp_path / "test_subject.py").write_text(source)
++    process = subprocess.Popen(
++        [sys.executable, "-c", _BOOTSTRAP], cwd=tmp_path,
++        stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True,
++    )
++    try:
++        stdout, stderr = process.communicate(timeout=10)
++    finally:
++        if process.returncode is None:
++            os.killpg(process.pid, signal.SIGKILL)
++            process.wait(timeout=2)
++    assert process.returncode == 0, stderr.decode()
++    assert (tmp_path / "entered").read_text() == {
++        "call": "test_subject", "collection": "<module>", "teardown": "cleanup",
++    }[phase]
++    result = json.loads(stdout)
++    assert result["timeout"] is True
++    assert result["crash"] is None
++    assert result["failed"] == []
++
++
++def test_inner_session_worker_preserves_real_call_failure(tmp_path, monkeypatch):
++    from pytest_leela.ast_analysis import find_mutation_points
++    from pytest_leela.models import Mutant
++    from pytest_leela.runner import run_tests_for_mutant
++
++    monkeypatch.chdir(tmp_path)
++    monkeypatch.syspath_prepend(str(tmp_path))
++    source = "def add(a, b):\n    return a + b\n"
++    target = tmp_path / "arithmetic.py"
++    target.write_text(source)
++    (tmp_path / "test_subject.py").write_text(
++        "from arithmetic import add\ndef test_subject():\n    assert add(2, 3) == 5\n"
++    )
++    point = next(p for p in find_mutation_points(source, str(target), "arithmetic")
++                 if p.node_type == "BinOp")
++    result = run_tests_for_mutant(
++        Mutant(point, "Sub", 0), {"arithmetic": source}, {"arithmetic": str(target)},
++        ["test_subject.py::test_subject"], test_times={"test_subject.py::test_subject": 0.0},
++    )
++    assert result.killed is True
++    assert result.killing_tests == ["test_subject.py::test_subject"]
++    assert result.tests_run == 1
++    assert result.error is None
++
++
++def test_timeout_regression_outer_guard_reaps_on_deadline(tmp_path, monkeypatch):
++    from types import SimpleNamespace
++    calls = []
++    process = SimpleNamespace(pid=424242, returncode=None,
++                              wait=lambda timeout: calls.append(("wait", timeout)))
++    def timeout(*args, **kwargs):
++        raise subprocess.TimeoutExpired("controlled child", 10)
++    process.communicate = timeout
++    monkeypatch.setattr(subprocess, "Popen", lambda *args, **kwargs: process)
++    monkeypatch.setattr(os, "killpg", lambda pid, sig: calls.append((pid, sig)))
++    with pytest.raises(subprocess.TimeoutExpired):
++        test_inner_session_terminates_nonreturning_execution(tmp_path, "call")
++    assert calls == [(424242, signal.SIGKILL), ("wait", 2)]
+diff --git a/tests/leela/describe_timeout_process.py b/tests/leela/describe_timeout_process.py
+new file mode 100644
+index 0000000..5a1eff1
+--- /dev/null
++++ b/tests/leela/describe_timeout_process.py
+@@ -0,0 +1,826 @@
++"""The private process boundary owns cleanup, never mutation scoring."""
++
++import json
++import os
++import sys
++import subprocess
++
++import pytest
++
++from pytest_leela._timeout_process import DirectTestProcess as WorkerProcess, TestProcess as GuardedProcess
++
++
++def _request(tmp_path):
++    return json.dumps({
++        "path": sys.path + [str(tmp_path)], "cwd": str(tmp_path),
++        "prefixes": {name: getattr(sys, name) for name in
++                     ("prefix", "base_prefix", "exec_prefix", "base_exec_prefix")},
++        "mutation": None, "sources": {}, "files": {},
++        "test_ids": [str(tmp_path / "test_worker.py")],
++        "test_dir": None, "exitfirst": True,
++    }).encode()
++
++
++def test_process_returns_completed_evidence_and_reaps(tmp_path):
++    (tmp_path / "test_worker.py").write_text("def test_pass():\n    assert 1 + 1 == 2\n")
++    worker = WorkerProcess()
++    response = json.loads(worker.run(_request(tmp_path), 5))
++    assert response["exit_code"] == 0
++    assert response["collector"]["total"] == 1
++    assert len(response["collector"]["passed"]) == 1
++    assert response["collector"]["failed"] == []
++    assert worker.process is None
++    assert worker.exchange_thread is not None
++    assert worker.exchange_thread.daemon is False
++    assert not worker.exchange_thread.is_alive()
++    worker.close()
++
++
++@pytest.mark.parametrize("ending", ["return", "crash", "timeout"])
++@pytest.mark.parametrize("boundary", [WorkerProcess, GuardedProcess])
++def test_process_stops_owned_descendants(tmp_path, ending, boundary):
++    marker = tmp_path / "child.pid"
++    child_code = "import threading; threading.Event().wait()"
++    source = (
++        "import os, subprocess, sys, threading\nfrom pathlib import Path\n"
++        "def test_child():\n"
++        f"    child = subprocess.Popen([sys.executable, '-c', {child_code!r}])\n"
++        f"    Path({str(marker)!r}).write_text(str(child.pid))\n"
++    )
++    if ending == "crash":
++        source += "    os._exit(7)\n"
++    elif ending == "timeout":
++        source += "    threading.Event().wait()\n"
++    else:
++        source += "    assert child.pid != os.getpid()\n"
++    (tmp_path / "test_worker.py").write_text(source)
++    worker = boundary()
++    if ending == "return":
++        response = json.loads(worker.run(_request(tmp_path), 5))
++        assert response["collector"]["total"] == 1
++    else:
++        # On crash a descendant can keep stdout open, so the same deadline
++        # still contains the exchange instead of an unbounded pipe read.
++        with pytest.raises((RuntimeError, TimeoutError)):
++            worker.run(_request(tmp_path), 5)
++    pid = int(marker.read_text())
++    snapshot = subprocess.run(
++        ["/bin/ps", "-p", str(pid), "-o", "stat="],
++        capture_output=True, text=True, timeout=2,
++    )
++    assert not snapshot.stdout.strip() or snapshot.stdout.strip().startswith("Z")
++    if isinstance(worker, WorkerProcess):
++        assert worker.process is None
++        assert not worker.exchange_thread.is_alive()
++
++
++def test_group_exited_rejects_live_or_missing_members(monkeypatch):
++    worker = WorkerProcess()
++    for output, expected in [("1 44 Z\n2 44 Z\n3 45 R\n", True),
++                             ("1 44 Z\n2 44 S\n", False),
++                             ("1 45 Z\n", False)]:
++        monkeypatch.setattr("pytest_leela._timeout_process.subprocess.run",
++                            lambda *a, **k: subprocess.CompletedProcess(a, 0, output, ""))
++        assert worker._group_exited(44) is expected
++
++
++def test_process_reports_bootstrap_crash_without_a_verdict():
++    worker = WorkerProcess()
++    with pytest.raises(RuntimeError, match="exited without a result"):
++        worker.run(b"not json", 5)
++    assert worker.process is None
++    assert not worker.exchange_thread.is_alive()
++
++
++def test_process_cancellation_reaps_before_propagating(tmp_path, monkeypatch):
++    worker = WorkerProcess()
++    def cancel(*args, **kwargs):
++        raise KeyboardInterrupt
++    monkeypatch.setattr(worker.reply, "get", cancel)
++    with pytest.raises(KeyboardInterrupt):
++        worker.run(_request(tmp_path), 5)
++    assert worker.process is None
++    assert not worker.exchange_thread.is_alive()
++
++
++def test_process_start_failure_does_not_start_ipc(monkeypatch):
++    worker = WorkerProcess()
++    def unavailable(*args, **kwargs):
++        raise OSError("interpreter unavailable")
++    monkeypatch.setattr("pytest_leela._timeout_process.subprocess.Popen", unavailable)
++    with pytest.raises(OSError, match="interpreter unavailable"):
++        worker.run(b"{}", 5)
++    assert worker.process is None
++    assert worker.exchange_thread is None
++
++
++def test_process_crash_is_not_a_test_failure(tmp_path):
++    (tmp_path / "test_worker.py").write_text("import os\nos._exit(7)\n")
++    worker = WorkerProcess()
++    with pytest.raises(RuntimeError, match="exited without a result"):
++        worker.run(_request(tmp_path), 5)
++    assert worker.process is None
++    assert not worker.exchange_thread.is_alive()
++
++
++def test_inner_session_rejects_invalid_worker_json(tmp_path, monkeypatch):
++    from pytest_leela.runner import InnerSession, ProjectModuleScope
++    monkeypatch.setattr("pytest_leela._timeout_process.TestProcess.run", lambda *args: b"broken")
++    session = InnerSession(None, ["test"], None, ProjectModuleScope(str(tmp_path)),
++                           test_times={"test": 0.0}).run()
++    assert session.timed_out.is_set() is False
++    assert "JSONDecodeError" in session.error()
++    assert session.collector.total == 0
++
++
++def test_inner_session_rejects_missing_worker_fields(tmp_path, monkeypatch):
++    from pytest_leela.runner import InnerSession, ProjectModuleScope
++    monkeypatch.setattr("pytest_leela._timeout_process.TestProcess.run", lambda *args: b"{}")
++    session = InnerSession(None, ["test"], None, ProjectModuleScope(str(tmp_path)),
++                           test_times={"test": 0.0}).run()
++    assert session.timed_out.is_set() is False
++    assert "KeyError" in session.error()
++
++
++def test_process_preserves_parent_environment_and_cwd(tmp_path, monkeypatch):
++    monkeypatch.setenv("LEELA_TIMEOUT_CONTRACT", "inherited")
++    original = os.getcwd()
++    (tmp_path / "test_worker.py").write_text(
++        "import os, sys, sysconfig\ndef test_environment():\n"
++        "    assert os.environ['LEELA_TIMEOUT_CONTRACT'] == 'inherited'\n"
++        f"    assert sys.prefix == {sys.prefix!r}\n"
++        f"    assert sys.exec_prefix == {sys.exec_prefix!r}\n"
++        f"    assert sysconfig.get_path('purelib') == {__import__('sysconfig').get_path('purelib')!r}\n"
++    )
++    response = json.loads(WorkerProcess().run(_request(tmp_path), 5))
++    assert response["collector"]["total"] == 1
++    assert response["collector"]["failed"] == []
++    assert os.getcwd() == original
++
++
++def test_guarded_process_rejects_unsupported_platform_before_start(monkeypatch):
++    monkeypatch.setattr("pytest_leela._timeout_process.os.name", "unsupported")
++    with pytest.raises(RuntimeError, match="requires POSIX"):
++        GuardedProcess().run(b"{}", 5)
++
++
++def test_guardian_nonzero_exit_after_response_is_not_success(tmp_path):
++    fake = tmp_path / "controlled_guardian.py"
++    fake.write_text("import sys\nprint('{\"result\": {}}', flush=True)\nsys.stderr.write('controlled failure')\nsys.exit(7)\n")
++    request = tmp_path / "request.json"
++    request.write_text("{}")
++    with pytest.raises(RuntimeError, match="status 7: controlled failure"):
++        GuardedProcess()._run_guardian(fake, request, 5)
++
++
++def test_guardian_has_no_lifetime_thread_at_successful_return(tmp_path, monkeypatch):
++    import threading
++    from pytest_leela import _timeout_guardian as guardian
++    request = tmp_path / "request.json"
++    request.write_bytes(_request(tmp_path))
++    read, write = os.pipe()
++    before = set(threading.enumerate())
++    monkeypatch.setattr(sys, "argv", ["guardian", str(request)])
++    monkeypatch.setattr(WorkerProcess, "run", lambda *args: b"{}")
++    from types import SimpleNamespace
++    monkeypatch.setattr(guardian, "time", SimpleNamespace(monotonic=lambda: 0))
++    data = json.loads(request.read_text())
++    data["deadline"] = 5
++    request.write_text(json.dumps(data))
++    with os.fdopen(read, "rb", buffering=0) as lifetime:
++        monkeypatch.setattr(sys, "stdin", lifetime)
++        guardian.main()
++    os.close(write)
++    assert set(threading.enumerate()) == before
++
++
++def test_worker_execute_returns_native_collector_without_a_mutant(tmp_path, monkeypatch):
++    from pytest_leela._timeout_worker import execute
++    monkeypatch.chdir(tmp_path)
++    (tmp_path / "test_worker.py").write_text("def test_pass():\n    assert 2 == 2\n")
++    response = execute(json.loads(_request(tmp_path)))
++    assert response["exit_code"] == 0
++    assert response["collector"]["total"] == 1
++    assert response["collector"]["failure_evidence"] == []
++    assert response["import_errors"] == response["import_failures"] == []
++    assert response["collector"]["_rootpath"] == str(tmp_path)
++
++
++def test_worker_execute_returns_actual_call_fingerprint(tmp_path, monkeypatch):
++    import dataclasses
++    from pytest_leela._timeout_worker import execute
++    from pytest_leela.ast_analysis import find_mutation_points
++    from pytest_leela.models import Mutant
++    monkeypatch.chdir(tmp_path)
++    source = "def add(a, b):\n    return a + b\n"
++    target = tmp_path / "worker_target.py"
++    target.write_text(source)
++    (tmp_path / "test_worker.py").write_text(
++        "from worker_target import add\ndef test_add():\n    assert add(2, 3) == 5\n"
++    )
++    point = next(p for p in find_mutation_points(source, str(target), "worker_target")
++                 if p.node_type == "BinOp")
++    request = json.loads(_request(tmp_path))
++    request.update(mutation=dataclasses.asdict(Mutant(point, "Sub", 0)),
++                   sources={"worker_target": source}, files={"worker_target": str(target)})
++    response = execute(request)
++    assert response["exit_code"] == 1
++    evidence = response["collector"]["failure_evidence"]
++    assert len(evidence) == 1
++    assert evidence[0]["phase"] == "call"
++    assert evidence[0]["fingerprint"][0] == "builtins.AssertionError"
++
++
++def test_guardian_stops_watcher_after_worker_error(tmp_path, monkeypatch, capsys):
++    import threading
++    from pytest_leela import _timeout_guardian as guardian
++    request = tmp_path / "request.json"
++    data = json.loads(_request(tmp_path))
++    data["deadline"] = 5
++    request.write_text(json.dumps(data))
++    read, write = os.pipe()
++    before = set(threading.enumerate())
++    def fail(*args):
++        raise OSError("controlled worker failure")
++    monkeypatch.setattr(sys, "argv", ["guardian", str(request)])
++    monkeypatch.setattr(WorkerProcess, "run", fail)
++    with os.fdopen(read, "rb", buffering=0) as lifetime:
++        monkeypatch.setattr(sys, "stdin", lifetime)
++        guardian.main()
++    os.close(write)
++    envelope = json.loads(capsys.readouterr().out)
++    assert envelope == {"failure": "OSError", "message": "controlled worker failure"}
++    assert set(threading.enumerate()) == before
++
++
++def test_guardian_parent_eof_is_a_lifecycle_error(tmp_path, monkeypatch, capsys):
++    import threading
++    from pytest_leela import _timeout_guardian as guardian
++    request = tmp_path / "request.json"
++    data = json.loads(_request(tmp_path))
++    data["deadline"] = 5
++    request.write_text(json.dumps(data))
++    read, write = os.pipe()
++    os.close(write)
++    before = set(threading.enumerate())
++    def await_parent(self, *args):
++        error = self.reply.get(timeout=2)
++        raise error
++    monkeypatch.setattr(sys, "argv", ["guardian", str(request)])
++    monkeypatch.setattr(WorkerProcess, "run", await_parent)
++    with os.fdopen(read, "rb", buffering=0) as lifetime:
++        monkeypatch.setattr(sys, "stdin", lifetime)
++        guardian.main()
++    envelope = json.loads(capsys.readouterr().out)
++    assert envelope == {"failure": "ParentExited", "message": "leela: caller exited"}
++    assert set(threading.enumerate()) == before
++
++
++def test_process_ipc_write_failure_is_not_deadline(tmp_path, monkeypatch):
++    import io
++    from types import SimpleNamespace
++    worker = WorkerProcess()
++    closed = io.BytesIO()
++    closed.close()
++    worker.process = SimpleNamespace(stdin=closed, stdout=io.BytesIO())
++    worker._exchange(b"request")
++    error = worker.reply.get_nowait()
++    assert isinstance(error, ValueError)
++    assert str(error) == "I/O operation on closed file."
++
++
++@pytest.mark.parametrize("deadline,clock,expected", [(12.0, 5.0, 7.0), (3.0, 5.0, 0.0)])
++def test_guardian_subtracts_startup_from_original_budget(tmp_path, monkeypatch, capsys, deadline, clock, expected):
++    from pytest_leela import _timeout_guardian as guardian
++    request = tmp_path / "request.json"
++    data = json.loads(_request(tmp_path))
++    data["deadline"] = deadline
++    request.write_text(json.dumps(data))
++    budgets = []
++    def observe(self, request, timeout):
++        budgets.append(timeout)
++        return b"{}"
++    read, write = os.pipe()
++    monkeypatch.setattr(sys, "argv", ["guardian", str(request)])
++    monkeypatch.setattr(WorkerProcess, "run", observe)
++    from types import SimpleNamespace
++    monkeypatch.setattr(guardian, "time", SimpleNamespace(monotonic=lambda: clock))
++    with os.fdopen(read, "rb", buffering=0) as lifetime:
++        monkeypatch.setattr(sys, "stdin", lifetime)
++        guardian.main()
++    os.close(write)
++    assert budgets == [expected]
++    assert json.loads(capsys.readouterr().out) == {"result": {}}
++
++
++def test_worker_main_emits_one_response_before_waiting(tmp_path, monkeypatch, capsys):
++    import io
++    from pytest_leela import _timeout_worker as worker
++    (tmp_path / "test_worker.py").write_text("def test_pass():\n    assert True\n")
++    class StopAfterResponse(Exception):
++        pass
++    class Completion:
++        def wait(self):
++            raise StopAfterResponse
++    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(_request(tmp_path))))
++    monkeypatch.setattr(worker.threading, "Event", Completion)
++    monkeypatch.setattr(worker, "execute", lambda request: {"checked": request["cwd"]})
++    with pytest.raises(StopAfterResponse):
++        worker.main()
++    assert json.loads(capsys.readouterr().out) == {"checked": str(tmp_path)}
++
++
++def test_worker_script_entry_dispatches_main(monkeypatch):
++    import ast
++    from pathlib import Path
++    from pytest_leela import _timeout_worker as worker
++    tree = ast.parse(Path(worker.__file__).read_text())
++    entry = tree.body[-1]
++    assert isinstance(entry, ast.If)
++    calls = []
++    exec(compile(ast.Module(body=[entry], type_ignores=[]), worker.__file__, "exec"),
++         {"__name__": "__main__", "main": lambda: calls.append("main")})
++    assert calls == ["main"]
++
++
++def test_worker_execute_preserves_pre_session_import_evidence(tmp_path, monkeypatch):
++    import dataclasses
++    from pytest_leela._timeout_worker import execute
++    from pytest_leela.ast_analysis import find_mutation_points
++    from pytest_leela.models import Mutant
++    monkeypatch.chdir(tmp_path)
++    source = "value = 2 + 1\n"
++    target = tmp_path / "worker_broken.py"
++    target.write_text(source)
++    (tmp_path / "conftest.py").write_text(
++        "import worker_broken\nassert worker_broken.value == 3, 'bootstrap value'\n"
++    )
++    (tmp_path / "test_worker.py").write_text("def test_pass():\n    assert True\n")
++    point = next(p for p in find_mutation_points(source, str(target), "worker_broken")
++                 if p.node_type == "BinOp")
++    # Division by zero is a real import failure in mutated target source.
++    source = "value = 2 + 0\n"
++    target.write_text(source)
++    request = json.loads(_request(tmp_path))
++    request.update(mutation=dataclasses.asdict(Mutant(point, "Div", 0)),
++                   sources={"worker_broken": source}, files={"worker_broken": str(target)})
++    response = execute(request)
++    assert response["collector"]["_rootpath"] is None
++    assert response["import_errors"]
++    assert len(response["import_failures"]) == 1
++    name, fingerprint, diagnostic = response["import_failures"][0]
++    assert name == "worker_broken"
++    assert fingerprint[0] == "builtins.ZeroDivisionError"
++    assert "division by zero" in diagnostic
++
++
++def test_a_process_deadline_arithmetic_before_process_activation(monkeypatch):
++    from types import SimpleNamespace
++    import io
++    import queue
++    from pytest_leela import _timeout_process as process_module
++    observed = []
++    clock = iter([10.0, 12.0])
++    monkeypatch.setattr(process_module, "time", SimpleNamespace(monotonic=lambda: next(clock)))
++    monkeypatch.setattr(process_module.subprocess, "Popen", lambda *a, **k:
++                        SimpleNamespace(stdin=io.BytesIO(), stdout=io.BytesIO(b"result\n")))
++    monkeypatch.setattr(WorkerProcess, "close", lambda self: observed.append("closed"))
++    worker = WorkerProcess()
++    def receive(timeout):
++        observed.append(timeout)
++        return b"result\n"
++    monkeypatch.setattr(worker.reply, "get", receive)
++    assert worker.run(b"request", 7) == b"result\n"
++    worker.exchange_thread.join(timeout=1)
++    assert observed == [5.0, "closed"]
++    assert not worker.exchange_thread.is_alive()
++
++
++def test_a_process_closes_pipes_and_reaps_after_permission_failure(monkeypatch):
++    import io
++    from types import SimpleNamespace
++    worker = WorkerProcess()
++    calls = []
++    process = SimpleNamespace(pid=424242, stdin=io.BytesIO(), stdout=io.BytesIO(),
++                              wait=lambda timeout: calls.append(("wait", timeout)))
++    worker.process = process
++    def denied(pid, sig):
++        calls.append((pid, sig))
++        raise PermissionError("controlled permission failure")
++    monkeypatch.setattr("pytest_leela._timeout_process.os.killpg", denied)
++    monkeypatch.setattr(worker, "_group_exited", lambda pid: False)
++    with pytest.raises(PermissionError, match="controlled permission failure"):
++        worker.close()
++    assert calls == [(424242, __import__('signal').SIGKILL), ("wait", 2)]
++    assert process.stdin.closed
++    assert process.stdout.closed
++    assert worker.process is None
++
++
++def test_a_process_cleanup_uses_owned_group_before_wait(monkeypatch):
++    import io
++    import signal
++    from types import SimpleNamespace
++    worker = WorkerProcess()
++    calls = []
++    process = SimpleNamespace(pid=424242, stdin=io.BytesIO(), stdout=io.BytesIO(),
++                              wait=lambda timeout: calls.append(("wait", timeout)))
++    worker.process = process
++    monkeypatch.setattr("pytest_leela._timeout_process.os.killpg",
++                        lambda pid, sig: calls.append((pid, sig)))
++    worker.close()
++    assert calls == [(424242, signal.SIGKILL), ("wait", 2)]
++    assert process.stdin.closed
++    assert process.stdout.closed
++    assert worker.process is None
++
++
++def test_a_guardian_transport_deadline_before_process_activation(tmp_path, monkeypatch):
++    import io
++    from types import SimpleNamespace
++    from pytest_leela import _timeout_process as module
++    observed = []
++    clock = iter([10.0, 12.0])
++    monkeypatch.setattr(module, "time", SimpleNamespace(monotonic=lambda: next(clock)))
++    process = SimpleNamespace(stdin=io.BytesIO(), stdout=io.BytesIO(), returncode=0,
++                              wait=lambda timeout: observed.append(("wait", timeout)))
++    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **k: process)
++    class Ready:
++        def __enter__(self):
++            return self
++        def __exit__(self, *args):
++            pass
++        def register(self, *args):
++            pass
++        def select(self, timeout):
++            observed.append(("select", timeout))
++            return []
++    assert Ready().select(0) == []
++    observed.clear()
++    monkeypatch.setattr(module.selectors, "DefaultSelector", Ready)
++    with pytest.raises(RuntimeError, match="failed to enforce deadline"):
++        GuardedProcess()._exchange_guardian(tmp_path, tmp_path, 7, io.BytesIO())
++    assert observed == [("select", 10.0), ("wait", 5)]
++    assert process.stdin.closed
++    assert process.stdout.closed
++
++
++def test_a_guarded_request_carries_absolute_deadline(tmp_path, monkeypatch):
++    from types import SimpleNamespace
++    from pathlib import Path
++    from pytest_leela import _timeout_process as module
++    seen = []
++    monkeypatch.setattr(module, "time", SimpleNamespace(monotonic=lambda: 10.0))
++    def inspect_request(self, guardian, request, timeout):
++        seen.append((json.loads(request.read_text()), timeout, request))
++        return b"response"
++    monkeypatch.setattr(GuardedProcess, "_run_guardian", inspect_request)
++    assert GuardedProcess().run(b"{}", 7) == b"response"
++    payload, timeout, path = seen[0]
++    assert payload == {"deadline": 17.0}
++    assert timeout == 7
++    assert not path.exists()
++
++
++def test_guardian_deadline_envelope_has_specific_exception(tmp_path):
++    from pytest_leela._timeout_process import DeadlineExpired
++    fake = tmp_path / "controlled_deadline.py"
++    fake.write_text("print('{\"failure\": \"DeadlineExpired\", \"message\": \"deadline\"}', flush=True)\n")
++    request = tmp_path / "request.json"
++    request.write_text("{}")
++    with pytest.raises(DeadlineExpired, match="deadline"):
++        GuardedProcess()._run_guardian(fake, request, 5)
++
++
++def test_a_process_queue_failure_is_not_reclassified_timeout(monkeypatch):
++    import io
++    from types import SimpleNamespace
++    from pytest_leela import _timeout_process as module
++    worker = WorkerProcess()
++    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **k:
++                        SimpleNamespace(stdin=io.BytesIO(), stdout=io.BytesIO(b"result\n")))
++    monkeypatch.setattr(worker, "close", lambda: None)
++    def fail(timeout):
++        raise RuntimeError("queue failed")
++    monkeypatch.setattr(worker.reply, "get", fail)
++    with pytest.raises(RuntimeError, match="queue failed"):
++        worker.run(b"request", 5)
++    worker.exchange_thread.join(timeout=1)
++    assert not worker.exchange_thread.is_alive()
++
++
++@pytest.mark.parametrize("error", [ProcessLookupError("gone"), ValueError("invalid signal")])
++def test_a_process_cleanup_only_accepts_missing_group(monkeypatch, error):
++    import io
++    from types import SimpleNamespace
++    worker = WorkerProcess()
++    process = SimpleNamespace(pid=424242, stdin=io.BytesIO(), stdout=io.BytesIO(), wait=lambda timeout: None)
++    worker.process = process
++    def fail(pid, sig):
++        raise error
++    monkeypatch.setattr("pytest_leela._timeout_process.os.killpg", fail)
++    if isinstance(error, ProcessLookupError):
++        worker.close()
++    else:
++        with pytest.raises(ValueError, match="invalid signal"):
++            worker.close()
++    assert worker.process is None
++    assert process.stdin.closed
++    assert process.stdout.closed
++
++
++def test_guardian_empty_response_is_prompt_protocol_error(tmp_path):
++    fake = tmp_path / "controlled_empty.py"
++    fake.write_text("pass\n")
++    request = tmp_path / "request.json"
++    request.write_text("{}")
++    with pytest.raises(json.JSONDecodeError):
++        GuardedProcess()._run_guardian(fake, request, 0.05)
++
++
++@pytest.mark.parametrize("wait_error", [subprocess.TimeoutExpired("guardian", 5), OSError("wait failed")])
++def test_a_guardian_cleanup_retries_only_actual_timeout(tmp_path, monkeypatch, wait_error):
++    import io
++    from types import SimpleNamespace
++    from pytest_leela import _timeout_process as module
++    calls = []
++    def wait(timeout):
++        calls.append(("wait", timeout))
++        if len(calls) == 1:
++            raise wait_error
++    process = SimpleNamespace(stdin=io.BytesIO(), stdout=io.BytesIO(), returncode=0,
++                              wait=wait, kill=lambda: calls.append("kill"))
++    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **k: process)
++    class Ready:
++        def __enter__(self):
++            return self
++        def __exit__(self, *args):
++            pass
++        def register(self, *args):
++            pass
++        def select(self, timeout):
++            return [True]
++    with Ready() as selector:
++        assert selector.select(0) == [True]
++    monkeypatch.setattr(module.selectors, "DefaultSelector", Ready)
++    monkeypatch.setattr(module.os, "read", lambda *args: b'{"result": {}}\n')
++    monkeypatch.setattr(process.stdout, "fileno", lambda: 0)
++    if isinstance(wait_error, subprocess.TimeoutExpired):
++        with pytest.raises(RuntimeError, match="guardian cleanup failed"):
++            GuardedProcess()._exchange_guardian(tmp_path, tmp_path, 5, io.BytesIO())
++        assert calls == [("wait", 5), "kill", ("wait", 2)]
++    else:
++        with pytest.raises(OSError, match="wait failed"):
++            GuardedProcess()._exchange_guardian(tmp_path, tmp_path, 5, io.BytesIO())
++        assert calls == [("wait", 5)]
++
++
++def test_a_guardian_eof_stops_reading_before_retry(tmp_path, monkeypatch):
++    import io
++    from types import SimpleNamespace
++    from pytest_leela import _timeout_process as module
++    reads = []
++    process = SimpleNamespace(stdin=io.BytesIO(), stdout=io.BytesIO(), returncode=0, wait=lambda timeout: None)
++    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **k: process)
++    class Ready:
++        def __enter__(self):
++            return self
++        def __exit__(self, *args):
++            pass
++        def register(self, *args):
++            pass
++        def select(self, timeout):
++            return [True]
++    monkeypatch.setattr(module.selectors, "DefaultSelector", Ready)
++    monkeypatch.setattr(process.stdout, "fileno", lambda: 0)
++    def eof(*args):
++        reads.append("read")
++        assert len(reads) == 1, "EOF must not retry the pipe"
++        return b""
++    assert eof(0, 1) == b""
++    reads.clear()
++    monkeypatch.setattr(module.os, "read", eof)
++    with pytest.raises(json.JSONDecodeError):
++        GuardedProcess()._exchange_guardian(tmp_path, tmp_path, 5, io.BytesIO())
++    assert reads == ["read"]
++
++
++def test_a_process_zombie_exception_does_not_hide_other_os_errors(monkeypatch):
++    import io
++    from types import SimpleNamespace
++    worker = WorkerProcess()
++    worker.process = SimpleNamespace(pid=424242, stdin=io.BytesIO(), stdout=io.BytesIO(), wait=lambda timeout: None)
++    def invalid(pid, sig):
++        raise OSError("invalid group operation")
++    monkeypatch.setattr("pytest_leela._timeout_process.os.killpg", invalid)
++    monkeypatch.setattr("pytest_leela._timeout_process.sys.platform", "darwin")
++    monkeypatch.setattr(worker, "_group_exited", lambda pid: True)
++    with pytest.raises(OSError, match="invalid group operation"):
++        worker.close()
++    assert worker.process is None
++
++
++def test_a_process_delivers_ipc_exception_without_timeout(monkeypatch):
++    import io
++    from types import SimpleNamespace
++    from pytest_leela import _timeout_process as module
++    worker = WorkerProcess()
++    monkeypatch.setattr(module.subprocess, "Popen", lambda *a, **k:
++                        SimpleNamespace(stdin=io.BytesIO(), stdout=io.BytesIO(b"response\n")))
++    monkeypatch.setattr(worker, "close", lambda: None)
++    monkeypatch.setattr(worker.reply, "get", lambda timeout: OSError("transport failed"))
++    with pytest.raises(OSError, match="transport failed"):
++        worker.run(b"request", 5)
++    worker.exchange_thread.join(timeout=1)
++    assert not worker.exchange_thread.is_alive()
++
++
++def test_guardian_worker_failure_envelope_is_runner_error(tmp_path):
++    fake = tmp_path / "controlled_failure.py"
++    fake.write_text("print('{\"failure\": \"OSError\", \"message\": \"worker failed\"}', flush=True)\n")
++    request = tmp_path / "request.json"
++    request.write_text("{}")
++    with pytest.raises(RuntimeError, match="worker failed"):
++        GuardedProcess()._run_guardian(fake, request, 5)
++
++
++def test_a_guardian_import_does_not_execute_main(tmp_path, monkeypatch, capsys):
++    import importlib
++    from pathlib import Path
++    from types import SimpleNamespace
++    path = tmp_path / "request.json"
++    request = json.loads(_request(tmp_path))
++    request["deadline"] = 5
++    path.write_text(json.dumps(request))
++    read, write = os.pipe()
++    calls = []
++    monkeypatch.setattr(sys, "argv", ["guardian", str(path)])
++    def complete(*args):
++        calls.append("run")
++        return b"{}"
++    assert complete() == b"{}"
++    calls.clear()
++    monkeypatch.setattr(WorkerProcess, "run", complete)
++    sys.modules.pop("pytest_leela._timeout_guardian", None)
++    with os.fdopen(read, "rb", buffering=0) as lifetime:
++        monkeypatch.setattr(sys, "stdin", lifetime)
++        imported = importlib.import_module("pytest_leela._timeout_guardian")
++    os.close(write)
++    assert imported.__file__ == str(Path(__file__).resolve().parents[2] / "src/pytest_leela/_timeout_guardian.py")
++    assert calls == [], "import must not execute the guardian entry point"
++    assert capsys.readouterr().out == ""
++
++
++def test_a_worker_import_does_not_execute_main(tmp_path, monkeypatch, capsys):
++    import importlib
++    import io
++    from pathlib import Path
++    from types import SimpleNamespace
++    waits = []
++    (tmp_path / "test_worker.py").write_text("def test_pass():\n    assert True\n")
++    request = _request(tmp_path)
++    class Completion:
++        def wait(self):
++            waits.append("wait")
++    # Only the wait at the private entry point is replaced; a valid normal
++    # pytest session remains available if a mutant wrongly executes main.
++    import threading
++    def event():
++        return Completion()
++    monkeypatch.setattr(threading, "Event", event)
++    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(request)))
++    sys.modules.pop("pytest_leela._timeout_worker", None)
++    imported = importlib.import_module("pytest_leela._timeout_worker")
++    assert imported.__file__ == str(Path(__file__).resolve().parents[2] / "src/pytest_leela/_timeout_worker.py")
++    assert waits == [], "import must not wait or execute the worker entry point"
++    assert capsys.readouterr().out == ""
++
++
++def test_guardian_entry_guard_calls_main():
++    import ast
++    from pathlib import Path
++    from pytest_leela import _timeout_guardian as guardian
++    entry = ast.parse(Path(guardian.__file__).read_text()).body[-1]
++    assert isinstance(entry, ast.If)
++    calls = []
++    exec(compile(ast.Module(body=[entry], type_ignores=[]), guardian.__file__, "exec"),
++         {"__name__": "__main__", "main": lambda: calls.append("main")})
++    assert calls == ["main"]
++
++
++def test_process_delayed_ipc_does_not_resignal_reaped_pid(monkeypatch):
++    import io
++    import threading
++    from types import SimpleNamespace
++    entered = threading.Event()
++    release = threading.Event()
++    def delayed_return():
++        entered.set()
++        release.wait()
++    thread = threading.Thread(target=delayed_return)
++    worker = WorkerProcess()
++    worker.exchange_thread = thread
++    signals = []
++    process = SimpleNamespace(pid=424242, stdin=io.BytesIO(), stdout=io.BytesIO(), wait=lambda timeout: None)
++    worker.process = process
++    monkeypatch.setattr("pytest_leela._timeout_process.os.killpg", lambda pid, sig: signals.append(pid))
++    thread.start()
++    try:
++        assert entered.wait(timeout=1)
++        with pytest.raises(RuntimeError, match="IPC did not stop"):
++            worker.close()
++        assert thread.is_alive()
++        assert worker.process is None
++        worker.close()
++        assert signals == [424242]
++    finally:
++        release.set()
++        thread.join(timeout=2)
++        process.stdin.close()
++        process.stdout.close()
++    assert not thread.is_alive()
++
++
++def test_guardian_delayed_watcher_reports_error_then_drains(tmp_path, monkeypatch):
++    import selectors
++    import threading
++    from pytest_leela import _timeout_guardian as guardian
++    data = json.loads(_request(tmp_path))
++    data["deadline"] = 5
++    request = tmp_path / "request.json"
++    request.write_text(json.dumps(data))
++    entered = threading.Event()
++    release = threading.Event()
++    readiness = []
++    original = selectors.DefaultSelector
++    class DelayedSelector:
++        def __enter__(self):
++            self.selector = original()
++            return self
++        def __exit__(self, *args):
++            self.selector.close()
++        def register(self, *args):
++            self.selector.register(*args)
++        def select(self):
++            ready = self.selector.select()
++            entered.set()
++            release.wait()
++            readiness.append(ready)
++            return ready
++    before = set(threading.enumerate())
++    read, write = os.pipe()
++    monkeypatch.setattr(sys, "argv", ["guardian", str(request)])
++    monkeypatch.setattr(WorkerProcess, "run", lambda *args: b"{}")
++    monkeypatch.setattr(guardian.selectors, "DefaultSelector", DelayedSelector)
++    try:
++        with os.fdopen(read, "rb", buffering=0) as lifetime:
++            monkeypatch.setattr(sys, "stdin", lifetime)
++            with pytest.raises(RuntimeError, match="lifetime watcher did not stop"):
++                guardian.main()
++        assert entered.is_set()
++        delayed = set(threading.enumerate()) - before
++        assert len(delayed) == 1
++        assert all(thread.is_alive() for thread in delayed)
++    finally:
++        release.set()
++        for thread in set(threading.enumerate()) - before:
++            thread.join(timeout=2)
++        os.close(write)
++    assert set(threading.enumerate()) == before
++    assert readiness
++    assert isinstance(readiness[0], list)
++    # Exercise the same delayed selector's normal release path too: callers
++    # must receive the real readiness list rather than None.
++    probe_read, probe_write = os.pipe()
++    try:
++        os.write(probe_write, b"ready")
++        with DelayedSelector() as selector:
++            selector.register(probe_read, selectors.EVENT_READ)
++            ready = selector.select()
++            assert isinstance(ready, list)
++            assert ready[0][0].fd == probe_read
++            assert ready[0][1] == selectors.EVENT_READ
++    finally:
++        os.close(probe_read)
++        os.close(probe_write)
++
++
++def test_worker_import_contract_positive_wait_control(tmp_path, monkeypatch, capsys):
++    import importlib
++    original = importlib.import_module
++    def execute_entry(name, *args, **kwargs):
++        module = original(name, *args, **kwargs)
++        if name == "pytest_leela._timeout_worker":
++            module.main()
++        return module
++    monkeypatch.setattr(importlib, "import_module", execute_entry)
++    with pytest.raises(AssertionError, match="import must not wait"):
++        test_a_worker_import_does_not_execute_main(tmp_path, monkeypatch, capsys)
++
++
++def test_runner_json_fingerprint_preserves_unreliable_and_nested_causes():
++    from pytest_leela.runner import _tuple_fingerprint
++    assert _tuple_fingerprint(None) is None
++    assert _tuple_fingerprint(["ValueError", "message", ["caused by", ["OSError", "cause", None, []]], []]) == (
++        "ValueError", "message", ("caused by", ("OSError", "cause", None, ())), (),
++    )

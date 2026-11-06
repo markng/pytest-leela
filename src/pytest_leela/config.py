@@ -1,12 +1,26 @@
 """Configuration loader for pytest-leela — reads [tool.pytest-leela] from pyproject.toml."""
 
-from __future__ import annotations
+# NOTE: Do NOT add from __future__ import annotations here.
+# Without that flag, every annotation is evaluated at function
+# def time, so a BitOr->BitAnd mutation on a type annotation
+# (e.g. "int | None" -> "int & None") raises TypeError at
+# import — which is exactly the test-killing signal mutation
+# testing depends on. See the top-of-file note in
+# pytest_leela.import_hook for the full reasoning.
+#
 
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from pytest_leela.operators import ALL_OPERATORS, DEFAULT_OPERATORS
+
+__all__ = [
+    "ALL_OPERATORS",
+    "DEFAULT_OPERATORS",
+    "LeelaConfig",
+    "load_config",
+]
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,2087 @@
+diff --git a/.github/workflows/python-package.yml b/.github/workflows/python-package.yml
+index ff5715f..5b8b340 100644
+--- a/.github/workflows/python-package.yml
++++ b/.github/workflows/python-package.yml
+@@ -13,6 +13,43 @@ permissions:
+   contents: read
+ 
+ jobs:
++  lockfile:
++
++    runs-on: ubuntu-latest
++
++    steps:
++    - uses: actions/checkout@v4
++    - uses: actions/setup-python@v5
++      with:
++        python-version: "3.13"
++    - name: Check uv.lock matches pyproject.toml
++      run: |
++        python -m pip install --upgrade pip "uv==0.11.19"
++        uv lock --check
++
++  pytest-floor:
++
++    runs-on: ubuntu-latest
++
++    steps:
++    - uses: actions/checkout@v4
++    - uses: actions/setup-python@v5
++      with:
++        python-version: "3.12"
++    - name: Install the oldest supported pytest
++      run: |
++        python -m pip install --upgrade pip
++        pip install -e ".[dev,django]" "pytest==7.0.0"
++    - name: Test with pytest
++      run: |
++        # Every warning is an error except two that pytest 7.0 itself raises:
++        # its helpconfig hookwrapper warns when a conftest fails to import
++        # (several tests do that on purpose), and on Python 3.12 its assertion
++        # rewriter uses ast.Str/ast.Num, which warn whenever a test module has
++        # no cached rewrite yet (every module on a fresh checkout).
++        pytest -W error -W "ignore::pluggy.PluggyTeardownRaisedWarning" \
++          -W "ignore::DeprecationWarning:_pytest.assertion.rewrite"
++
+   build:
+ 
+     runs-on: ubuntu-latest
+@@ -30,12 +67,15 @@ jobs:
+     - name: Install dependencies
+       run: |
+         python -m pip install --upgrade pip
+-        pip install -e ".[dev]"
++        pip install -e ".[dev,django]"
+     - name: Lint with flake8
+       run: |
+         pip install flake8
+         # stop the build if there are Python syntax errors or undefined names
+         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
++    - name: Type-check with mypy
++      run: |
++        mypy
+     - name: Test with pytest
+       run: |
+         pytest
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index ad59f21..044136e 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,114 @@
+ # Changelog
+ 
++## 0.9.0 — 2026-10-14
++
++### Fixed
++
++- **The clean baseline reads current local source, tests and helpers.**
++  Timestamp bytecode caches could reuse stale code after a same-size edit
++  with an unchanged mtime, accepting a failing baseline and running mutants.
++  Leela now removes only the project's source and assertion-rewrite caches
++  before coverage and the unmutated baseline, leaving installed packages alone.
++
++- **Installed packages in a virtualenv inside the project are no longer
++  evicted between mutants.** Leela evicted every module whose `__file__`
++  sat under the cwd (and, before a run, everything under the temp dir).
++  With uv's default `.venv` inside the project that included third-party
++  packages, so C extensions such as numpy failed to re-import with
++  `ImportError: cannot load module more than once per process`. That
++  crash was scored as a **kill**, so every mutant reported killed,
++  including mutants no test caught. Eviction now skips anything under
++  `sys.prefix`, `sys.base_prefix`, `sys.exec_prefix`,
++  `site.getsitepackages()`, `site.getusersitepackages()` or a
++  `site-packages` / `dist-packages` directory, while still evicting the
++  project's own modules so mutated code reloads.
++
++  **Scores reported by earlier versions may be inflated** for projects
++  whose virtualenv lives inside the project directory. Re-run to get an
++  honest number.
++
++- **Database tests under pytest-django can run inside leela's inner
++  sessions.** pytest-django blocks DB access at configure time and only
++  restores it at unconfigure, which is after leela runs. Each inner
++  session's `DjangoDbBlocker` recorded that outer blocking wrapper as the
++  "real" `ensure_connection`, so `django_db_blocker.unblock()` could
++  never reach the database: every DB test errored in setup, and each
++  setup error was scored as a **kill**, including for mutants no test
++  could detect. Leela now lifts the outer block (via pytest-django's own
++  `unblock()`) while it runs. Scores from earlier versions on
++  pytest-django projects with DB tests may be inflated.
++
++- **Django model and admin modules are no longer reloaded between
++  mutants.** Re-executing them re-registered models ("Reloading models is
++  not advised") and admin classes (`AlreadyRegistered`), and re-entered
++  import cycles that only resolve in Django's app-loading order. Any
++  project module they reference is kept too, so a kept model never ends
++  up subclassing a stale copy of a reloaded mixin.
++
++- **The summary no longer reports a negative "pruned by type analysis"
++  count.** A typed rule can add operators the untyped rule lacks (int
++  `+` gains `//`), and `count_pruned` subtracted list lengths, so such
++  points counted as negative pruning ("-1 pruned"). It now counts only
++  untyped mutations the typed rule dropped.
++
++- **Under `--diff`, the summary's candidate, pruned and type-enrichment
++  counts cover only the changed lines.** They counted every mutation
++  point in the target files while only changed-line mutants ran ("159
++  candidates" for 88 tested). The diff filter now applies before type
++  enrichment, counting and generation.
++
++### Added
++
++- **Clean baseline before any mutant.** The selected tests run once with
++  no mutation applied, through the same in-process path as every mutant.
++  If anything fails or errors, the run aborts with a message naming the
++  failing tests and a non-zero exit, instead of scoring every mutant as
++  killed.
++
++- **A third mutant status, `error`.** A mutant whose inner run crashed,
++  exited abnormally (usage error, nothing collected, interrupted) with no
++  test failure or collection failure, or ran zero tests, was previously
++  reported as killed (crash) or **SURVIVED** (`tests_run: 0`). It is now
++  an error: reported with its reason in the terminal, HTML and JSON
++  reports, excluded from the mutation score, and failing the session by
++  default. `MutantResult` gains `error` and a `status` of `"killed"`,
++  `"survived"` or `"error"`; `RunResult` gains `errors` and
++  `mutants_scored`. Timeouts remain kills.
++
++- **A test module that fails to collect under the mutant is a kill.**
++  The clean baseline shows it collects unmutated, so the failure is the
++  mutant's doing: the target raising at import, or a test module's own
++  module-level check failing. Those modules are the killing tests.
++  `MutatingLoader` records exceptions raised by the mutated source, and a
++  conftest that fails to import because of one is a kill too. A
++  conftest's own failing check, or a conftest or test module that calls
++  `pytest.exit()` at import, is an `error`: it is not attributed to the
++  mutant. So is a conftest collection hook that calls `pytest.exit()`;
++  the error names the node being collected. Error text renders each
++  collection failure as `path: Type: message`. A run that
++  stays green or empty is not a kill: an import caught by the test is
++  SURVIVED, and a module-level skip, a skip marker or a conftest that
++  skips is an `error`, because no test ran. A conftest raising `Skipped`
++  at import no longer crashes the whole leela run: `Skipped` is a
++  `BaseException`, outside what inner runs caught.
++  0.8.0's verdict for a mutant that broke the target's import depended
++  on the layout. With the virtualenv and the temp dir outside the
++  project, it was SURVIVED with `tests_run: 0`. With the virtualenv
++  inside the project, re-importing installed packages could crash the
++  inner run, and the mutant was KILLED as `<crashed>`, a verdict
++  indistinguishable from leela failing to test it.
++
++- **`--leela-benchmark` no longer raises `TypeError`.** It called the
++  target-discovery helpers without the `python_files` patterns they
++  require.
++
++- **The `django` extra requires `pytest-django>=4.10`.** 4.10 is the
++  first release whose `pytest_unconfigure` restores the session's
++  database block, which leela's nested sessions depend on.
++
++- **`fail_on_error` option** in `[tool.pytest-leela]` (default `true`).
++  Set it to `false` to keep errored mutants from failing the session.
++
+ ## 0.8.0 — 2026-06-10
+ 
+ ### Added
+diff --git a/README.md b/README.md
+index ad9148a..adf04f6 100644
+--- a/README.md
++++ b/README.md
+@@ -103,7 +103,7 @@ pytest --leela-benchmark
+ - **Framework-aware** — clears Django URL caches between mutants so view reloads work correctly
+ - **Resource limits** — `--max-cores N` caps parallelism; `--max-memory MB` guards memory
+ - **HTML report** — `--leela-html` generates an interactive single-file report with source viewer, survivor navigation, and test source overlay
+-- **CI exit codes** — exits non-zero when mutants survive, so CI pipelines fail on incomplete kill rates
++- **CI exit codes** — exits non-zero when mutants survive or error, so CI pipelines fail on incomplete kill rates
+ - **Benchmark mode** — `--leela-benchmark` measures the speedup from each optimization layer
+ 
+ ---
+@@ -125,6 +125,7 @@ operators = [
+     "boolean",
+     "return",
+ ]
++fail_on_error = true
+ ```
+ 
+ ### `exclude`
+@@ -155,6 +156,103 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
+ | `control_flow` | `break` / `continue` swaps | off |
+ | `exception` | `except` handler broadening, body-to-raise | off |
+ 
++### `fail_on_error`
++
++Whether errored mutants fail the session (non-zero exit). Default: `true`.
++
++See [Mutant statuses](#mutant-statuses). Set it to `false` only when you accept that some
++mutants go untested, for example while fixing a known collection problem.
++
++---
++
++## Mutant statuses
++
++Each mutant ends in exactly one of three states:
++
++| Status | Meaning | Counts toward the score |
++|---|---|---|
++| **killed** | A call-phase test failure or mutant timeout, or a setup/teardown/collection/import failure confirmed by a passing clean control and recurrence of the same failure under the mutant | yes |
++| **survived** | Tests ran and all of them passed | yes |
++| **error** | No trustworthy verdict: an inconclusive setup/teardown/collection/import failure, pytest crash, deliberate skip/exit, abnormal exit without a test failure, or zero tests run (for example everything skipped). An inconclusive error may have zero **or positive** call-phase `tests_run` | no |
++
++The mutation score is `killed / (killed + survived)`. Errors are listed separately, with their
++reason, in the terminal report, the HTML report and the JSON output, and they fail the session
++unless `fail_on_error = false`. An error means leela could not tell whether your tests catch the
++mutant, so it is reported as neither a kill nor a survival.
++
++The initial clean baseline proves only that the selected tests passed before mutation.
++A setup, teardown, collection or import failure without a call-phase failure is initially
++inconclusive, even if earlier tests passed. Leela runs at most **one clean unmutated control**
++through the same selection and, only if that passes, **one additional mutant confirmation**.
++It counts a kill only when the actual phase, node, exception identity/message and meaningful
++visible chained cause recur. A failed control, different failure, surviving confirmation or
++insufficient exception evidence remains **error**, with the original and control/confirmation
++diagnostics. Ambient or flaky failures therefore do not automatically kill unrelated mutants.
++These are bounds on attempts, not a hard wall-clock execution limit or perfect proof against
++all nondeterminism.
++
++This check preserves genuine mutation-caused target imports and test-module collection
++failures, including module-level assertions such as `assert calc.RATIO == 5`; the killing
++nodes name the files that failed to collect. A conftest's own check failing **during
++collection** can also kill after this confirmation. Before the session starts, a failed
++conftest import is eligible when the mutated target itself raised during import; a conftest's
++own check without such a target import failure remains an error. A conftest that catches an
++error and calls `pytest.exit()` or `pytest.skip()` remains an error, not a confirmed kill.
++
++If a test caught the import error and the suite completed green, the mutant **survived**: no
++test noticed it. If the mutant made the tests skip themselves (a module-level `pytest.skip`, a
++`skipif` marker, or a conftest or test module that skips or calls `pytest.exit()` at import),
++the mutant is an **error**: no test ran.
++
++Known limits of these rules:
++
++- **A module that can only be imported once per process.** If a test module imports something
++  that refuses to load twice (for example it raises when a process-global registry is already
++  installed), every re-import fails to collect. Through `pytest --leela` the outer session has
++  already imported it, so the clean baseline fails and the run aborts. When `Engine.run` is called
++  directly with `use_coverage=False` and a test directory, the baseline may be the first import
++  and pass. Later re-import failures also fail the clean per-mutant control: those mutants
++  are inconclusive **errors**, commonly with `tests_run: 0`, excluded from the score. Leela
++  does not make non-idempotent registration safe to repeat in-process.
++- **A deliberate exit hides every kill not yet reported.** When a conftest or a test module
++  catches the target's import error and calls `pytest.exit()`, the inner run ends there and the
++  mutant is an **error**. Tests run only after collection, so no test failure is ever reported,
++  including a test that imports the target inside its body; nor is a sibling module's collection
++  failure that pytest would have reached after the exit. A module that already failed to
++  collect before the exit stops the run first (`-x`) can still kill after same-failure
++  confirmation.
++
++### Clean baseline before any mutant
++
++Before the first mutant, leela runs the selected tests once with no mutation applied, through
++the same in-process path every mutant uses. If anything fails or errors there, the run aborts
++with `leela: aborted: tests do not pass with no mutation applied (...)` and a non-zero exit,
++and no mutants are scored. Without this check, a test that fails for an unrelated reason (a
++fixture that cannot run in-process, a missing service) would score every mutant as killed.
++
++### pytest-django
++
++pytest-django blocks database access for the whole session and only restores it at
++unconfigure, after leela has run. Leela lifts that outer block for the duration of its run
++(through pytest-django's own `django_db_blocker.unblock()`), so database tests in the inner
++sessions can open connections as they do in a normal run.
++
++Django model and admin modules are never reloaded between mutants (unless one is itself a
++`--target`), and neither is any project module they reference. Re-executing them registers
++models and admin classes a second time, which Django rejects, and re-importing a module they
++reference would split class identity (a kept model subclassing the old copy of a reloaded
++mixin). The trade-off: if a model or admin module imports a function from your target at
++module level, calls through that reference run the unmutated code, which shows up as a
++survivor, never as a fake kill.
++
++### Installed packages are never reloaded
++
++Between mutants leela evicts the project's own modules so that mutated code is re-imported.
++Installed packages are left loaded, even when the virtualenv sits inside the project directory
++(uv's default `.venv`): anything under `sys.prefix`, `sys.base_prefix`, `site.getsitepackages()`,
++`site.getusersitepackages()`, or a `site-packages` / `dist-packages` directory. Re-importing them
++would break C extensions such as numpy, which CPython can load only once per process.
++
+ ---
+ 
+ ## Pragma Skip
+@@ -186,7 +284,7 @@ not string literals or docstrings that happen to contain the text.
+ 
+ **What it shows:**
+ - Overall mutation score badge
+-- Per-file breakdown with kill/survive/timeout counts
++- Per-file breakdown with kill/survive/error counts
+ - Source code viewer with syntax highlighting
+ 
+ **Interactive features:**
+diff --git a/pyproject.toml b/pyproject.toml
+index 71824dd..c7437d5 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
+ 
+ [project]
+ name = "pytest-leela"
+-version = "0.8.0"
++version = "0.9.0"
+ description = "Type-aware mutation testing for Python — fast, opinionated, pytest-native"
+ requires-python = ">=3.12"
+ readme = "README.md"
+@@ -32,9 +32,17 @@ dependencies = [
+ dev = [
+     "pytest-describe>=2.0",
+     "mypy",
++    "django-stubs",
+     "factory-boy",
+     "faker",
+ ]
++# Exercises leela's Django handling (pytest-django DB block, model/admin
++# module pinning) end to end.  pytest-django 4.10 is the first release
++# whose pytest_unconfigure restores the session's DB block.
++django = [
++    "django>=5.2",
++    "pytest-django>=4.10",
++]
+ 
+ [project.urls]
+ Homepage = "https://github.com/markng/pytest-leela"
+@@ -63,6 +71,10 @@ files = ["src/pytest_leela"]
+ module = "django.*"
+ ignore_missing_imports = true
+ 
++[[tool.mypy.overrides]]
++module = "pytest_django.*"
++ignore_missing_imports = true
++
+ [[tool.mypy.overrides]]
+ module = "pytest_leela.coverage_tracker"
+ disable_error_code = ["arg-type"]
+diff --git a/src/pytest_leela/__init__.py b/src/pytest_leela/__init__.py
+index 86fe958..a5f6626 100644
+--- a/src/pytest_leela/__init__.py
++++ b/src/pytest_leela/__init__.py
+@@ -1,3 +1,3 @@
+ """pytest-leela: Type-aware mutation testing for Python."""
+ 
+-__version__ = "0.4.0"
++__version__ = "0.9.0"
+diff --git a/src/pytest_leela/config.py b/src/pytest_leela/config.py
+index 07c7f11..fd5c84d 100644
+--- a/src/pytest_leela/config.py
++++ b/src/pytest_leela/config.py
+@@ -27,6 +27,8 @@ class LeelaConfig:
+ 
+     exclude: tuple[str, ...] = ()
+     operators: tuple[str, ...] = field(default_factory=lambda: tuple(DEFAULT_OPERATORS))
++    # Fail the session when any mutant's run errored outside the tests.
++    fail_on_error: bool = True
+ 
+ 
+ def load_config(rootpath: Path) -> LeelaConfig:
+@@ -48,6 +50,7 @@ def load_config(rootpath: Path) -> LeelaConfig:
+ 
+     exclude = leela_config.get("exclude", [])
+     operators = leela_config.get("operators", list(DEFAULT_OPERATORS))
++    fail_on_error = leela_config.get("fail_on_error", True)
+ 
+     # Validate types — a bare string silently iterates characters (Guidelines 2:5)
+     if not isinstance(exclude, list):
+@@ -61,6 +64,12 @@ def load_config(rootpath: Path) -> LeelaConfig:
+             f"got {type(operators).__name__}: {operators!r}"
+         )
+ 
++    if not isinstance(fail_on_error, bool):
++        raise TypeError(
++            f"[tool.pytest-leela] 'fail_on_error' must be true or false in pyproject.toml, "
++            f"got {type(fail_on_error).__name__}: {fail_on_error!r}"
++        )
++
+     # Validate inner element types — every element must be a string (Guidelines 2:5)
+     for item in exclude:
+         if not isinstance(item, str):
+@@ -88,4 +97,8 @@ def load_config(rootpath: Path) -> LeelaConfig:
+     if "all" in operators:
+         operators = list(ALL_OPERATORS)
+ 
+-    return LeelaConfig(exclude=tuple(exclude), operators=tuple(operators))
++    return LeelaConfig(
++        exclude=tuple(exclude),
++        operators=tuple(operators),
++        fail_on_error=fail_on_error,
++    )
+* Unmerged path src/pytest_leela/engine.py
+diff --git a/src/pytest_leela/html_report.py b/src/pytest_leela/html_report.py
+index 5dac0e8..c4c38d2 100644
+--- a/src/pytest_leela/html_report.py
++++ b/src/pytest_leela/html_report.py
+@@ -194,6 +194,8 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
+             "replacement": replacement_disp,
+             "description": desc,
+             "killed": mr.killed,
++            "status": mr.status,
++            "error": mr.error,
+             "tests_run": mr.tests_run,
+             "time_seconds": mr.time_seconds,
+             "killing_test": (
+@@ -233,9 +235,11 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
+ 
+         # Per-file stats
+         total = len(mutant_list)
+-        killed = sum(1 for m in mutant_list if m["killed"])
+-        survived = total - killed
+-        score = (killed / total * 100.0) if total > 0 else 0.0
++        killed = sum(1 for m in mutant_list if m["status"] == "killed")
++        survived = sum(1 for m in mutant_list if m["status"] == "survived")
++        errors = total - killed - survived
++        scored = killed + survived
++        score = (killed / scored * 100.0) if scored > 0 else 0.0
+ 
+         files[rel] = {
+             "source": source,
+@@ -245,6 +249,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
+                 "total": total,
+                 "killed": killed,
+                 "survived": survived,
++                "errors": errors,
+                 "score": round(score, 2),
+             },
+         }
+@@ -253,7 +258,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
+     survived_index: list[dict[str, Any]] = []
+     for rel in sorted(files.keys()):
+         for midx, m in enumerate(files[rel]["mutants"]):
+-            if not m["killed"]:
++            if m["status"] == "survived":
+                 survived_index.append(
+                     {
+                         "file": rel,
+@@ -273,6 +278,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
+             "mutants_pruned": result.mutants_pruned,
+             "killed": result.killed,
+             "survived": len(result.survived),
++            "errors": len(result.errors),
+             "mutation_score": round(result.mutation_score, 2),
+             "wall_time_seconds": result.wall_time_seconds,
+         },
+@@ -483,6 +489,7 @@ html, body {{
+ }}
+ .mut-killed  {{ color: #a6e3a1; }}
+ .mut-survived {{ color: #f38ba8; font-weight: 700; }}
++.mut-error {{ color: #fab387; font-weight: 700; }}
+ .code-cell {{
+     padding-left: 12px !important;
+ }}
+@@ -538,6 +545,17 @@ html, body {{
+     border-left-color: #f38ba8;
+     background: rgba(243, 139, 168, 0.08);
+ }}
++.mutant-card.error {{
++    border-left-color: #fab387;
++    background: rgba(250, 179, 135, 0.08);
++}}
++.mc-error {{
++    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
++    font-size: 11px;
++    color: #fab387;
++    margin-top: 4px;
++    word-break: break-all;
++}}
+ .mutant-card .mc-header {{
+     display: flex;
+     align-items: center;
+@@ -553,6 +571,7 @@ html, body {{
+ }}
+ .status-killed   {{ background: #a6e3a1; color: #1e1e2e; }}
+ .status-survived {{ background: #f38ba8; color: #1e1e2e; }}
++.status-error    {{ background: #fab387; color: #1e1e2e; }}
+ .mc-desc {{
+     font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+     font-size: 13px;
+@@ -779,6 +798,7 @@ html, body {{
+     <span class="logo">Leela</span>
+     <span id="score-badge" class="score-badge"></span>
+     <span id="survived-count"></span>
++    <span id="error-count" class="mut-error"></span>
+     <span class="hdr-spacer"></span>
+     <button class="hdr-btn" id="btn-prev" title="Previous survivor (p)">&lt; Prev</button>
+     <button class="hdr-btn" id="btn-next" title="Next survivor (n)">Next &gt;</button>
+@@ -954,6 +974,8 @@ window.LEELA_DATA = {json_data};
+         var sc = document.getElementById("survived-count");
+         sc.textContent = summary.survived + " survived";
+         if (summary.survived === 0) sc.style.color = "#a6e3a1";
++        var ec = document.getElementById("error-count");
++        ec.textContent = summary.errors > 0 ? summary.errors + " errors (not scored)" : "";
+     }}
+ 
+     /* --- Sidebar --- */
+@@ -968,7 +990,7 @@ window.LEELA_DATA = {json_data};
+             html += '<div class="file-entry' + cls + '" data-file="' + esc(fname) + '">';
+             html += '<span class="fname" title="' + esc(fname) + '">' + esc(fname) + "</span>";
+             html += '<span class="file-badge ' + fileBadgeColor(st.score) + '">' + st.score.toFixed(0) + "%</span>";
+-            html += '<span class="fstats">' + st.killed + "/" + st.total + "</span>";
++            html += '<span class="fstats">' + st.killed + "/" + (st.killed + st.survived) + (st.errors > 0 ? ' <span class="mut-error">!' + st.errors + "</span>" : "") + "</span>";
+             html += "</div>";
+         }});
+         list.innerHTML = html;
+@@ -1009,11 +1031,13 @@ window.LEELA_DATA = {json_data};
+             // Survived?
+             var hasSurvived = false;
+             var hasKilled = false;
++            var eCount = 0;
+             var mutCount = 0;
+             if (lineMutants[ln]) {{
+                 lineMutants[ln].forEach(function(m) {{
+-                    if (m.killed) hasKilled = true;
+-                    else hasSurvived = true;
++                    if (m.status === "killed") hasKilled = true;
++                    else if (m.status === "survived") hasSurvived = true;
++                    else eCount++;
+                     mutCount++;
+                 }});
+             }}
+@@ -1034,16 +1058,19 @@ window.LEELA_DATA = {json_data};
+             var mutHtml = "";
+             if (mutCount > 0) {{
+                 if (hasSurvived) {{
+-                    var sCount = lineMutants[ln].filter(function(m) {{ return !m.killed; }}).length;
++                    var sCount = lineMutants[ln].filter(function(m) {{ return m.status === "survived"; }}).length;
+                     mutHtml = '<span class="mut-survived">' + (sCount > 1 ? "\u2717" + sCount : "\u2717") + "</span>";
+                     if (hasKilled) {{
+                         var kCount = lineMutants[ln].filter(function(m) {{ return m.killed; }}).length;
+                         mutHtml += ' <span class="mut-killed">' + (kCount > 1 ? "\u2713" + kCount : "\u2713") + "</span>";
+                     }}
+-                }} else {{
+-                    var kc = mutCount;
++                }} else if (hasKilled) {{
++                    var kc = mutCount - eCount;
+                     mutHtml = '<span class="mut-killed">' + (kc > 1 ? "\u2713" + kc : "\u2713") + "</span>";
+                 }}
++                if (eCount > 0) {{
++                    mutHtml += (mutHtml ? " " : "") + '<span class="mut-error">' + (eCount > 1 ? "!" + eCount : "!") + "</span>";
++                }}
+             }}
+             html += '<td class="mut-cell">' + mutHtml + "</td>";
+             // Code
+@@ -1105,17 +1132,22 @@ window.LEELA_DATA = {json_data};
+         if (mutants.length > 0) {{
+             html += '<div class="detail-section"><h3>Mutants (' + mutants.length + ")</h3>";
+             mutants.forEach(function(m) {{
+-                var sclass = m.killed ? "" : " survived";
++                var sclass = m.status === "killed" ? "" : " " + m.status;
+                 html += '<div class="mutant-card' + sclass + '">';
+                 html += '<div class="mc-header">';
+-                if (m.killed) {{
++                if (m.status === "killed") {{
+                     html += '<span class="status-badge status-killed">Killed</span>';
++                }} else if (m.status === "error") {{
++                    html += '<span class="status-badge status-error">Error</span>';
+                 }} else {{
+                     html += '<span class="status-badge status-survived">Survived</span>';
+                 }}
+                 html += '<span class="mc-desc">' + esc(m.description) + "</span>";
+                 html += "</div>";
+                 html += '<div class="mc-meta">' + esc(m.node_type) + " col " + m.col_offset + " &middot; " + (m.time_seconds * 1000).toFixed(0) + "ms</div>";
++                if (m.error) {{
++                    html += '<div class="mc-error">' + esc(m.error) + "</div>";
++                }}
+                 if (m.killed && m.killing_tests && m.killing_tests.length > 0) {{
+                     html += '<div class="mc-tests"><div class="mc-label">Killing tests:</div>';
+                     m.killing_tests.forEach(function(t) {{
+diff --git a/src/pytest_leela/import_hook.py b/src/pytest_leela/import_hook.py
+index a557d8f..3d50e31 100644
+--- a/src/pytest_leela/import_hook.py
++++ b/src/pytest_leela/import_hook.py
+@@ -202,6 +202,55 @@ def apply_mutation(source: str, mutant: Mutant) -> tuple[str, bool]:
+     return tree, applier.applied
+ 
+ 
++def _exception_evidence(
++    exc: BaseException, seen: frozenset[int] = frozenset()
++) -> tuple[tuple[object, ...] | None, str]:
++    """Snapshot identity/message/visible causes, never traceback locations.
++
++    A cycle or unrenderable message leaves useful diagnostics but cannot
++    establish recurrence. No live exception/traceback is retained.
++    """
++    name = type(exc).__qualname__
++    identity = f"{type(exc).__module__}.{name}"
++    display = name if type(exc).__module__ == "builtins" else identity
++    if id(exc) in seen:
++        return None, f"{display}: <exception chain cycle>"
++    seen = seen | {id(exc)}
++    reliable = True
++    try:
++        message = str(exc)
++    except Exception as formatting_error:
++        message = f"<message unavailable: {type(formatting_error).__qualname__}>"
++        reliable = False
++    diagnostic = f"{display}: {message}"
++    cause = exc.__cause__
++    chain_kind = "caused by"
++    if cause is None and not exc.__suppress_context__:
++        cause = exc.__context__
++        chain_kind = "during handling"
++    cause_key: tuple[object, ...] | None = None
++    if cause is not None:
++        nested_key, cause_text = _exception_evidence(cause, seen)
++        reliable = reliable and nested_key is not None
++        # Kind and cause contribute together, only when a visible cause exists.
++        cause_key = (chain_kind, nested_key)
++        diagnostic += f"; {chain_kind}: {cause_text}"
++    children: list[tuple[object, ...] | None] = []
++    if isinstance(exc, BaseExceptionGroup):
++        for child in exc.exceptions:
++            child_key, child_text = _exception_evidence(child, seen)
++            children.append(child_key)
++            reliable = reliable and child_key is not None
++            diagnostic += f"; contained: {child_text}"
++    key = (
++        identity,
++        message,
++        cause_key,
++        tuple(children),
++    )
++    return key if reliable else None, diagnostic
++
++
+ class MutatingLoader(importlib.abc.Loader):
+     """Loader that applies a mutation to source before executing."""
+ 
+@@ -210,10 +259,16 @@ class MutatingLoader(importlib.abc.Loader):
+         source: str,
+         mutant: Mutant,
+         filename: str,
++        import_errors: list[str] | None = None,
+     ) -> None:
+         self.source = source
+         self.mutant = mutant
+         self.filename = filename
++        # Receives one entry per exception raised while executing the
++        # mutated source, so the runner can tell an import broken by the
++        # mutant from an unrelated collection error.
++        self.import_errors: list[str] = [] if import_errors is None else import_errors
++        self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
+ 
+     def create_module(self, spec: importlib.machinery.ModuleSpec) -> None:
+         return None
+@@ -235,7 +290,13 @@ class MutatingLoader(importlib.abc.Loader):
+         tree = applier.visit(tree)
+         ast.fix_missing_locations(tree)
+         code = compile(tree, self.filename, "exec")
+-        exec(code, module.__dict__)
++        try:
++            exec(code, module.__dict__)
++        except Exception as exc:
++            fingerprint, diagnostic = _exception_evidence(exc)
++            self._import_failures.append((module.__name__, fingerprint, diagnostic))
++            self.import_errors.append(f"{module.__name__}: {diagnostic}")
++            raise
+ 
+ 
+ class MutatingFinder(importlib.abc.MetaPathFinder):
+@@ -249,6 +310,10 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
+         # target_modules: {module_name: source_code}
+         self.target_modules = target_modules
+         self.mutant = mutant
++        # Exceptions raised while executing a mutated module (see
++        # MutatingLoader.import_errors).
++        self.import_errors: list[str] = []
++        self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
+         self._module_to_file: dict[str, str] = {}
+         for mod_name in target_modules:
+             self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
+@@ -268,7 +333,9 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
+                 self.target_modules[fullname],
+                 self.mutant,
+                 filename,
++                self.import_errors,
+             )
++            loader._import_failures = self._import_failures
+             return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
+         return None
+ 
+* Unmerged path src/pytest_leela/models.py
+diff --git a/src/pytest_leela/operators.py b/src/pytest_leela/operators.py
+index dd33e6d..a5b129f 100644
+--- a/src/pytest_leela/operators.py
++++ b/src/pytest_leela/operators.py
+@@ -324,7 +324,12 @@ def count_pruned(
+     use_types: bool = True,
+     allowed_keys: frozenset[tuple[str, str]] | None = None,
+ ) -> int:
+-    """Count how many mutations are pruned by type awareness."""
++    """Count the untyped mutations that type awareness removed.
++
++    A typed rule replaces the untyped list rather than narrowing it, and can
++    add operators (int ``+`` gains ``//``).  Additions are not pruning, so
++    only untyped mutations missing from the typed list are counted.
++    """
+     if not use_types:
+         return 0
+ 
+@@ -332,5 +337,5 @@ def count_pruned(
+     for point in points:
+         untyped = mutations_for(point, use_types=False, allowed_keys=allowed_keys)
+         typed = mutations_for(point, use_types=True, allowed_keys=allowed_keys)
+-        pruned += len(untyped) - len(typed)
++        pruned += len(set(untyped) - set(typed))
+     return pruned
+diff --git a/src/pytest_leela/output.py b/src/pytest_leela/output.py
+index 5919b47..4464b03 100644
+--- a/src/pytest_leela/output.py
++++ b/src/pytest_leela/output.py
+@@ -118,26 +118,46 @@ def format_terminal_report(result: RunResult) -> str:
+         basename = os.path.basename(file_path)
+         file_res = file_results[file_path]
+ 
+-        killed = sum(1 for r in file_res if r.killed)
+-        total = len(file_res)
+-        pct = _pct(killed, total)
+-
+-        lines.append(f"  {basename:<30s} {killed}/{total} killed ({pct:.1f}%)")
+-
+-        # Show survived mutants
+-        survived = [r for r in file_res if not r.killed]
+-        for r in survived:
++        killed = sum(1 for r in file_res if r.status == "killed")
++        errored = [r for r in file_res if r.status == "error"]
++        scored = len(file_res) - len(errored)
++        # A file whose every mutant errored has no score at all.
++        pct = f"{_pct(killed, scored):.1f}%" if scored else "n/a"
++
++        summary = f"  {basename:<30s} {killed}/{scored} killed ({pct})"
++        if errored:
++            summary += f", {len(errored)} errors"
++        lines.append(summary)
++
++        # Show survived and errored mutants
++        for r in file_res:
++            if r.status == "killed":
++                continue
+             m = r.mutant
+             desc = _op_display(m.point.original_op, m.replacement_op)
+-            lines.append(f"    line {m.point.lineno}: {desc:<45s} SURVIVED")
++            if r.status == "error":
++                lines.extend(
++                    [
++                        f"    line {m.point.lineno}: {desc:<45s} ERROR",
++                        f"      {r.error}",
++                    ]
++                )
++            else:
++                lines.append(f"    line {m.point.lineno}: {desc:<45s} SURVIVED")
+ 
+     lines.append("")
+ 
+     # Overall summary
+     lines.append(
+-        f"Overall: {result.killed}/{result.mutants_tested} killed "
++        f"Overall: {result.killed}/{result.mutants_scored} killed "
+         f"({result.mutation_score:.1f}%) in {result.wall_time_seconds:.1f}s"
+     )
++    if result.errors:
++        lines.append(
++            f"  {len(result.errors)} mutants errored outside the tests "
++            "(crash, usage error, no tests ran, or inconclusive "
++            "setup/collection failure) and are excluded from the score"
++        )
+     if result.mutants_pruned > 0:
+         lines.append(
+             f"  ({result.total_mutants} candidates, "
+@@ -157,6 +177,7 @@ def format_json_report(result: RunResult) -> str:
+         "mutants_pruned": result.mutants_pruned,
+         "killed": result.killed,
+         "survived": len(result.survived),
++        "errors": len(result.errors),
+         "mutation_score": round(result.mutation_score, 2),
+         "wall_time_seconds": round(result.wall_time_seconds, 2),
+         "survived_mutants": [
+@@ -171,5 +192,18 @@ def format_json_report(result: RunResult) -> str:
+             }
+             for r in result.survived
+         ],
++        "error_mutants": [
++            {
++                "file": r.mutant.point.file_path,
++                "line": r.mutant.point.lineno,
++                "original": r.mutant.point.original_op,
++                "replacement": r.mutant.replacement_op,
++                "description": _op_display(
++                    r.mutant.point.original_op, r.mutant.replacement_op
++                ),
++                "error": r.error,
++            }
++            for r in result.errors
++        ],
+     }
+     return json.dumps(data, indent=2)
+diff --git a/src/pytest_leela/plugin.py b/src/pytest_leela/plugin.py
+index 69831d2..9a2f57f 100644
+--- a/src/pytest_leela/plugin.py
++++ b/src/pytest_leela/plugin.py
+@@ -7,17 +7,21 @@
+ # hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+ # its ``compile()`` call must also remain unflagged.
+ 
++import contextlib
+ import fnmatch
+ import glob as _glob
+ import os
++import sys
++from collections.abc import Generator
+ from pathlib import Path
+ 
+ import pytest
+ 
+-from pytest_leela.config import ALL_OPERATORS, load_config
++from pytest_leela.config import load_config
+ from pytest_leela.coverage_tracker import CoveragePlugin
+-from pytest_leela.engine import Engine
++from pytest_leela.engine import BaselineFailure, Engine
+ from pytest_leela.git_diff import changed_files
++from pytest_leela.operators import ALL_OPERATORS
+ from pytest_leela.output import format_terminal_report
+ from pytest_leela.resources import ResourceLimits
+ 
+@@ -187,6 +191,31 @@ class LeelaPlugin:
+ 
+         return _apply_excludes(target_files, leela_config.exclude, rootpath)
+ 
++    @contextlib.contextmanager
++    def _outer_django_db_unblocked(self) -> Generator[None]:
++        """Lift the outer session's pytest-django DB block for leela's run.
++
++        pytest-django blocks DB access at configure time and only restores it
++        at unconfigure, so it is still blocked here.  Each inner session's
++        ``DjangoDbBlocker`` records whatever ``ensure_connection`` is on
++        first use as the "real" one (pytest_django/plugin.py,
++        ``_dj_db_wrapper``: "self._real_ensure_connection =
++        BaseDatabaseWrapper.ensure_connection"), so it would record the
++        outer block and its ``unblock()`` could never reach the database.
++        """
++        if "pytest_django.plugin" not in sys.modules:
++            # pytest-django is not installed or not loaded: nothing to lift.
++            yield
++            return
++        from pytest_django.plugin import blocking_manager_key
++
++        if blocking_manager_key not in self.config.stash:
++            # Loaded but disabled for this session (``-p no:django``).
++            yield
++            return
++        with self.config.stash[blocking_manager_key].unblock():
++            yield
++
+     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
+         if exitstatus != 0:
+             return
+@@ -223,22 +252,33 @@ class LeelaPlugin:
+             max_memory_percent=self.config.getoption("max_memory", default=None),
+         )
+ 
+-        engine = Engine(enabled_categories=enabled_categories)
+-        result = engine.run(
+-            target_files,
+-            test_node_ids=test_node_ids,
+-            limits=limits,
+-            diff_base=diff_base,
+-            pre_coverage_map=pre_coverage_map,
+-        )
+-
+-        report = format_terminal_report(result)
+-
+         tw = (
+             session.config.get_terminal_writer()
+             if hasattr(session.config, "get_terminal_writer")
+             else None
+         )
++
++        engine = Engine(enabled_categories=enabled_categories)
++        try:
++            with self._outer_django_db_unblocked():
++                result = engine.run(
++                    target_files,
++                    test_node_ids=test_node_ids,
++                    limits=limits,
++                    diff_base=diff_base,
++                    pre_coverage_map=pre_coverage_map,
++                )
++        except BaselineFailure as exc:
++            message = f"\nleela: aborted: {exc}\n"
++            if tw:
++                tw.write(message)
++            else:
++                print(message)
++            session.exitstatus = 1
++            return
++
++        report = format_terminal_report(result)
++
+         if tw:
+             tw.write(report)
+         else:
+@@ -250,5 +290,5 @@ class LeelaPlugin:
+ 
+             generate_html_report(result, html_path)
+ 
+-        if result.survived:
++        if result.survived or (result.errors and leela_config.fail_on_error):
+             session.exitstatus = 1
+* Unmerged path src/pytest_leela/runner.py
+diff --git a/tests/conftest.py b/tests/conftest.py
+index e69de29..27436b1 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -0,0 +1,24 @@
++"""Shared test hooks for pytest-leela's own suite."""
++
++import sys
++
++import pytest
++
++pytest_plugins = ["pytester"]
++
++
++@pytest.hookimpl(wrapper=True)
++def pytest_runtest_call(item):
++    """Put back any module a test evicted from ``sys.modules``.
++
++    Many tests exercise leela's real eviction code.  Under a self-mutation
++    that widens eviction (e.g. stdlib), the evicted ``warnings`` module
++    would crash pytest's own teardown before the test pinning that contract
++    gets to run and fail.
++    """
++    saved = dict(sys.modules)
++    try:
++        return (yield)
++    finally:
++        for name, module in saved.items():
++            sys.modules.setdefault(name, module)
+* Unmerged path tests/leela/describe_benchmark.py
+diff --git a/tests/leela/describe_config.py b/tests/leela/describe_config.py
+index 6453e89..af26b27 100644
+--- a/tests/leela/describe_config.py
++++ b/tests/leela/describe_config.py
+@@ -186,3 +186,42 @@ def describe_load_config():
+                 ValueError, match="'operators' elements must be strings"
+             ):
+                 load_config(tmp_path)
++
++
++def describe_fail_on_error():
++    def it_defaults_to_true():
++        assert LeelaConfig().fail_on_error is True
++
++    def it_defaults_to_true_when_unset_in_pyproject(tmp_path: Path):
++        (tmp_path / "pyproject.toml").write_text(
++            '[tool.pytest-leela]\nexclude = ["x"]\n'
++        )
++        assert load_config(tmp_path).fail_on_error is True
++
++    def it_reads_false_from_pyproject(tmp_path: Path):
++        (tmp_path / "pyproject.toml").write_text(
++            "[tool.pytest-leela]\nfail_on_error = false\n"
++        )
++        assert load_config(tmp_path).fail_on_error is False
++
++    def it_reads_true_from_pyproject(tmp_path: Path):
++        (tmp_path / "pyproject.toml").write_text(
++            "[tool.pytest-leela]\nfail_on_error = true\n"
++        )
++        assert load_config(tmp_path).fail_on_error is True
++
++    def it_raises_on_a_string_value(tmp_path: Path):
++        (tmp_path / "pyproject.toml").write_text(
++            '[tool.pytest-leela]\nfail_on_error = "false"\n'
++        )
++        with pytest.raises(
++            TypeError, match=r"'fail_on_error' must be true or false.*got str: 'false'"
++        ):
++            load_config(tmp_path)
++
++    def it_raises_on_an_integer_value(tmp_path: Path):
++        (tmp_path / "pyproject.toml").write_text(
++            "[tool.pytest-leela]\nfail_on_error = 0\n"
++        )
++        with pytest.raises(TypeError, match="got int: 0"):
++            load_config(tmp_path)
+diff --git a/tests/leela/describe_end_to_end.py b/tests/leela/describe_end_to_end.py
+new file mode 100644
+index 0000000..ce42ff4
+--- /dev/null
++++ b/tests/leela/describe_end_to_end.py
+@@ -0,0 +1,486 @@
++"""End-to-end: ``pytest --leela`` in a subprocess against throwaway projects."""
++
++import importlib
++import textwrap
++
++_DOUBLE = "def double(x):\n    return x * 2\n"
++_DOUBLE_TEST = (
++    "from calc import double\n\n\ndef test_double():\n    assert double(3) == 6\n"
++)
++
++
++def _leela(pytester, *extra):
++    return pytester.runpytest_subprocess(
++        "-p", "no:cacheprovider", "--leela", "--target", "calc.py", *extra
++    )
++
++
++def describe_import_breaking_mutant():
++    def it_counts_a_target_that_raises_on_import_as_killed(pytester):
++        """The judge's probe: every test errors at collection, the suite is red."""
++        pytester.makepyfile(
++            calc="RATIO = 10 // (1 + 1)\n\n\ndef ratio():\n    return RATIO\n",
++            test_calc=(
++                "from calc import ratio\n\n\ndef test_ratio():\n"
++                "    assert ratio() == 5\n"
++                "    assert isinstance(ratio(), int)\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        assert result.ret == 0
++        result.stdout.fnmatch_lines(["Overall: 5/5 killed (100.0%)*"])
++        assert "ERROR" not in result.stdout.str()
++
++    def it_keeps_a_caught_import_error_with_green_tests_survived(pytester):
++        """Regression: the test swallows the import failure and passes, so the
++        mutant that breaks the import went undetected."""
++        pytester.makepyfile(
++            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
++            test_calc=(
++                "try:\n"
++                "    import calc\n"
++                "except Exception:\n"
++                "    calc = None\n\n\n"
++                "def test_ratio_if_available():\n"
++                "    if calc is None:\n"
++                "        return\n"
++                "    assert calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        result.stdout.fnmatch_lines(["*line 1: + → - * SURVIVED"])
++        assert "ERROR" not in result.stdout.str()
++        assert result.ret == 1
++
++    def it_reports_a_module_level_skip_on_import_error_as_an_error(pytester):
++        """Regression: the test module skips itself when the import fails, so
++        pytest reports "1 skipped" and no test saw the mutant."""
++        pytester.makepyfile(
++            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
++            test_calc=(
++                "import pytest\n\n"
++                "try:\n"
++                "    import calc\n"
++                "except Exception:\n"
++                "    pytest.skip('calc unavailable', allow_module_level=True)\n\n\n"
++                "def test_ratio():\n"
++                "    assert calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        result.stdout.fnmatch_lines(
++            [
++                "*line 1: + → - * ERROR",
++                "*pytest exited with USAGE_ERROR",
++            ]
++        )
++        assert "KILLED" not in result.stdout.str()
++        assert result.ret == 1
++
++    def it_reports_a_skip_marker_on_import_error_as_an_error(pytester):
++        """Regression: every test skips at setup when the import fails, pytest
++        exits OK with zero tests run."""
++        pytester.makepyfile(
++            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
++            test_calc=(
++                "import pytest\n\n"
++                "try:\n"
++                "    import calc\n"
++                "except Exception:\n"
++                "    calc = None\n\n\n"
++                "@pytest.mark.skipif(calc is None, reason='calc unavailable')\n"
++                "def test_ratio():\n"
++                "    assert calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        result.stdout.fnmatch_lines(["*line 1: + → - * ERROR", "*no tests ran"])
++        assert "KILLED" not in result.stdout.str()
++        assert result.ret == 1
++
++
++def describe_collection_failures():
++    def it_kills_when_a_module_level_assert_fails_under_the_mutant(pytester):
++        """The judge's modassert probe: the test module fails to collect under
++        the mutant, after a green baseline, so the suite detected it."""
++        pytester.makepyfile(
++            calc=(
++                "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n\n\n"
++                "def ratio():\n    return RATIO\n"
++            ),
++            test_calc=(
++                "import calc\n\n"
++                "assert calc.RATIO == 5\n\n\n"
++                "def test_ratio():\n"
++                "    assert calc.ratio() == 5\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        result.stdout.fnmatch_lines(
++            ["*line 2: // → / * SURVIVED", "Overall: 4/5 killed (80.0%)*"]
++        )
++        assert "ERROR" not in result.stdout.str()
++        assert result.ret == 1
++
++    def it_reports_a_conftest_that_skips_itself_as_an_error(pytester):
++        """The judge's confskip probe: the conftest's module-level skip used
++        to escape pytest.main and crash the whole run."""
++        pytester.makepyfile(
++            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
++            conftest=(
++                "import pytest\n\n"
++                "try:\n"
++                "    import calc  # noqa: F401\n"
++                "except Exception:\n"
++                "    pytest.skip('calc unavailable', allow_module_level=True)\n"
++            ),
++            test_calc=(
++                "import calc\n\n\n"
++                "def test_ratio():\n"
++                "    assert calc.RATIO in (5, 10, 0, 20, 5.0)\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        result.stdout.fnmatch_lines(
++            [
++                "*line 1: + → - * ERROR",
++                "*pytest crashed: Skipped: calc unavailable",
++            ]
++        )
++        assert "Traceback" not in result.stdout.str() + result.stderr.str()
++        assert result.ret == 1
++
++    def it_reports_a_conftest_that_exits_on_a_failed_import_as_an_error(pytester):
++        """The judge's confexit probe, while a conftest the target itself
++        breaks stays a kill."""
++        pytester.makepyfile(
++            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
++            conftest=(
++                "import pytest\n\n"
++                "try:\n"
++                "    import calc  # noqa: F401\n"
++                "except Exception:\n"
++                "    pytest.exit('calc unavailable')\n"
++            ),
++            test_calc=(
++                "import calc\n\n\n"
++                "def test_ratio():\n"
++                "    assert calc.RATIO in (5, 10, 0, 20, 5.0)\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        result.stdout.fnmatch_lines(
++            [
++                "*line 1: + → - * ERROR",
++                "*conftest called pytest.exit() at import (calc unavailable)",
++            ]
++        )
++        assert "KILLED" not in result.stdout.str()
++        assert result.ret == 1
++
++    def it_reports_a_test_module_that_exits_on_a_failed_import_as_an_error(
++        pytester,
++    ):
++        """The judge's modexit probe."""
++        pytester.makepyfile(
++            calc="DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n",
++            test_calc=(
++                "import pytest\n\n"
++                "try:\n"
++                "    import calc\n"
++                "except Exception:\n"
++                "    pytest.exit('calc unavailable')\n\n\n"
++                "def test_ratio():\n"
++                "    assert calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        result.stdout.fnmatch_lines(
++            [
++                "*line 1: + → - * ERROR",
++                "*test module test_calc.py called pytest.exit() at import (calc unavailable)",
++            ]
++        )
++        assert "KILLED" not in result.stdout.str()
++        assert result.ret == 1
++
++
++def describe_error_mutants():
++    def _project(pytester, fail_on_error=None):
++        # Every mutant of LIMIT makes the test module skip itself, so no
++        # test runs against it: an error, neither a kill nor a survival.
++        pytester.makepyfile(
++            calc="LIMIT = 1 + 1\n\n\n" + _DOUBLE,
++            test_calc=(
++                "import pytest\n\n"
++                "import calc\n\n"
++                "if calc.LIMIT != 2:\n"
++                "    pytest.skip('limit changed', allow_module_level=True)\n\n\n"
++                "def test_double():\n"
++                "    assert calc.double(3) == 6\n"
++            ),
++        )
++        if fail_on_error is not None:
++            pytester.makefile(
++                ".toml",
++                pyproject=f"[tool.pytest-leela]\nfail_on_error = {fail_on_error}\n",
++            )
++
++    def it_shows_the_error_and_fails_the_session(pytester):
++        _project(pytester)
++
++        result = _leela(pytester)
++
++        assert result.ret == 1
++        result.stdout.fnmatch_lines(
++            [
++                "*line 1: + * ERROR",
++                "*pytest exited with USAGE_ERROR",
++                "*mutants errored outside the tests*",
++            ]
++        )
++        assert "SURVIVED" not in result.stdout.str()
++
++    def it_passes_when_fail_on_error_is_false(pytester):
++        _project(pytester, fail_on_error="false")
++
++        result = _leela(pytester)
++
++        assert result.ret == 0
++        result.stdout.fnmatch_lines(["*ERROR"])
++
++
++def describe_baseline_abort():
++    def it_aborts_when_a_test_only_passes_once_per_process(pytester):
++        pytester.makepyfile(
++            calc=_DOUBLE,
++            test_calc=(
++                "import builtins\n\nfrom calc import double\n\n\n"
++                "def test_double_once():\n"
++                "    assert not getattr(builtins, '_leela_e2e_seen', False)\n"
++                "    builtins._leela_e2e_seen = True\n"
++                "    assert double(3) == 6\n"
++            ),
++        )
++
++        result = _leela(pytester)
++
++        assert result.ret == 1
++        result.stdout.fnmatch_lines(
++            [
++                (
++                    "leela: aborted: tests do not pass with no mutation applied "
++                    "(failed: test_calc.py::test_double_once)*"
++                )
++            ]
++        )
++        assert "Overall:" not in result.stdout.str()
++
++
++def describe_clean_project():
++    def it_kills_every_mutant_and_passes(pytester):
++        pytester.makepyfile(calc=_DOUBLE, test_calc=_DOUBLE_TEST)
++
++        result = _leela(pytester)
++
++        assert result.ret == 0
++        result.stdout.fnmatch_lines(["Overall: *killed (100.0%)*"])
++
++
++_LOGGED = (
++    "from pathlib import Path\n\n"
++    "with Path('imports.log').open('a') as log:\n"
++    "    log.write(__name__ + '\\n')\n\n"
++)
++
++
++def _django_project(pytester, test_body):
++    """A small Django project on sqlite.
++
++    Every project module appends its name to imports.log when executed, so
++    a test can count re-executions across leela's inner sessions.
++    ``shop.backoffice`` registers a project-defined ModelAdmin and is
++    imported only from ``ShopConfig.ready()``: nothing references it, so
++    only leela's walk of the admin registry can keep it loaded.
++    ``shop.admin`` registers nothing and ``stock`` has no admin, so only the
++    ``<app>.admin`` and models-module roots keep those modules loaded.
++    """
++    # Hard import: a missing pytest-django must fail, never skip.
++    importlib.import_module("pytest_django")
++    pytester.makeini(
++        textwrap.dedent(
++            """
++            [pytest]
++            DJANGO_SETTINGS_MODULE = settings
++            pythonpath = .
++            """
++        )
++    )
++    pytester.makepyfile(
++        settings=textwrap.dedent(
++            """
++            SECRET_KEY = "leela-e2e"
++            INSTALLED_APPS = [
++                "django.contrib.contenttypes",
++                "django.contrib.auth",
++                "django.contrib.messages",
++                "django.contrib.sessions",
++                "django.contrib.admin",
++                "shop.apps.ShopConfig",
++                "stock",
++            ]
++            DATABASES = {
++                "default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}
++            }
++            DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
++            USE_TZ = True
++            """
++        )
++    )
++    shop = pytester.mkpydir("shop")
++    (shop / "apps.py").write_text(
++        "import importlib\n\n"
++        "from django.apps import AppConfig\n\n\n"
++        "class ShopConfig(AppConfig):\n"
++        "    name = 'shop'\n\n"
++        "    def ready(self):\n"
++        "        importlib.import_module('shop.backoffice')\n"
++    )
++    (shop / "mixins.py").write_text(
++        _LOGGED + "class PricedMixin:\n    currency = 'USD'\n"
++    )
++    (shop / "models.py").write_text(
++        _LOGGED + "from django.db import models\n\n"
++        "from shop.mixins import PricedMixin\n\n\n"
++        "class Item(PricedMixin, models.Model):\n"
++        "    name = models.CharField(max_length=20)\n"
++    )
++    (shop / "backoffice.py").write_text(
++        _LOGGED + "from django.contrib import admin\n\n"
++        "from shop.models import Item\n\n\n"
++        "@admin.register(Item)\n"
++        "class ItemAdmin(admin.ModelAdmin):\n"
++        "    list_display = ('name',)\n"
++    )
++    (shop / "admin.py").write_text(
++        _LOGGED + "from django.contrib import admin\n\n"
++        "admin.site.site_header = 'Shop admin'\n"
++    )
++    stock = pytester.mkpydir("stock")
++    (stock / "models.py").write_text(
++        _LOGGED + "from django.db import models\n\n\n"
++        "class Bin(models.Model):\n"
++        "    label = models.CharField(max_length=20)\n"
++    )
++    (shop / "pricing.py").write_text("def total(a, b):\n    return a + b\n")
++    tests = pytester.mkdir("tests")
++    (tests / "test_shop.py").write_text(
++        "import pytest\n\nfrom shop.pricing import total\n\n\n" + test_body
++    )
++    return pytester
++
++
++def _leela_django(project):
++    return project.runpytest_subprocess(
++        "-p", "no:cacheprovider", "--leela", "--target", "shop/pricing.py"
++    )
++
++
++def describe_django_project():
++    def it_runs_database_tests_inside_the_inner_session(pytester):
++        """total(0, 0) cannot tell + from -, so Add -> Sub must survive.
++
++        0.8.0 reported it killed: the DB test errored in setup inside every
++        inner run.
++        """
++        project = _django_project(
++            pytester,
++            "from shop.models import Item\n\n\n"
++            "@pytest.mark.django_db\n"
++            "def test_item_round_trips_through_the_database():\n"
++            "    Item.objects.create(name='pen')\n"
++            "    assert Item.objects.count() == 1\n"
++            "    assert total(0, 0) == 0\n",
++        )
++
++        result = _leela_django(project)
++
++        assert "leela: aborted" not in result.stdout.str()
++        result.stdout.fnmatch_lines(["*line 2: + * SURVIVED"])
++        assert result.ret == 1
++
++    def it_lifts_the_outer_db_block_inside_inner_sessions(pytester):
++        """Root cause 3 without touching a database.
++
++        Inside an inner session, unblock() must restore the real
++        ensure_connection, not the outer session's blocking wrapper.
++        """
++        project = _django_project(
++            pytester,
++            "def test_unblock_reaches_the_real_connection(django_db_blocker):\n"
++            "    from django.db import connection\n\n"
++            "    with django_db_blocker.unblock():\n"
++            "        name = connection.ensure_connection.__qualname__\n"
++            "    assert name != 'DjangoDbBlocker._blocking_wrapper'\n"
++            "    assert total(0, 0) == 0\n",
++        )
++
++        result = _leela_django(project)
++
++        assert "leela: aborted" not in result.stdout.str()
++        result.stdout.fnmatch_lines(["*line 2: + * SURVIVED"])
++
++    def it_never_re_executes_models_admin_or_what_they_reference(pytester):
++        """Each pinning mechanism keeps one module loaded: shop.models and
++        stock.models as model modules, shop.admin as an ``<app>.admin``,
++        shop.backoffice through the admin registry walk, shop.mixins through
++        the reference closure.  Each must execute exactly once across the
++        outer and inner sessions.
++        """
++        project = _django_project(
++            pytester,
++            "import sys\n\n"
++            "from django.apps import apps\n"
++            "from django.contrib import admin\n\n"
++            "import shop.admin\n"
++            "from shop.backoffice import ItemAdmin\n"
++            "from shop.mixins import PricedMixin\n"
++            "from shop.models import Item\n"
++            "from stock.models import Bin\n\n\n"
++            "def test_registry_and_identity_hold():\n"
++            "    assert admin.site.site_header == 'Shop admin'\n"
++            "    assert apps.get_model('stock', 'Bin') is Bin\n"
++            "    assert issubclass(Item, PricedMixin)\n"
++            "    assert type(admin.site._registry[Item]) is ItemAdmin\n"
++            "    assert sys.modules['shop.mixins'].PricedMixin is PricedMixin\n"
++            "    assert total(2, 3) == 5\n",
++        )
++
++        result = _leela_django(project)
++
++        executions = (project.path / "imports.log").read_text().split()
++        assert sorted(executions) == [
++            "shop.admin",
++            "shop.backoffice",
++            "shop.mixins",
++            "shop.models",
++            "stock.models",
++        ]
++        result.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
++        assert result.ret == 0
+* Unmerged path tests/leela/describe_engine.py
+diff --git a/tests/leela/describe_html_report.py b/tests/leela/describe_html_report.py
+index f554bc8..0b034b7 100644
+--- a/tests/leela/describe_html_report.py
++++ b/tests/leela/describe_html_report.py
+@@ -5,6 +5,8 @@ from __future__ import annotations
+ import json
+ import os
+ 
++import pytest
++
+ from pytest_leela.html_report import (
+     _build_html_viewer,
+     _build_report_data,
+@@ -881,3 +883,75 @@ def describe_generate_html_report():
+ 
+         data_js = tmp_path / "report.data.js"
+         assert not data_js.exists()
++
++
++def _make_error_mutant_result(mutant_id: int = 9, **point_overrides) -> MutantResult:
++    point = _make_point(**point_overrides)
++    return MutantResult(
++        mutant=Mutant(point=point, replacement_op="Sub", mutant_id=mutant_id),
++        killed=False,
++        tests_run=0,
++        killing_test=None,
++        time_seconds=0.05,
++        error="no tests ran",
++    )
++
++
++def describe_report_data_with_errors():
++    def _data():
++        return _build_report_data(
++            _make_run_result(
++                results=[
++                    _make_mutant_result(True, 1),
++                    _make_mutant_result(False, 2),
++                    _make_error_mutant_result(3),
++                ]
++            )
++        )
++
++    def it_records_each_mutants_status_and_error():
++        mutants = _data()["files"]["app.py"]["mutants"]
++        assert [m["status"] for m in mutants] == ["killed", "survived", "error"]
++        assert [m["error"] for m in mutants] == [None, None, "no tests ran"]
++
++    def it_counts_errors_in_file_stats_and_scores_without_them():
++        stats = _data()["files"]["app.py"]["stats"]
++        assert stats == {
++            "total": 3,
++            "killed": 1,
++            "survived": 1,
++            "errors": 1,
++            "score": 50.0,
++        }
++
++    def it_scores_zero_for_a_file_whose_every_mutant_errored():
++        data = _build_report_data(
++            _make_run_result(results=[_make_error_mutant_result(1)])
++        )
++        assert data["files"]["app.py"]["stats"]["score"] == pytest.approx(0.0)
++
++    def it_leaves_errored_mutants_out_of_the_survivor_index():
++        index = _data()["survived_index"]
++        assert [s["mutant_idx"] for s in index] == [1]
++
++    def it_counts_errors_in_the_summary():
++        summary = _data()["summary"]
++        assert summary["errors"] == 1
++        assert summary["survived"] == 1
++        assert summary["mutation_score"] == pytest.approx(50.0)
++
++
++def describe_html_viewer_error_rendering():
++    def it_renders_an_error_badge_and_reason():
++        html = _build_html_viewer("{}")
++        assert 'status-badge status-error">Error</span>' in html
++        assert '<div class="mc-error">' in html
++
++    def it_renders_the_header_error_count():
++        html = _build_html_viewer("{}")
++        assert 'id="error-count"' in html
++        assert '" errors (not scored)"' in html
++
++    def it_treats_only_survived_status_as_a_survivor_line():
++        html = _build_html_viewer("{}")
++        assert 'else if (m.status === "survived") hasSurvived = true;' in html
+diff --git a/tests/leela/describe_import_hook.py b/tests/leela/describe_import_hook.py
+index 6070164..31ad6aa 100644
+--- a/tests/leela/describe_import_hook.py
++++ b/tests/leela/describe_import_hook.py
+@@ -1331,3 +1331,41 @@ def describe_clear_target_modules():
+         finally:
+             sys.modules.pop("fake_target", None)
+             sys.modules.pop("fake_target.sub", None)
++
++
++def describe_import_error_recording():
++    """MutatingLoader reports exceptions raised by the mutated source."""
++
++    def _exec(source, import_errors=None):
++        from pytest_leela.import_hook import MutatingLoader
++
++        loader = MutatingLoader(source, _make_mutant(), "rec.py", import_errors)
++        module = types.ModuleType("rec_mod")
++        loader.exec_module(module)
++        return loader
++
++    def it_records_and_reraises_an_exception_from_the_module_body():
++        sink: list[str] = []
++        try:
++            _exec("raise ValueError('boom')\n", sink)
++        except ValueError:
++            pass
++        else:
++            raise AssertionError("exec_module swallowed the exception")
++        assert sink == ["rec_mod: ValueError: boom"]
++
++    def it_records_nothing_for_a_module_that_imports_cleanly():
++        sink: list[str] = []
++        _exec("x = 1\n", sink)
++        assert sink == []
++
++    def it_owns_a_fresh_list_when_none_is_given():
++        loader = _exec("x = 1\n")
++        assert loader.import_errors == []
++
++    def it_shares_the_finders_list_with_every_loader_it_creates():
++        from pytest_leela.import_hook import MutatingFinder
++
++        finder = MutatingFinder({"rec_target": "x = 1\n"}, _make_mutant())
++        spec = finder.find_spec("rec_target")
++        assert spec.loader.import_errors is finder.import_errors
+diff --git a/tests/leela/describe_models.py b/tests/leela/describe_models.py
+index fd90635..d62a624 100644
+--- a/tests/leela/describe_models.py
++++ b/tests/leela/describe_models.py
+@@ -1,5 +1,7 @@
+ """Tests for pytest_leela.models — data models for mutation testing."""
+ 
++import pytest
++
+ from pytest_leela.models import (
+     CoverageMap,
+     EnrichmentStats,
+@@ -272,3 +274,82 @@ def describe_enrichment_stats():
+         c = a + b
+         assert c.from_annotations == 0
+         assert c.from_assignment_dataflow == 0
++
++
++def _make_error_result(mutant_id: int = 9) -> MutantResult:
++    mutant = Mutant(point=_make_point(), replacement_op="Sub", mutant_id=mutant_id)
++    return MutantResult(
++        mutant=mutant,
++        killed=False,
++        tests_run=0,
++        killing_test=None,
++        time_seconds=0.1,
++        error="pytest exited with INTERRUPTED",
++    )
++
++
++def _run_of(results: list[MutantResult]) -> RunResult:
++    return RunResult(
++        target_files=["test.py"],
++        total_mutants=len(results),
++        mutants_tested=len(results),
++        mutants_pruned=0,
++        results=results,
++        wall_time_seconds=1.0,
++    )
++
++
++def describe_mutant_result_status():
++    def it_is_killed_when_killed():
++        assert _make_result(True).status == "killed"
++
++    def it_is_survived_when_not_killed_and_no_error():
++        assert _make_result(False).status == "survived"
++
++    def it_is_error_when_an_error_is_recorded():
++        assert _make_error_result().status == "error"
++
++    def it_defaults_error_to_none():
++        assert _make_result(False).error is None
++
++
++def describe_run_result_errors():
++    def it_lists_errored_mutants_separately_from_survivors():
++        errored = _make_error_result(3)
++        survivor = _make_result(False, 2)
++        run = _run_of([_make_result(True, 1), survivor, errored])
++        assert run.errors == [errored]
++        assert run.survived == [survivor]
++
++    def it_counts_only_killed_and_survived_as_scored():
++        run = _run_of(
++            [_make_result(True, 1), _make_result(False, 2), _make_error_result()]
++        )
++        assert run.mutants_scored == 2
++
++    def it_excludes_errors_from_the_mutation_score():
++        run = _run_of(
++            [_make_result(True, 1), _make_result(False, 2), _make_error_result()]
++        )
++        assert run.mutation_score == pytest.approx(50.0)
++
++    def it_scores_zero_when_every_mutant_errored():
++        run = _run_of([_make_error_result(1), _make_error_result(2)])
++        assert run.mutation_score == pytest.approx(0.0)
++
++
++def describe_mutant_result_invariant():
++    def it_rejects_a_killed_result_that_also_carries_an_error():
++        mutant = Mutant(point=_make_point(), replacement_op="Sub", mutant_id=1)
++        with pytest.raises(ValueError, match="cannot also carry an error: 'x'"):
++            MutantResult(
++                mutant=mutant,
++                killed=True,
++                tests_run=1,
++                killing_test="t",
++                time_seconds=0.1,
++                error="x",
++            )
++
++    def it_accepts_an_errored_result_that_was_not_killed():
++        assert _make_error_result().error == "pytest exited with INTERRUPTED"
+diff --git a/tests/leela/describe_operators.py b/tests/leela/describe_operators.py
+index 0f49bb1..f52c9d5 100644
+--- a/tests/leela/describe_operators.py
++++ b/tests/leela/describe_operators.py
+@@ -374,14 +374,18 @@ def describe_count_pruned():
+         pruned = count_pruned([point], use_types=False)
+         assert pruned == 0
+ 
+-    def it_counts_zero_for_non_pruned():
+-        # int Add: typed has 3 mutations, untyped has 2 -> pruned = 2 - 3 = -1? No.
+-        # Actually untyped Add = ["Sub", "Mult"] (2), typed int Add = ["Sub", "Mult", "FloorDiv"] (3)
+-        # pruned = 2 - 3 = -1, but that's expansion not pruning
++    def it_does_not_count_typed_additions_as_negative_pruning():
++        """Regression: int Add gains FloorDiv under typing; the summary used to
++        print "-1 pruned by type analysis"."""
+         point = _make_point(node_type="BinOp", original_op="Add", inferred_type="int")
+-        pruned = count_pruned([point], use_types=True)
+-        # This can be negative (expansion), which is expected behavior
+-        assert pruned == -1
++        assert count_pruned([point], use_types=True) == 0
++
++    def it_counts_an_untyped_mutation_the_typed_rule_replaces():
++        # int FloorDiv: untyped [Div, Mult], typed [Mult, Add] -> Div is pruned
++        point = _make_point(
++            node_type="BinOp", original_op="FloorDiv", inferred_type="int"
++        )
++        assert count_pruned([point], use_types=True) == 1
+ 
+     def it_handles_empty_list():
+         pruned = count_pruned([], use_types=True)
+diff --git a/tests/leela/describe_output.py b/tests/leela/describe_output.py
+index a27c476..dd115a8 100644
+--- a/tests/leela/describe_output.py
++++ b/tests/leela/describe_output.py
+@@ -427,3 +427,105 @@ def describe_format_json_report():
+         run = _make_run_result()
+         data = json.loads(format_json_report(run))
+         assert data["target_files"] == run.target_files
++
++
++def _make_error_result(
++    file_path: str = "src/app.py", lineno: int = 12, mutant_id: int = 7
++) -> MutantResult:
++    point = _make_point(file_path=file_path, lineno=lineno)
++    return MutantResult(
++        mutant=Mutant(point=point, replacement_op="Sub", mutant_id=mutant_id),
++        killed=False,
++        tests_run=0,
++        killing_test=None,
++        time_seconds=0.1,
++        error="pytest exited with INTERRUPTED (t.py: ImportError: x)",
++    )
++
++
++def describe_terminal_report_with_errors():
++    def it_marks_errored_mutants_as_error_not_survived():
++        report = format_terminal_report(
++            _make_run_result([_make_result(killed=True), _make_error_result()])
++        )
++        assert "line 12: + \u2192 -" in report
++        assert "ERROR" in report
++        assert "SURVIVED" not in report
++
++    def it_prints_the_error_reason_under_the_mutant():
++        report = format_terminal_report(_make_run_result([_make_error_result()]))
++        assert "      pytest exited with INTERRUPTED (t.py: ImportError: x)" in report
++
++    def it_excludes_errors_from_the_per_file_score_and_counts_them():
++        report = format_terminal_report(
++            _make_run_result(
++                [
++                    _make_result(killed=True, mutant_id=1),
++                    _make_result(killed=False, mutant_id=2),
++                    _make_error_result(),
++                ]
++            )
++        )
++        assert "1/2 killed (50.0%), 1 errors" in report
++
++    def it_omits_the_error_count_for_a_file_without_errors():
++        report = format_terminal_report(_make_run_result([_make_result(killed=True)]))
++        assert "1/1 killed (100.0%)\n" in report
++        assert "errors" not in report
++
++    def it_shows_na_for_a_file_whose_every_mutant_errored():
++        report = format_terminal_report(_make_run_result([_make_error_result()]))
++        assert "0/0 killed (n/a), 1 errors" in report
++
++    def it_excludes_errors_from_the_overall_score():
++        report = format_terminal_report(
++            _make_run_result([_make_result(killed=True), _make_error_result()])
++        )
++        assert "Overall: 1/1 killed (100.0%)" in report
++
++    def it_explains_errored_mutants_in_the_overall_summary():
++        report = format_terminal_report(
++            _make_run_result([_make_result(killed=True), _make_error_result()])
++        )
++        assert (
++            "  1 mutants errored outside the tests (crash, usage error, "
++            "no tests ran, or inconclusive setup/collection failure) "
++            "and are excluded from the score"
++        ) in report
++
++    def it_omits_the_error_summary_when_nothing_errored():
++        report = format_terminal_report(_make_run_result([_make_result(killed=True)]))
++        assert "errored outside the tests" not in report
++
++
++def describe_json_report_with_errors():
++    def it_counts_errors_separately():
++        data = json.loads(
++            format_json_report(
++                _make_run_result(
++                    [
++                        _make_result(killed=True, mutant_id=1),
++                        _make_result(killed=False, mutant_id=2),
++                        _make_error_result(),
++                    ]
++                )
++            )
++        )
++        assert data["killed"] == 1
++        assert data["survived"] == 1
++        assert data["errors"] == 1
++        assert data["mutation_score"] == pytest.approx(50.0)
++        assert len(data["survived_mutants"]) == 1
++
++    def it_lists_errored_mutants_with_their_reason():
++        data = json.loads(format_json_report(_make_run_result([_make_error_result()])))
++        assert data["error_mutants"] == [
++            {
++                "file": "src/app.py",
++                "line": 12,
++                "original": "Add",
++                "replacement": "Sub",
++                "description": "+ \u2192 -",
++                "error": "pytest exited with INTERRUPTED (t.py: ImportError: x)",
++            }
++        ]
+diff --git a/tests/leela/describe_plugin.py b/tests/leela/describe_plugin.py
+index 1fc1208..5b44093 100644
+--- a/tests/leela/describe_plugin.py
++++ b/tests/leela/describe_plugin.py
+@@ -1152,3 +1152,208 @@ def describe_apply_excludes():
+         files = ["/root/migrations/0001.py"]
+         result = _apply_excludes(files, ["migrations/*.py"], Path("/root"))
+         assert result == []
++
++
++def describe_exit_status_with_errored_mutants():
++    """Errored mutants fail the session unless ``fail_on_error = false``."""
++
++    def _finish(results, leela_config):
++        from pytest_leela.models import RunResult
++        from pytest_leela.plugin import LeelaPlugin
++
++        config = MagicMock()
++        config.getoption.side_effect = lambda key, default=None: {
++            "target": ["/fake/mod.py"],
++            "diff": None,
++            "max_cores": None,
++            "max_memory": None,
++        }.get(key, default)
++        plugin = LeelaPlugin(config)
++        session = MagicMock()
++        session.config = config
++        session.config.rootpath = Path("/tmp/project")
++        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
++        session.exitstatus = 0
++
++        mock_engine_cls = MagicMock()
++        mock_engine_cls.return_value.run.return_value = RunResult(
++            target_files=["/fake/mod.py"],
++            total_mutants=len(results),
++            mutants_tested=len(results),
++            mutants_pruned=0,
++            results=results,
++            wall_time_seconds=0.5,
++        )
++        with (
++            patch("pytest_leela.plugin.load_config", return_value=leela_config),
++            patch(
++                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
++            ),
++            patch("pytest_leela.plugin.Engine", mock_engine_cls),
++            patch("pytest_leela.plugin.format_terminal_report", return_value=""),
++        ):
++            plugin.pytest_sessionfinish(session, exitstatus=0)
++        return session.exitstatus
++
++    def _result(killed, error=None):
++        from pytest_leela.models import Mutant, MutantResult, MutationPoint
++
++        point = MutationPoint(
++            file_path="/fake/mod.py",
++            module_name="mod",
++            lineno=10,
++            col_offset=0,
++            node_type="BinOp",
++            original_op="Add",
++            inferred_type="int",
++        )
++        return MutantResult(
++            mutant=Mutant(point=point, replacement_op="Sub", mutant_id=1),
++            killed=killed,
++            tests_run=0 if error else 1,
++            killing_test="t::a" if killed else None,
++            time_seconds=0.1,
++            error=error,
++        )
++
++    def it_fails_the_session_on_an_errored_mutant_by_default():
++        from pytest_leela.config import LeelaConfig
++
++        status = _finish([_result(True), _result(False, "no tests ran")], LeelaConfig())
++        assert status == 1
++
++    def it_passes_with_errors_when_fail_on_error_is_false():
++        from pytest_leela.config import LeelaConfig
++
++        status = _finish(
++            [_result(True), _result(False, "no tests ran")],
++            LeelaConfig(fail_on_error=False),
++        )
++        assert status == 0
++
++    def it_still_fails_on_survivors_when_fail_on_error_is_false():
++        from pytest_leela.config import LeelaConfig
++
++        status = _finish([_result(False)], LeelaConfig(fail_on_error=False))
++        assert status == 1
++
++
++def describe_outer_django_db_unblocked():
++    """pytest-django's outer DB block must be lifted for leela's inner runs."""
++
++    def _plugin(stash):
++        from pytest_leela.plugin import LeelaPlugin
++
++        config = MagicMock()
++        config.stash = stash
++        return LeelaPlugin(config)
++
++    def it_is_a_no_op_without_pytest_django(monkeypatch):
++        import sys
++
++        monkeypatch.delitem(sys.modules, "pytest_django.plugin", raising=False)
++        with _plugin(MagicMock())._outer_django_db_unblocked():
++            entered = True
++        assert entered
++
++    def it_is_a_no_op_when_pytest_django_is_disabled(monkeypatch):
++        import sys
++        import types
++
++        import pytest
++
++        fake = types.ModuleType("pytest_django.plugin")
++        fake.blocking_manager_key = pytest.StashKey()
++        monkeypatch.setitem(sys.modules, "pytest_django.plugin", fake)
++        with _plugin(pytest.Stash())._outer_django_db_unblocked():
++            entered = True
++        assert entered
++
++    def it_unblocks_the_outer_blocker_for_the_duration(monkeypatch):
++        import contextlib
++        import sys
++        import types
++
++        import pytest
++
++        events: list[str] = []
++
++        class FakeBlocker:
++            @contextlib.contextmanager
++            def unblock(self):
++                events.append("unblock")
++                try:
++                    yield
++                finally:
++                    events.append("restore")
++
++        fake = types.ModuleType("pytest_django.plugin")
++        fake.blocking_manager_key = pytest.StashKey()
++        monkeypatch.setitem(sys.modules, "pytest_django.plugin", fake)
++        stash = pytest.Stash()
++        stash[fake.blocking_manager_key] = FakeBlocker()
++
++        with _plugin(stash)._outer_django_db_unblocked():
++            events.append("inside")
++
++        assert events == ["unblock", "inside", "restore"]
++
++
++def describe_baseline_failure_handling():
++    def _session(config):
++        session = MagicMock()
++        session.config = config
++        session.config.rootpath = Path("/tmp/project")
++        session.items = [MagicMock(nodeid="tests/test_a.py::test_one")]
++        session.exitstatus = 0
++        return session
++
++    def _config():
++        config = MagicMock()
++        config.getoption.side_effect = lambda key, default=None: {
++            "target": ["/fake/mod.py"],
++            "diff": None,
++            "max_cores": None,
++            "max_memory": None,
++        }.get(key, default)
++        return config
++
++    def _finish(config, session):
++        from pytest_leela.config import LeelaConfig
++        from pytest_leela.engine import BaselineFailure
++        from pytest_leela.plugin import LeelaPlugin
++
++        mock_engine_cls = MagicMock()
++        mock_engine_cls.return_value.run.side_effect = BaselineFailure("boom")
++        with (
++            patch("pytest_leela.plugin.load_config", return_value=LeelaConfig()),
++            patch(
++                "pytest_leela.plugin._find_target_files", return_value=["/fake/mod.py"]
++            ),
++            patch("pytest_leela.plugin.Engine", mock_engine_cls),
++            patch("pytest_leela.plugin.format_terminal_report") as mock_report,
++        ):
++            LeelaPlugin(config).pytest_sessionfinish(session, exitstatus=0)
++        return mock_report
++
++    def it_writes_the_reason_and_fails_the_session():
++        config = _config()
++        session = _session(config)
++
++        mock_report = _finish(config, session)
++
++        config.get_terminal_writer.return_value.write.assert_called_once_with(
++            "\nleela: aborted: boom\n"
++        )
++        assert session.exitstatus == 1
++        mock_report.assert_not_called()
++
++    def it_prints_the_reason_without_a_terminal_writer(capsys):
++        config = _config()
++        del config.get_terminal_writer
++        session = _session(config)
++
++        _finish(config, session)
++
++        assert "\nleela: aborted: boom\n" in capsys.readouterr().out
++        assert session.exitstatus == 1
+* Unmerged path tests/leela/describe_runner.py
+* Unmerged path uv.lock

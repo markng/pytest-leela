@@ -1,6 +1,13 @@
 """Terminal reporter and structured output for mutation testing results."""
 
-from __future__ import annotations
+# NOTE: Do NOT add from __future__ import annotations here.
+# Without that flag, every annotation is evaluated at function
+# def time, so a BitOr->BitAnd mutation on a type annotation
+# (e.g. "int | None" -> "int & None") raises TypeError at
+# import — which is exactly the test-killing signal mutation
+# testing depends on. See the top-of-file note in
+# pytest_leela.import_hook for the full reasoning.
+#
 
 import json
 import os
@@ -40,11 +47,11 @@ def _op_display(original: str, replacement: str) -> str:
 
     # Special return mutations
     if replacement in ("negate", "negate_expr"):
-        return f"return x \u2192 return -x"
+        return "return x \u2192 return -x"
     if replacement == "remove_negation":
-        return f"return -x \u2192 return x"
+        return "return -x \u2192 return x"
     if replacement == "empty_str":
-        return f'return "..." \u2192 return ""'
+        return 'return "..." \u2192 return ""'
     if replacement in ("True", "False", "None") and original in (
         "True",
         "False",

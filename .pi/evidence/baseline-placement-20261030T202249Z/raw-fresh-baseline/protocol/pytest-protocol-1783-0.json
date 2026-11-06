@@ -1,0 +1,45 @@
+{
+  "collection": [
+    {
+      "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+      "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+      "path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+      "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+    }
+  ],
+  "configure": {
+    "args": [
+      "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+      "-q",
+      "-s",
+      "--basetemp=/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp"
+    ],
+    "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+    "inipath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/pyproject.toml",
+    "invocationDir": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+    "pid": 1783,
+    "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+  },
+  "finish": {
+    "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+    "exitstatus": 0,
+    "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+  },
+  "reports": [
+    {
+      "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+      "outcome": "passed",
+      "phase": "setup"
+    },
+    {
+      "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+      "outcome": "passed",
+      "phase": "call"
+    },
+    {
+      "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+      "outcome": "passed",
+      "phase": "teardown"
+    }
+  ]
+}

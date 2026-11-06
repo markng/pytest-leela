@@ -1,0 +1,2762 @@
+[
+  {
+    "path": "tests/leela/describe_a_timeout_engine_contract.py",
+    "sha256": "95316c86865368ddd642b668ccf5a9913fa577b9f6f1f6020d762e8a0aa6ddec",
+    "callCount": 1,
+    "calls": [
+      {
+        "line": 15,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_annotation_policy.py",
+    "sha256": "6a7449f4a2e3b765aef8ecb8b28ede8ee5fcf29bf0e901c6b1489366ce70e176",
+    "callCount": 3,
+    "calls": [
+      {
+        "line": 48,
+        "call": "exec"
+      },
+      {
+        "line": 62,
+        "call": "compile"
+      },
+      {
+        "line": 49,
+        "call": "compile"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_ast_analysis.py",
+    "sha256": "ea83f0fc98e763a15251958432c7b2e2d65c89728568397f62b20214d4151355",
+    "callCount": 1,
+    "calls": [
+      {
+        "line": 571,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_benchmark.py",
+    "sha256": "4dee6d53a2a62465a3cef8aa8095cedd506f765ed6457a9936ef1c9a62634f81",
+    "callCount": 2,
+    "calls": [
+      {
+        "line": 300,
+        "call": "write_text"
+      },
+      {
+        "line": 301,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_ci_mutation_regressions.py",
+    "sha256": "82b15e0f3e965a6dcc45c3adcd576ba6f1c0873d5ccd505bbf88b76a92ea536a",
+    "callCount": 10,
+    "calls": [
+      {
+        "line": 22,
+        "call": "write_text"
+      },
+      {
+        "line": 41,
+        "call": "write_text"
+      },
+      {
+        "line": 60,
+        "call": "write_text"
+      },
+      {
+        "line": 62,
+        "call": "write_text"
+      },
+      {
+        "line": 69,
+        "call": "write_text"
+      },
+      {
+        "line": 71,
+        "call": "write_text"
+      },
+      {
+        "line": 73,
+        "call": "write_text"
+      },
+      {
+        "line": 82,
+        "call": "write_text"
+      },
+      {
+        "line": 91,
+        "call": "write_text"
+      },
+      {
+        "line": 45,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_config.py",
+    "sha256": "7126ffbd39b5344b11f1d46fc4a5ee7f9f5a9a2d8c2a10d5d752c8464749e8c7",
+    "callCount": 23,
+    "calls": [
+      {
+        "line": 48,
+        "call": "write_text"
+      },
+      {
+        "line": 59,
+        "call": "write_text"
+      },
+      {
+        "line": 120,
+        "call": "write_text"
+      },
+      {
+        "line": 127,
+        "call": "write_text"
+      },
+      {
+        "line": 196,
+        "call": "write_text"
+      },
+      {
+        "line": 202,
+        "call": "write_text"
+      },
+      {
+        "line": 208,
+        "call": "write_text"
+      },
+      {
+        "line": 214,
+        "call": "write_text"
+      },
+      {
+        "line": 223,
+        "call": "write_text"
+      },
+      {
+        "line": 74,
+        "call": "write_text"
+      },
+      {
+        "line": 81,
+        "call": "write_text"
+      },
+      {
+        "line": 89,
+        "call": "write_text"
+      },
+      {
+        "line": 96,
+        "call": "write_text"
+      },
+      {
+        "line": 106,
+        "call": "write_text"
+      },
+      {
+        "line": 112,
+        "call": "write_text"
+      },
+      {
+        "line": 136,
+        "call": "write_text"
+      },
+      {
+        "line": 142,
+        "call": "write_text"
+      },
+      {
+        "line": 150,
+        "call": "write_text"
+      },
+      {
+        "line": 156,
+        "call": "write_text"
+      },
+      {
+        "line": 162,
+        "call": "write_text"
+      },
+      {
+        "line": 168,
+        "call": "write_text"
+      },
+      {
+        "line": 176,
+        "call": "write_text"
+      },
+      {
+        "line": 182,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_coverage_collector.py",
+    "sha256": "c33f927f9be52f1300449a0ca254f31bf59041a12b29caa1b97b2507224b401d",
+    "callCount": 12,
+    "calls": [
+      {
+        "line": 179,
+        "call": "write_text"
+      },
+      {
+        "line": 190,
+        "call": "write_text"
+      },
+      {
+        "line": 191,
+        "call": "write_text"
+      },
+      {
+        "line": 209,
+        "call": "write_text"
+      },
+      {
+        "line": 211,
+        "call": "write_text"
+      },
+      {
+        "line": 212,
+        "call": "write_text"
+      },
+      {
+        "line": 116,
+        "call": "write_text"
+      },
+      {
+        "line": 124,
+        "call": "write_text"
+      },
+      {
+        "line": 125,
+        "call": "write_text"
+      },
+      {
+        "line": 135,
+        "call": "write_text"
+      },
+      {
+        "line": 160,
+        "call": "write_text"
+      },
+      {
+        "line": 161,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_coverage_tracker.py",
+    "sha256": "0dd215b5ae002e490ce31e823ddc7d6131e2d2539b4f32e1d79888e6aa6d8cff",
+    "callCount": 8,
+    "calls": [
+      {
+        "line": 36,
+        "call": "compile"
+      },
+      {
+        "line": 38,
+        "call": "exec"
+      },
+      {
+        "line": 105,
+        "call": "compile"
+      },
+      {
+        "line": 107,
+        "call": "exec"
+      },
+      {
+        "line": 211,
+        "call": "compile"
+      },
+      {
+        "line": 212,
+        "call": "compile"
+      },
+      {
+        "line": 215,
+        "call": "exec"
+      },
+      {
+        "line": 216,
+        "call": "exec"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_daemon.py",
+    "sha256": "f945e6cd69d164da43262d96bf715256b784b447a2a4deb21ab004e285e68dfa",
+    "callCount": 156,
+    "calls": [
+      {
+        "line": 69,
+        "call": "write_text"
+      },
+      {
+        "line": 72,
+        "call": "write_text"
+      },
+      {
+        "line": 73,
+        "call": "write_text"
+      },
+      {
+        "line": 80,
+        "call": "write_text"
+      },
+      {
+        "line": 139,
+        "call": "write_text"
+      },
+      {
+        "line": 142,
+        "call": "write_text"
+      },
+      {
+        "line": 144,
+        "call": "write_text"
+      },
+      {
+        "line": 209,
+        "call": "write_text"
+      },
+      {
+        "line": 212,
+        "call": "write_text"
+      },
+      {
+        "line": 213,
+        "call": "write_text"
+      },
+      {
+        "line": 215,
+        "call": "write_text"
+      },
+      {
+        "line": 216,
+        "call": "write_text"
+      },
+      {
+        "line": 2082,
+        "call": "write_text"
+      },
+      {
+        "line": 2463,
+        "call": "write_text"
+      },
+      {
+        "line": 2964,
+        "call": "write_text"
+      },
+      {
+        "line": 3518,
+        "call": "write_text"
+      },
+      {
+        "line": 3525,
+        "call": "write_text"
+      },
+      {
+        "line": 3625,
+        "call": "write_text"
+      },
+      {
+        "line": 3680,
+        "call": "write_text"
+      },
+      {
+        "line": 3766,
+        "call": "write_text"
+      },
+      {
+        "line": 3767,
+        "call": "write_text"
+      },
+      {
+        "line": 3810,
+        "call": "write_text"
+      },
+      {
+        "line": 3811,
+        "call": "write_text"
+      },
+      {
+        "line": 3812,
+        "call": "write_text"
+      },
+      {
+        "line": 3819,
+        "call": "write_text"
+      },
+      {
+        "line": 3857,
+        "call": "write_text"
+      },
+      {
+        "line": 3860,
+        "call": "write_text"
+      },
+      {
+        "line": 3882,
+        "call": "write_text"
+      },
+      {
+        "line": 3903,
+        "call": "write_text"
+      },
+      {
+        "line": 3906,
+        "call": "write_text"
+      },
+      {
+        "line": 3910,
+        "call": "write_text"
+      },
+      {
+        "line": 3960,
+        "call": "write_text"
+      },
+      {
+        "line": 3973,
+        "call": "write_text"
+      },
+      {
+        "line": 3974,
+        "call": "write_text"
+      },
+      {
+        "line": 4023,
+        "call": "write_text"
+      },
+      {
+        "line": 4026,
+        "call": "write_text"
+      },
+      {
+        "line": 4066,
+        "call": "write_text"
+      },
+      {
+        "line": 4223,
+        "call": "write_text"
+      },
+      {
+        "line": 4225,
+        "call": "write_text"
+      },
+      {
+        "line": 4277,
+        "call": "write_text"
+      },
+      {
+        "line": 4279,
+        "call": "write_text"
+      },
+      {
+        "line": 4297,
+        "call": "write_text"
+      },
+      {
+        "line": 4299,
+        "call": "write_text"
+      },
+      {
+        "line": 4320,
+        "call": "write_text"
+      },
+      {
+        "line": 4322,
+        "call": "write_text"
+      },
+      {
+        "line": 4341,
+        "call": "write_text"
+      },
+      {
+        "line": 4343,
+        "call": "write_text"
+      },
+      {
+        "line": 4359,
+        "call": "write_text"
+      },
+      {
+        "line": 4361,
+        "call": "write_text"
+      },
+      {
+        "line": 4379,
+        "call": "write_text"
+      },
+      {
+        "line": 4381,
+        "call": "write_text"
+      },
+      {
+        "line": 4512,
+        "call": "write_text"
+      },
+      {
+        "line": 4552,
+        "call": "write_text"
+      },
+      {
+        "line": 4554,
+        "call": "write_text"
+      },
+      {
+        "line": 4718,
+        "call": "write_text"
+      },
+      {
+        "line": 4720,
+        "call": "write_text"
+      },
+      {
+        "line": 4721,
+        "call": "write_text"
+      },
+      {
+        "line": 186,
+        "call": "write_text"
+      },
+      {
+        "line": 582,
+        "call": "write_text"
+      },
+      {
+        "line": 584,
+        "call": "write_text"
+      },
+      {
+        "line": 1038,
+        "call": "write_text"
+      },
+      {
+        "line": 1043,
+        "call": "write_text"
+      },
+      {
+        "line": 1044,
+        "call": "write_text"
+      },
+      {
+        "line": 1047,
+        "call": "write_text"
+      },
+      {
+        "line": 1121,
+        "call": "write_text"
+      },
+      {
+        "line": 1124,
+        "call": "write_text"
+      },
+      {
+        "line": 1125,
+        "call": "write_text"
+      },
+      {
+        "line": 1362,
+        "call": "write_text"
+      },
+      {
+        "line": 1434,
+        "call": "write_text"
+      },
+      {
+        "line": 1473,
+        "call": "write_text"
+      },
+      {
+        "line": 1478,
+        "call": "write_text"
+      },
+      {
+        "line": 1612,
+        "call": "write_text"
+      },
+      {
+        "line": 1767,
+        "call": "write_text"
+      },
+      {
+        "line": 1882,
+        "call": "write_text"
+      },
+      {
+        "line": 1885,
+        "call": "write_text"
+      },
+      {
+        "line": 1886,
+        "call": "write_text"
+      },
+      {
+        "line": 1927,
+        "call": "write_text"
+      },
+      {
+        "line": 1946,
+        "call": "write_text"
+      },
+      {
+        "line": 2678,
+        "call": "write_text"
+      },
+      {
+        "line": 2714,
+        "call": "write_text"
+      },
+      {
+        "line": 2725,
+        "call": "write_text"
+      },
+      {
+        "line": 2736,
+        "call": "write_text"
+      },
+      {
+        "line": 2737,
+        "call": "write_text"
+      },
+      {
+        "line": 2767,
+        "call": "write_text"
+      },
+      {
+        "line": 2779,
+        "call": "write_text"
+      },
+      {
+        "line": 3035,
+        "call": "write_text"
+      },
+      {
+        "line": 3347,
+        "call": "write_text"
+      },
+      {
+        "line": 3469,
+        "call": "write_text"
+      },
+      {
+        "line": 3532,
+        "call": "write_text"
+      },
+      {
+        "line": 3556,
+        "call": "write_text"
+      },
+      {
+        "line": 3688,
+        "call": "write_text"
+      },
+      {
+        "line": 3727,
+        "call": "write_text"
+      },
+      {
+        "line": 3779,
+        "call": "write_bytes"
+      },
+      {
+        "line": 3792,
+        "call": "write_bytes"
+      },
+      {
+        "line": 3856,
+        "call": "write_text"
+      },
+      {
+        "line": 3940,
+        "call": "write_text"
+      },
+      {
+        "line": 3980,
+        "call": "write_text"
+      },
+      {
+        "line": 3998,
+        "call": "write_text"
+      },
+      {
+        "line": 4005,
+        "call": "write_text"
+      },
+      {
+        "line": 4091,
+        "call": "write_text"
+      },
+      {
+        "line": 4198,
+        "call": "write_text"
+      },
+      {
+        "line": 4286,
+        "call": "write_text"
+      },
+      {
+        "line": 4307,
+        "call": "write_text"
+      },
+      {
+        "line": 4330,
+        "call": "write_text"
+      },
+      {
+        "line": 4350,
+        "call": "write_text"
+      },
+      {
+        "line": 4368,
+        "call": "write_text"
+      },
+      {
+        "line": 4458,
+        "call": "write_text"
+      },
+      {
+        "line": 4770,
+        "call": "write_text"
+      },
+      {
+        "line": 4789,
+        "call": "write_text"
+      },
+      {
+        "line": 4839,
+        "call": "write_text"
+      },
+      {
+        "line": 982,
+        "call": "write_text"
+      },
+      {
+        "line": 995,
+        "call": "write_text"
+      },
+      {
+        "line": 1069,
+        "call": "write_text"
+      },
+      {
+        "line": 1099,
+        "call": "write_text"
+      },
+      {
+        "line": 1135,
+        "call": "write_text"
+      },
+      {
+        "line": 1324,
+        "call": "write_text"
+      },
+      {
+        "line": 1436,
+        "call": "write_text"
+      },
+      {
+        "line": 1896,
+        "call": "write_text"
+      },
+      {
+        "line": 3495,
+        "call": "write_text"
+      },
+      {
+        "line": 3534,
+        "call": "write_text"
+      },
+      {
+        "line": 3595,
+        "call": "write_text"
+      },
+      {
+        "line": 3695,
+        "call": "write_text"
+      },
+      {
+        "line": 3723,
+        "call": "write_text"
+      },
+      {
+        "line": 3739,
+        "call": "write_text"
+      },
+      {
+        "line": 3918,
+        "call": "write_text"
+      },
+      {
+        "line": 3920,
+        "call": "write_text"
+      },
+      {
+        "line": 3923,
+        "call": "write_text"
+      },
+      {
+        "line": 4031,
+        "call": "write_text"
+      },
+      {
+        "line": 4032,
+        "call": "write_text"
+      },
+      {
+        "line": 4155,
+        "call": "write_text"
+      },
+      {
+        "line": 4191,
+        "call": "write_text"
+      },
+      {
+        "line": 4247,
+        "call": "write_text"
+      },
+      {
+        "line": 4488,
+        "call": "write_text"
+      },
+      {
+        "line": 4586,
+        "call": "write_text"
+      },
+      {
+        "line": 4687,
+        "call": "write_text"
+      },
+      {
+        "line": 1867,
+        "call": "write_text"
+      },
+      {
+        "line": 3705,
+        "call": "write_text"
+      },
+      {
+        "line": 3707,
+        "call": "write_text"
+      },
+      {
+        "line": 3716,
+        "call": "write_text"
+      },
+      {
+        "line": 3717,
+        "call": "write_text"
+      },
+      {
+        "line": 3735,
+        "call": "write_text"
+      },
+      {
+        "line": 4038,
+        "call": "write_text"
+      },
+      {
+        "line": 4039,
+        "call": "write_text"
+      },
+      {
+        "line": 4144,
+        "call": "write_text"
+      },
+      {
+        "line": 4425,
+        "call": "write_text"
+      },
+      {
+        "line": 4626,
+        "call": "compile"
+      },
+      {
+        "line": 4745,
+        "call": "write_text"
+      },
+      {
+        "line": 4746,
+        "call": "write_bytes"
+      },
+      {
+        "line": 4864,
+        "call": "write_bytes"
+      },
+      {
+        "line": 4866,
+        "call": "write_text"
+      },
+      {
+        "line": 4881,
+        "call": "write_text"
+      },
+      {
+        "line": 4044,
+        "call": "write_text"
+      },
+      {
+        "line": 4412,
+        "call": "write_text"
+      },
+      {
+        "line": 4524,
+        "call": "write_text"
+      },
+      {
+        "line": 4639,
+        "call": "write_text"
+      },
+      {
+        "line": 4048,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_daemon_contracts.py",
+    "sha256": "032d21fe97b4c6d1b3405eee6cd1a5274c4b19d5e1f466e63f9af4afec68b41f",
+    "callCount": 1,
+    "calls": [
+      {
+        "line": 22,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_end_to_end.py",
+    "sha256": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+    "callCount": 21,
+    "calls": [
+      {
+        "line": 335,
+        "call": "makepyfile"
+      },
+      {
+        "line": 357,
+        "call": "write_text"
+      },
+      {
+        "line": 365,
+        "call": "write_text"
+      },
+      {
+        "line": 368,
+        "call": "write_text"
+      },
+      {
+        "line": 374,
+        "call": "write_text"
+      },
+      {
+        "line": 381,
+        "call": "write_text"
+      },
+      {
+        "line": 386,
+        "call": "write_text"
+      },
+      {
+        "line": 391,
+        "call": "write_text"
+      },
+      {
+        "line": 393,
+        "call": "write_text"
+      },
+      {
+        "line": 21,
+        "call": "makepyfile"
+      },
+      {
+        "line": 39,
+        "call": "makepyfile"
+      },
+      {
+        "line": 62,
+        "call": "makepyfile"
+      },
+      {
+        "line": 89,
+        "call": "makepyfile"
+      },
+      {
+        "line": 114,
+        "call": "makepyfile"
+      },
+      {
+        "line": 138,
+        "call": "makepyfile"
+      },
+      {
+        "line": 168,
+        "call": "makepyfile"
+      },
+      {
+        "line": 199,
+        "call": "makepyfile"
+      },
+      {
+        "line": 228,
+        "call": "makepyfile"
+      },
+      {
+        "line": 271,
+        "call": "makepyfile"
+      },
+      {
+        "line": 298,
+        "call": "makepyfile"
+      },
+      {
+        "line": 240,
+        "call": "makefile"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_engine.py",
+    "sha256": "9f03a7fd25cc96621eb3764d161c1394c8a4b500e86ca9bae74ea8521ee8035f",
+    "callCount": 82,
+    "calls": [
+      {
+        "line": 894,
+        "call": "write_text"
+      },
+      {
+        "line": 897,
+        "call": "write_text"
+      },
+      {
+        "line": 170,
+        "call": "write_text"
+      },
+      {
+        "line": 195,
+        "call": "write_text"
+      },
+      {
+        "line": 199,
+        "call": "write_text"
+      },
+      {
+        "line": 222,
+        "call": "write_text"
+      },
+      {
+        "line": 225,
+        "call": "write_text"
+      },
+      {
+        "line": 238,
+        "call": "write_text"
+      },
+      {
+        "line": 241,
+        "call": "write_text"
+      },
+      {
+        "line": 257,
+        "call": "write_text"
+      },
+      {
+        "line": 260,
+        "call": "write_text"
+      },
+      {
+        "line": 281,
+        "call": "write_text"
+      },
+      {
+        "line": 287,
+        "call": "write_text"
+      },
+      {
+        "line": 318,
+        "call": "write_text"
+      },
+      {
+        "line": 325,
+        "call": "write_text"
+      },
+      {
+        "line": 358,
+        "call": "write_text"
+      },
+      {
+        "line": 361,
+        "call": "write_text"
+      },
+      {
+        "line": 387,
+        "call": "write_text"
+      },
+      {
+        "line": 390,
+        "call": "write_text"
+      },
+      {
+        "line": 406,
+        "call": "write_text"
+      },
+      {
+        "line": 409,
+        "call": "write_text"
+      },
+      {
+        "line": 423,
+        "call": "write_text"
+      },
+      {
+        "line": 426,
+        "call": "write_text"
+      },
+      {
+        "line": 440,
+        "call": "write_text"
+      },
+      {
+        "line": 443,
+        "call": "write_text"
+      },
+      {
+        "line": 471,
+        "call": "write_text"
+      },
+      {
+        "line": 481,
+        "call": "write_text"
+      },
+      {
+        "line": 530,
+        "call": "write_text"
+      },
+      {
+        "line": 533,
+        "call": "write_text"
+      },
+      {
+        "line": 562,
+        "call": "write_text"
+      },
+      {
+        "line": 565,
+        "call": "write_text"
+      },
+      {
+        "line": 594,
+        "call": "write_text"
+      },
+      {
+        "line": 597,
+        "call": "write_text"
+      },
+      {
+        "line": 622,
+        "call": "write_text"
+      },
+      {
+        "line": 625,
+        "call": "write_text"
+      },
+      {
+        "line": 654,
+        "call": "write_text"
+      },
+      {
+        "line": 684,
+        "call": "write_text"
+      },
+      {
+        "line": 711,
+        "call": "write_text"
+      },
+      {
+        "line": 770,
+        "call": "write_text"
+      },
+      {
+        "line": 820,
+        "call": "write_text"
+      },
+      {
+        "line": 862,
+        "call": "write_text"
+      },
+      {
+        "line": 958,
+        "call": "write_text"
+      },
+      {
+        "line": 980,
+        "call": "write_text"
+      },
+      {
+        "line": 984,
+        "call": "write_text"
+      },
+      {
+        "line": 988,
+        "call": "write_text"
+      },
+      {
+        "line": 1014,
+        "call": "write_text"
+      },
+      {
+        "line": 1065,
+        "call": "write_text"
+      },
+      {
+        "line": 1097,
+        "call": "write_text"
+      },
+      {
+        "line": 1111,
+        "call": "write_text"
+      },
+      {
+        "line": 1210,
+        "call": "write_text"
+      },
+      {
+        "line": 1212,
+        "call": "write_text"
+      },
+      {
+        "line": 1222,
+        "call": "write_text"
+      },
+      {
+        "line": 1238,
+        "call": "write_text"
+      },
+      {
+        "line": 1239,
+        "call": "compile"
+      },
+      {
+        "line": 1265,
+        "call": "write_text"
+      },
+      {
+        "line": 1274,
+        "call": "write_text"
+      },
+      {
+        "line": 1280,
+        "call": "write_text"
+      },
+      {
+        "line": 1288,
+        "call": "write_text"
+      },
+      {
+        "line": 1294,
+        "call": "write_text"
+      },
+      {
+        "line": 1296,
+        "call": "write_text"
+      },
+      {
+        "line": 1298,
+        "call": "write_text"
+      },
+      {
+        "line": 1305,
+        "call": "write_text"
+      },
+      {
+        "line": 1310,
+        "call": "write_text"
+      },
+      {
+        "line": 1335,
+        "call": "write_text"
+      },
+      {
+        "line": 1338,
+        "call": "write_text"
+      },
+      {
+        "line": 1374,
+        "call": "write_text"
+      },
+      {
+        "line": 1377,
+        "call": "write_text"
+      },
+      {
+        "line": 1406,
+        "call": "write_text"
+      },
+      {
+        "line": 1409,
+        "call": "write_text"
+      },
+      {
+        "line": 1435,
+        "call": "write_text"
+      },
+      {
+        "line": 1438,
+        "call": "write_text"
+      },
+      {
+        "line": 1479,
+        "call": "write_text"
+      },
+      {
+        "line": 1511,
+        "call": "write_text"
+      },
+      {
+        "line": 1514,
+        "call": "write_text"
+      },
+      {
+        "line": 1540,
+        "call": "write_text"
+      },
+      {
+        "line": 1543,
+        "call": "write_text"
+      },
+      {
+        "line": 1562,
+        "call": "write_text"
+      },
+      {
+        "line": 1565,
+        "call": "write_text"
+      },
+      {
+        "line": 1592,
+        "call": "write_text"
+      },
+      {
+        "line": 1595,
+        "call": "write_text"
+      },
+      {
+        "line": 1252,
+        "call": "write_text"
+      },
+      {
+        "line": 1480,
+        "call": "compile"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_engine_integration.py",
+    "sha256": "b3ef4fee3a566f6a9a22117fdedeb0effc9b2636acb2007f140cda251f7d9c67",
+    "callCount": 74,
+    "calls": [
+      {
+        "line": 42,
+        "call": "write_text"
+      },
+      {
+        "line": 45,
+        "call": "write_text"
+      },
+      {
+        "line": 948,
+        "call": "write_text"
+      },
+      {
+        "line": 954,
+        "call": "write_text"
+      },
+      {
+        "line": 1041,
+        "call": "write_text"
+      },
+      {
+        "line": 1047,
+        "call": "write_text"
+      },
+      {
+        "line": 1306,
+        "call": "write_text"
+      },
+      {
+        "line": 1310,
+        "call": "write_text"
+      },
+      {
+        "line": 1312,
+        "call": "write_text"
+      },
+      {
+        "line": 1314,
+        "call": "write_text"
+      },
+      {
+        "line": 1319,
+        "call": "write_text"
+      },
+      {
+        "line": 1320,
+        "call": "write_text"
+      },
+      {
+        "line": 1322,
+        "call": "write_text"
+      },
+      {
+        "line": 229,
+        "call": "write_text"
+      },
+      {
+        "line": 267,
+        "call": "write_text"
+      },
+      {
+        "line": 274,
+        "call": "write_text"
+      },
+      {
+        "line": 310,
+        "call": "write_text"
+      },
+      {
+        "line": 347,
+        "call": "write_text"
+      },
+      {
+        "line": 352,
+        "call": "write_text"
+      },
+      {
+        "line": 386,
+        "call": "write_text"
+      },
+      {
+        "line": 393,
+        "call": "write_text"
+      },
+      {
+        "line": 400,
+        "call": "write_text"
+      },
+      {
+        "line": 404,
+        "call": "write_text"
+      },
+      {
+        "line": 406,
+        "call": "write_text"
+      },
+      {
+        "line": 426,
+        "call": "write_text"
+      },
+      {
+        "line": 627,
+        "call": "write_text"
+      },
+      {
+        "line": 628,
+        "call": "write_text"
+      },
+      {
+        "line": 629,
+        "call": "write_text"
+      },
+      {
+        "line": 756,
+        "call": "write_text"
+      },
+      {
+        "line": 757,
+        "call": "write_text"
+      },
+      {
+        "line": 759,
+        "call": "write_text"
+      },
+      {
+        "line": 761,
+        "call": "write_text"
+      },
+      {
+        "line": 762,
+        "call": "write_text"
+      },
+      {
+        "line": 764,
+        "call": "write_text"
+      },
+      {
+        "line": 770,
+        "call": "write_text"
+      },
+      {
+        "line": 773,
+        "call": "write_text"
+      },
+      {
+        "line": 786,
+        "call": "write_text"
+      },
+      {
+        "line": 787,
+        "call": "write_text"
+      },
+      {
+        "line": 790,
+        "call": "write_text"
+      },
+      {
+        "line": 792,
+        "call": "write_text"
+      },
+      {
+        "line": 793,
+        "call": "write_text"
+      },
+      {
+        "line": 795,
+        "call": "write_text"
+      },
+      {
+        "line": 798,
+        "call": "write_text"
+      },
+      {
+        "line": 807,
+        "call": "write_text"
+      },
+      {
+        "line": 812,
+        "call": "write_text"
+      },
+      {
+        "line": 821,
+        "call": "write_text"
+      },
+      {
+        "line": 844,
+        "call": "write_text"
+      },
+      {
+        "line": 884,
+        "call": "write_text"
+      },
+      {
+        "line": 911,
+        "call": "write_text"
+      },
+      {
+        "line": 914,
+        "call": "write_text"
+      },
+      {
+        "line": 1064,
+        "call": "write_text"
+      },
+      {
+        "line": 1067,
+        "call": "write_text"
+      },
+      {
+        "line": 1232,
+        "call": "write_text"
+      },
+      {
+        "line": 1254,
+        "call": "write_text"
+      },
+      {
+        "line": 1260,
+        "call": "write_text"
+      },
+      {
+        "line": 414,
+        "call": "write_text"
+      },
+      {
+        "line": 505,
+        "call": "write_text"
+      },
+      {
+        "line": 555,
+        "call": "write_text"
+      },
+      {
+        "line": 557,
+        "call": "write_text"
+      },
+      {
+        "line": 558,
+        "call": "write_text"
+      },
+      {
+        "line": 560,
+        "call": "write_text"
+      },
+      {
+        "line": 591,
+        "call": "write_text"
+      },
+      {
+        "line": 593,
+        "call": "write_text"
+      },
+      {
+        "line": 596,
+        "call": "write_text"
+      },
+      {
+        "line": 598,
+        "call": "write_text"
+      },
+      {
+        "line": 600,
+        "call": "write_text"
+      },
+      {
+        "line": 603,
+        "call": "write_text"
+      },
+      {
+        "line": 605,
+        "call": "write_text"
+      },
+      {
+        "line": 677,
+        "call": "write_text"
+      },
+      {
+        "line": 697,
+        "call": "write_text"
+      },
+      {
+        "line": 1142,
+        "call": "write_text"
+      },
+      {
+        "line": 653,
+        "call": "write_text"
+      },
+      {
+        "line": 1347,
+        "call": "write_text"
+      },
+      {
+        "line": 1351,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_execution_freshness.py",
+    "sha256": "b2a1c11d47977ad58bd0f8d11011fde82e231990c002c22618f1b35e08b057f2",
+    "callCount": 28,
+    "calls": [
+      {
+        "line": 54,
+        "call": "write_text"
+      },
+      {
+        "line": 58,
+        "call": "write_text"
+      },
+      {
+        "line": 59,
+        "call": "write_text"
+      },
+      {
+        "line": 84,
+        "call": "write_text"
+      },
+      {
+        "line": 88,
+        "call": "write_text"
+      },
+      {
+        "line": 89,
+        "call": "write_text"
+      },
+      {
+        "line": 113,
+        "call": "write_text"
+      },
+      {
+        "line": 117,
+        "call": "write_text"
+      },
+      {
+        "line": 118,
+        "call": "write_text"
+      },
+      {
+        "line": 146,
+        "call": "write_text"
+      },
+      {
+        "line": 147,
+        "call": "write_text"
+      },
+      {
+        "line": 173,
+        "call": "write_text"
+      },
+      {
+        "line": 177,
+        "call": "write_text"
+      },
+      {
+        "line": 179,
+        "call": "write_text"
+      },
+      {
+        "line": 243,
+        "call": "write_text"
+      },
+      {
+        "line": 247,
+        "call": "write_text"
+      },
+      {
+        "line": 248,
+        "call": "write_text"
+      },
+      {
+        "line": 292,
+        "call": "write_text"
+      },
+      {
+        "line": 296,
+        "call": "write_text"
+      },
+      {
+        "line": 298,
+        "call": "write_text"
+      },
+      {
+        "line": 309,
+        "call": "write_text"
+      },
+      {
+        "line": 75,
+        "call": "write_text"
+      },
+      {
+        "line": 105,
+        "call": "write_text"
+      },
+      {
+        "line": 131,
+        "call": "write_text"
+      },
+      {
+        "line": 150,
+        "call": "compile"
+      },
+      {
+        "line": 151,
+        "call": "compile"
+      },
+      {
+        "line": 219,
+        "call": "write_text"
+      },
+      {
+        "line": 263,
+        "call": "compile"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_html_report.py",
+    "sha256": "63e23feb2888aa6913793a5a2ee124cd5c857e7206a524854d3d63153f51be4f",
+    "callCount": 11,
+    "calls": [
+      {
+        "line": 422,
+        "call": "write_text"
+      },
+      {
+        "line": 443,
+        "call": "write_text"
+      },
+      {
+        "line": 482,
+        "call": "write_text"
+      },
+      {
+        "line": 501,
+        "call": "write_text"
+      },
+      {
+        "line": 534,
+        "call": "write_text"
+      },
+      {
+        "line": 555,
+        "call": "write_text"
+      },
+      {
+        "line": 575,
+        "call": "write_text"
+      },
+      {
+        "line": 601,
+        "call": "write_text"
+      },
+      {
+        "line": 634,
+        "call": "write_text"
+      },
+      {
+        "line": 668,
+        "call": "write_text"
+      },
+      {
+        "line": 760,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_plugin.py",
+    "sha256": "181058e70b7659edba7529dece17bfa4762a209d5f29adf67582af6526c47474",
+    "callCount": 39,
+    "calls": [
+      {
+        "line": 67,
+        "call": "write_text"
+      },
+      {
+        "line": 79,
+        "call": "write_text"
+      },
+      {
+        "line": 84,
+        "call": "write_text"
+      },
+      {
+        "line": 85,
+        "call": "write_text"
+      },
+      {
+        "line": 91,
+        "call": "write_text"
+      },
+      {
+        "line": 92,
+        "call": "write_text"
+      },
+      {
+        "line": 101,
+        "call": "write_text"
+      },
+      {
+        "line": 102,
+        "call": "write_text"
+      },
+      {
+        "line": 121,
+        "call": "write_text"
+      },
+      {
+        "line": 129,
+        "call": "write_text"
+      },
+      {
+        "line": 143,
+        "call": "write_text"
+      },
+      {
+        "line": 144,
+        "call": "write_text"
+      },
+      {
+        "line": 145,
+        "call": "write_text"
+      },
+      {
+        "line": 146,
+        "call": "write_text"
+      },
+      {
+        "line": 159,
+        "call": "write_text"
+      },
+      {
+        "line": 167,
+        "call": "write_text"
+      },
+      {
+        "line": 176,
+        "call": "write_text"
+      },
+      {
+        "line": 179,
+        "call": "write_text"
+      },
+      {
+        "line": 188,
+        "call": "write_text"
+      },
+      {
+        "line": 189,
+        "call": "write_text"
+      },
+      {
+        "line": 197,
+        "call": "write_text"
+      },
+      {
+        "line": 204,
+        "call": "write_text"
+      },
+      {
+        "line": 205,
+        "call": "write_text"
+      },
+      {
+        "line": 206,
+        "call": "write_text"
+      },
+      {
+        "line": 207,
+        "call": "write_text"
+      },
+      {
+        "line": 220,
+        "call": "write_text"
+      },
+      {
+        "line": 230,
+        "call": "write_text"
+      },
+      {
+        "line": 238,
+        "call": "write_text"
+      },
+      {
+        "line": 239,
+        "call": "write_text"
+      },
+      {
+        "line": 240,
+        "call": "write_text"
+      },
+      {
+        "line": 251,
+        "call": "write_text"
+      },
+      {
+        "line": 252,
+        "call": "write_text"
+      },
+      {
+        "line": 265,
+        "call": "write_text"
+      },
+      {
+        "line": 274,
+        "call": "write_text"
+      },
+      {
+        "line": 275,
+        "call": "write_text"
+      },
+      {
+        "line": 285,
+        "call": "write_text"
+      },
+      {
+        "line": 286,
+        "call": "write_text"
+      },
+      {
+        "line": 296,
+        "call": "write_text"
+      },
+      {
+        "line": 264,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_runner.py",
+    "sha256": "cae63636dd984c7edb64adee849285837a5a1537c15f20e4d624e51cf2042678",
+    "callCount": 134,
+    "calls": [
+      {
+        "line": 3147,
+        "call": "write_text"
+      },
+      {
+        "line": 3148,
+        "call": "write_text"
+      },
+      {
+        "line": 3154,
+        "call": "write_text"
+      },
+      {
+        "line": 108,
+        "call": "write_text"
+      },
+      {
+        "line": 111,
+        "call": "write_text"
+      },
+      {
+        "line": 115,
+        "call": "write_text"
+      },
+      {
+        "line": 123,
+        "call": "write_text"
+      },
+      {
+        "line": 140,
+        "call": "write_text"
+      },
+      {
+        "line": 145,
+        "call": "compile"
+      },
+      {
+        "line": 196,
+        "call": "write_text"
+      },
+      {
+        "line": 200,
+        "call": "write_text"
+      },
+      {
+        "line": 238,
+        "call": "write_text"
+      },
+      {
+        "line": 265,
+        "call": "write_text"
+      },
+      {
+        "line": 269,
+        "call": "write_text"
+      },
+      {
+        "line": 299,
+        "call": "write_text"
+      },
+      {
+        "line": 303,
+        "call": "write_text"
+      },
+      {
+        "line": 344,
+        "call": "write_text"
+      },
+      {
+        "line": 381,
+        "call": "write_text"
+      },
+      {
+        "line": 419,
+        "call": "write_text"
+      },
+      {
+        "line": 465,
+        "call": "write_text"
+      },
+      {
+        "line": 511,
+        "call": "write_text"
+      },
+      {
+        "line": 535,
+        "call": "write_text"
+      },
+      {
+        "line": 539,
+        "call": "write_text"
+      },
+      {
+        "line": 572,
+        "call": "write_text"
+      },
+      {
+        "line": 576,
+        "call": "write_text"
+      },
+      {
+        "line": 610,
+        "call": "write_text"
+      },
+      {
+        "line": 641,
+        "call": "write_text"
+      },
+      {
+        "line": 681,
+        "call": "write_text"
+      },
+      {
+        "line": 685,
+        "call": "write_text"
+      },
+      {
+        "line": 749,
+        "call": "write_text"
+      },
+      {
+        "line": 768,
+        "call": "write_text"
+      },
+      {
+        "line": 769,
+        "call": "write_text"
+      },
+      {
+        "line": 774,
+        "call": "write_text"
+      },
+      {
+        "line": 793,
+        "call": "write_text"
+      },
+      {
+        "line": 1015,
+        "call": "write_text"
+      },
+      {
+        "line": 1028,
+        "call": "write_text"
+      },
+      {
+        "line": 1056,
+        "call": "write_text"
+      },
+      {
+        "line": 1195,
+        "call": "write_text"
+      },
+      {
+        "line": 1199,
+        "call": "write_text"
+      },
+      {
+        "line": 1207,
+        "call": "write_text"
+      },
+      {
+        "line": 1287,
+        "call": "write_text"
+      },
+      {
+        "line": 1291,
+        "call": "write_text"
+      },
+      {
+        "line": 1326,
+        "call": "write_text"
+      },
+      {
+        "line": 1329,
+        "call": "write_text"
+      },
+      {
+        "line": 1359,
+        "call": "write_text"
+      },
+      {
+        "line": 1362,
+        "call": "write_text"
+      },
+      {
+        "line": 1363,
+        "call": "write_text"
+      },
+      {
+        "line": 1624,
+        "call": "write_text"
+      },
+      {
+        "line": 1927,
+        "call": "write_text"
+      },
+      {
+        "line": 1940,
+        "call": "write_text"
+      },
+      {
+        "line": 1978,
+        "call": "write_text"
+      },
+      {
+        "line": 1981,
+        "call": "write_text"
+      },
+      {
+        "line": 2018,
+        "call": "write_text"
+      },
+      {
+        "line": 2021,
+        "call": "write_text"
+      },
+      {
+        "line": 2111,
+        "call": "write_text"
+      },
+      {
+        "line": 2137,
+        "call": "write_text"
+      },
+      {
+        "line": 2274,
+        "call": "write_text"
+      },
+      {
+        "line": 2316,
+        "call": "write_text"
+      },
+      {
+        "line": 2363,
+        "call": "write_text"
+      },
+      {
+        "line": 2384,
+        "call": "write_text"
+      },
+      {
+        "line": 2391,
+        "call": "write_text"
+      },
+      {
+        "line": 2423,
+        "call": "write_text"
+      },
+      {
+        "line": 2424,
+        "call": "write_text"
+      },
+      {
+        "line": 2442,
+        "call": "write_text"
+      },
+      {
+        "line": 2443,
+        "call": "write_text"
+      },
+      {
+        "line": 2462,
+        "call": "write_text"
+      },
+      {
+        "line": 2483,
+        "call": "write_text"
+      },
+      {
+        "line": 2491,
+        "call": "write_text"
+      },
+      {
+        "line": 2514,
+        "call": "write_text"
+      },
+      {
+        "line": 2519,
+        "call": "write_text"
+      },
+      {
+        "line": 2539,
+        "call": "write_text"
+      },
+      {
+        "line": 2540,
+        "call": "write_text"
+      },
+      {
+        "line": 2561,
+        "call": "write_text"
+      },
+      {
+        "line": 2566,
+        "call": "write_text"
+      },
+      {
+        "line": 2586,
+        "call": "write_text"
+      },
+      {
+        "line": 2587,
+        "call": "write_text"
+      },
+      {
+        "line": 2611,
+        "call": "write_text"
+      },
+      {
+        "line": 2619,
+        "call": "write_text"
+      },
+      {
+        "line": 2721,
+        "call": "write_text"
+      },
+      {
+        "line": 2735,
+        "call": "write_text"
+      },
+      {
+        "line": 2746,
+        "call": "write_text"
+      },
+      {
+        "line": 2758,
+        "call": "write_text"
+      },
+      {
+        "line": 2780,
+        "call": "write_text"
+      },
+      {
+        "line": 2782,
+        "call": "write_text"
+      },
+      {
+        "line": 2784,
+        "call": "write_text"
+      },
+      {
+        "line": 2786,
+        "call": "write_text"
+      },
+      {
+        "line": 2797,
+        "call": "write_text"
+      },
+      {
+        "line": 2888,
+        "call": "write_text"
+      },
+      {
+        "line": 2891,
+        "call": "write_text"
+      },
+      {
+        "line": 2905,
+        "call": "write_text"
+      },
+      {
+        "line": 2946,
+        "call": "write_text"
+      },
+      {
+        "line": 2950,
+        "call": "write_text"
+      },
+      {
+        "line": 2953,
+        "call": "write_text"
+      },
+      {
+        "line": 2996,
+        "call": "write_text"
+      },
+      {
+        "line": 2999,
+        "call": "write_text"
+      },
+      {
+        "line": 3042,
+        "call": "write_text"
+      },
+      {
+        "line": 3046,
+        "call": "write_text"
+      },
+      {
+        "line": 3047,
+        "call": "write_text"
+      },
+      {
+        "line": 3099,
+        "call": "write_text"
+      },
+      {
+        "line": 3103,
+        "call": "write_text"
+      },
+      {
+        "line": 3190,
+        "call": "write_text"
+      },
+      {
+        "line": 3195,
+        "call": "write_text"
+      },
+      {
+        "line": 3196,
+        "call": "write_text"
+      },
+      {
+        "line": 3462,
+        "call": "write_text"
+      },
+      {
+        "line": 3492,
+        "call": "write_text"
+      },
+      {
+        "line": 3624,
+        "call": "write_text"
+      },
+      {
+        "line": 3658,
+        "call": "write_text"
+      },
+      {
+        "line": 3660,
+        "call": "write_text"
+      },
+      {
+        "line": 3673,
+        "call": "write_text"
+      },
+      {
+        "line": 3674,
+        "call": "write_text"
+      },
+      {
+        "line": 3675,
+        "call": "write_text"
+      },
+      {
+        "line": 3676,
+        "call": "write_text"
+      },
+      {
+        "line": 3692,
+        "call": "write_text"
+      },
+      {
+        "line": 3733,
+        "call": "write_text"
+      },
+      {
+        "line": 3736,
+        "call": "write_text"
+      },
+      {
+        "line": 3746,
+        "call": "write_text"
+      },
+      {
+        "line": 3759,
+        "call": "write_text"
+      },
+      {
+        "line": 112,
+        "call": "compile"
+      },
+      {
+        "line": 113,
+        "call": "compile"
+      },
+      {
+        "line": 124,
+        "call": "compile"
+      },
+      {
+        "line": 141,
+        "call": "compile"
+      },
+      {
+        "line": 239,
+        "call": "compile"
+      },
+      {
+        "line": 756,
+        "call": "write_text"
+      },
+      {
+        "line": 762,
+        "call": "write_text"
+      },
+      {
+        "line": 2340,
+        "call": "write_text"
+      },
+      {
+        "line": 2722,
+        "call": "compile"
+      },
+      {
+        "line": 2736,
+        "call": "compile"
+      },
+      {
+        "line": 2759,
+        "call": "compile"
+      },
+      {
+        "line": 2767,
+        "call": "compile"
+      },
+      {
+        "line": 3194,
+        "call": "write_text"
+      },
+      {
+        "line": 3365,
+        "call": "write_text"
+      },
+      {
+        "line": 3496,
+        "call": "write_text"
+      },
+      {
+        "line": 3516,
+        "call": "write_text"
+      },
+      {
+        "line": 3690,
+        "call": "compile"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_runner_timeout.py",
+    "sha256": "1c0e08d764eaa4b4f93d33757b094d42907c8554c70afa0935a5d628f1715cd4",
+    "callCount": 3,
+    "calls": [
+      {
+        "line": 42,
+        "call": "write_text"
+      },
+      {
+        "line": 72,
+        "call": "write_text"
+      },
+      {
+        "line": 73,
+        "call": "write_text"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_timeout_process.py",
+    "sha256": "b9f4c2613db0ff9ca15ff0f18be601d4ba8a58a67c3f14737253fdc38ffe1c84",
+    "callCount": 42,
+    "calls": [
+      {
+        "line": 25,
+        "call": "write_text"
+      },
+      {
+        "line": 56,
+        "call": "write_text"
+      },
+      {
+        "line": 118,
+        "call": "write_text"
+      },
+      {
+        "line": 148,
+        "call": "write_text"
+      },
+      {
+        "line": 169,
+        "call": "write_text"
+      },
+      {
+        "line": 171,
+        "call": "write_text"
+      },
+      {
+        "line": 180,
+        "call": "write_bytes"
+      },
+      {
+        "line": 189,
+        "call": "write_text"
+      },
+      {
+        "line": 200,
+        "call": "write_text"
+      },
+      {
+        "line": 217,
+        "call": "write_text"
+      },
+      {
+        "line": 218,
+        "call": "write_text"
+      },
+      {
+        "line": 240,
+        "call": "write_text"
+      },
+      {
+        "line": 262,
+        "call": "write_text"
+      },
+      {
+        "line": 298,
+        "call": "write_text"
+      },
+      {
+        "line": 319,
+        "call": "write_text"
+      },
+      {
+        "line": 341,
+        "call": "exec"
+      },
+      {
+        "line": 354,
+        "call": "write_text"
+      },
+      {
+        "line": 355,
+        "call": "write_text"
+      },
+      {
+        "line": 358,
+        "call": "write_text"
+      },
+      {
+        "line": 363,
+        "call": "write_text"
+      },
+      {
+        "line": 488,
+        "call": "write_text"
+      },
+      {
+        "line": 490,
+        "call": "write_text"
+      },
+      {
+        "line": 534,
+        "call": "write_text"
+      },
+      {
+        "line": 536,
+        "call": "write_text"
+      },
+      {
+        "line": 640,
+        "call": "write_text"
+      },
+      {
+        "line": 642,
+        "call": "write_text"
+      },
+      {
+        "line": 654,
+        "call": "write_text"
+      },
+      {
+        "line": 680,
+        "call": "write_text"
+      },
+      {
+        "line": 706,
+        "call": "exec"
+      },
+      {
+        "line": 751,
+        "call": "write_text"
+      },
+      {
+        "line": 846,
+        "call": "write_text"
+      },
+      {
+        "line": 847,
+        "call": "write_text"
+      },
+      {
+        "line": 859,
+        "call": "write_text"
+      },
+      {
+        "line": 902,
+        "call": "write_text"
+      },
+      {
+        "line": 903,
+        "call": "write_text"
+      },
+      {
+        "line": 904,
+        "call": "write_text"
+      },
+      {
+        "line": 940,
+        "call": "write_text"
+      },
+      {
+        "line": 941,
+        "call": "write_text"
+      },
+      {
+        "line": 946,
+        "call": "write_text"
+      },
+      {
+        "line": 1012,
+        "call": "write_text"
+      },
+      {
+        "line": 341,
+        "call": "compile"
+      },
+      {
+        "line": 706,
+        "call": "compile"
+      }
+    ]
+  },
+  {
+    "path": "tests/leela/describe_watcher_retained_probes.py",
+    "sha256": "1afe8bd34f8155a90db5d93666e0e7060d81488a3eaf7c68bf5e172fdb707a8e",
+    "callCount": 4,
+    "calls": [
+      {
+        "line": 47,
+        "call": "write_text"
+      },
+      {
+        "line": 49,
+        "call": "write_text"
+      },
+      {
+        "line": 86,
+        "call": "write_text"
+      },
+      {
+        "line": 88,
+        "call": "write_text"
+      }
+    ]
+  }
+]

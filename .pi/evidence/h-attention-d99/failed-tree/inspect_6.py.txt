@@ -1,0 +1,46 @@
+import json
+from pathlib import Path
+
+from pytest_leela.git_diff import changed_lines
+
+
+TARGETS = [
+    "src/pytest_leela/daemon.py",
+    "src/pytest_leela/index.py",
+    "tests/leela/describe_daemon.py",
+    "tests/leela/describe_index.py",
+]
+
+
+def select_changed_coverage(coverage, changed):
+    return {
+        path: {
+            "new_executable_lines": sorted(
+                set(data["executed_lines"] + data["missing_lines"])
+                & changed.get(str(Path(path).resolve()), set())
+            ),
+            "missing_new_lines": sorted(
+                set(data["missing_lines"])
+                & changed.get(str(Path(path).resolve()), set())
+            ),
+            "new_branches": [
+                branch for branch in data["executed_branches"] + data["missing_branches"]
+                if branch[0] in changed.get(str(Path(path).resolve()), set())
+            ],
+            "missing_new_branches": [
+                branch for branch in data["missing_branches"]
+                if branch[0] in changed.get(str(Path(path).resolve()), set())
+            ],
+        }
+        for path, data in coverage["files"].items()
+        if path in TARGETS
+    }
+
+
+def main():
+    coverage = json.loads(Path(".pi/evidence/coverage314-sysmon.json").read_text())
+    print(json.dumps(select_changed_coverage(coverage, changed_lines("HEAD")), indent=2))
+
+
+if __name__ == "__main__":
+    main()

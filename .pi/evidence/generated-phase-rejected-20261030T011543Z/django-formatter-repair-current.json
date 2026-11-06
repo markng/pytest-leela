@@ -1,0 +1,386 @@
+{
+  "classification": "authorized faithful private formatter repair current evidence",
+  "sourceRoot": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+  "head": "b1bb565883c75356be1a493c64084607d5769f3f",
+  "originalManifest": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/RESTORED-SOURCE.sha256",
+  "newManifest": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair-source.sha256",
+  "preSourceCopy": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/describe_end_to_end.pre.py",
+  "preSourceSha256": "6767573e2f2b4d76bba8d1fa66ae2583d28147b23317aa81acee2f15a0942c2a",
+  "currentSourceSha256": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+  "sourceDelta": {
+    "changedPaths": [
+      "tests/leela/describe_end_to_end.py"
+    ],
+    "unchangedPaths": [
+      "pyproject.toml",
+      "tests/leela/describe_runner.py",
+      "tests/leela/describe_a_timeout_engine_contract.py",
+      "tests/leela/describe_coverage_tracker.py",
+      "tests/leela/describe_runner_timeout.py",
+      "tests/leela/describe_timeout_process.py",
+      "tests/leela/describe_index.py",
+      "tests/leela/describe_daemon.py",
+      "tests/leela/describe_ci_mutation_regressions.py",
+      "README.md",
+      "src/pytest_leela/_timeout_worker.py",
+      "src/pytest_leela/runner.py",
+      "src/pytest_leela/index.py",
+      "src/pytest_leela/_timeout_process.py",
+      "src/pytest_leela/_timeout_guardian.py",
+      "src/pytest_leela/daemon.py"
+    ],
+    "oldLogged": "str(os.getpid()) + \":\" + __name__ + \"\\n\"",
+    "newLogged": "f'{os.getpid()}:{__name__}\\n'",
+    "rationale": "Remove unsupported string-arithmetic bootstrap mutants while preserving PID:module newline protocol.",
+    "tradeoff": "The exact old AST/operator denominator is not carried forward; new f-string generated bootstrap modules are honest zero-point domains under installed operators.",
+    "rollback": "restore preSourceCopy byte-for-byte then restore its old manifest identity; do not overwrite old receipt records."
+  },
+  "ordinaryImportContract": {
+    "output": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/formatter-import-contract-fa7482b42293468fa57337ce21260e0f-guard.log",
+    "phaseSnapshot": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/ordinary-imports-phase-snapshot.log",
+    "rowCount": 20,
+    "pids": [
+      "27490",
+      "27497",
+      "27499",
+      "27505"
+    ],
+    "modulesByPid": {
+      "27490": [
+        "shop.models",
+        "shop.mixins",
+        "stock.models",
+        "shop.admin",
+        "shop.backoffice"
+      ],
+      "27497": [
+        "shop.models",
+        "shop.mixins",
+        "stock.models",
+        "shop.admin",
+        "shop.backoffice"
+      ],
+      "27499": [
+        "shop.models",
+        "shop.mixins",
+        "stock.models",
+        "shop.admin",
+        "shop.backoffice"
+      ],
+      "27505": [
+        "shop.models",
+        "shop.mixins",
+        "stock.models",
+        "shop.admin",
+        "shop.backoffice"
+      ]
+    },
+    "expectedModules": [
+      "shop.admin",
+      "shop.backoffice",
+      "shop.mixins",
+      "shop.models",
+      "stock.models"
+    ],
+    "businessRegistryEvidence": "outer existing assertion passed; raw stdout includes registry/identity checks and 3 actual pricing mutations but not a full source qualification.",
+    "generatedProject": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/outer-basetemp/it_imports_models_admin_and_references_once_per_process0"
+  },
+  "formatControl": {
+    "row": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/formatter-control-row.txt",
+    "expected": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/formatter-control-expected.txt",
+    "classification": "separate declared synthetic formatter control, not subject replay"
+  },
+  "generatedModuleInventory": {
+    "path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/generated-module-inventory.json",
+    "pricing": {
+      "default": 3,
+      "all": 3
+    },
+    "bootstrapZeroPointDomains": [
+      "shop.admin",
+      "shop.backoffice",
+      "shop.mixins",
+      "shop.models",
+      "stock.models"
+    ]
+  },
+  "producer": {
+    "default": {
+      "denominator": 17,
+      "genuineCallCount": 17,
+      "raw": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/producer-default.json"
+    },
+    "all": {
+      "denominator": 17,
+      "genuineCallCount": 17,
+      "raw": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/producer-all.json"
+    },
+    "metrics": {
+      "classification": "disposable affected-producer source metric",
+      "target": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+      "producer": {
+        "name": "_django_project",
+        "lines": [
+          313,
+          396
+        ]
+      },
+      "pytestExit": 0,
+      "node": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+      "statementAstNodes": 17,
+      "statementNodesLineObserved": 15,
+      "unobservedStatementNodes": [
+        {
+          "type": "FunctionDef",
+          "line": 313,
+          "end": 396
+        },
+        {
+          "type": "Expr",
+          "line": 314,
+          "end": 323
+        }
+      ],
+      "branchAstNodes": 0,
+      "lineHits": [
+        325,
+        326,
+        327,
+        328,
+        335,
+        336,
+        337,
+        356,
+        357,
+        358,
+        365,
+        366,
+        368,
+        369,
+        374,
+        375,
+        381,
+        382,
+        385,
+        386,
+        387,
+        391,
+        392,
+        393,
+        394,
+        396,
+        400,
+        401,
+        456,
+        457,
+        458,
+        475,
+        477,
+        478,
+        479,
+        480,
+        481,
+        483,
+        484,
+        485,
+        486,
+        493,
+        494
+      ],
+      "coverageTestTimes": {
+        "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process": 1.7305561249995662
+      },
+      "coverageMap": {
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:358": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:477": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:480": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:486": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:483": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:382": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:327": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:385": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:391": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:394": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:458": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:336": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:400": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:479": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:357": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:366": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:485": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:369": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:375": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:494": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:381": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:387": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:326": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:396": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:335": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:393": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:457": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:356": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:475": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:481": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:365": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:478": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:484": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:368": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:493": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:374": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:386": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:325": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:328": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:392": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:337": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:456": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:401": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ]
+      }
+    },
+    "metricsLimit": "statement AST nodes line-observed is 15/17; the unobserved FunctionDef and docstring Expr are listed. Branch AST denominator is zero, reported as zero-point not 100%."
+  },
+  "artifacts": {
+    "producerQualificationSha256": "2aada609faccc06b7084398087fcbe8c14deec593b25593365872d85e4b76063",
+    "producerMetricsSha256": "b11d89a3192b60b16c95054ee73aadd5313f9f846946748a58aa7c10ad5be113",
+    "producerControlsSha256": "c2bd40e380d1645b863716c68151a1f2616b62d973d253beb14e66a5db5eb013",
+    "controls": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/producer-controls.log"
+  },
+  "remaining": [
+    "Original generated DEFAULT129 and broader ALL domains are not closed by this affected producer proof.",
+    "Expanded statements1861/1886, affected substrates, original broad gates/review, and three missing T4 receipts remain.",
+    "Existing prices and previous reports are historical evidence, not silently merged into this post-formatter domain."
+  ],
+  "compiledStatementEvidence": {
+    "path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/compiled-statement-evidence.json",
+    "classification": "disposable single-task evidence diagnostic",
+    "sha256": "2d394ee1f745687f7f90b7b99e258d8187e699be22488979b02c5e2e8f07f37f",
+    "statementAstNodes": 17,
+    "lineObserved": 15,
+    "compiledLineNumbers": [
+      313,
+      325,
+      326,
+      327,
+      328,
+      335,
+      336,
+      337,
+      356,
+      357,
+      358,
+      365,
+      366,
+      368,
+      369,
+      374,
+      375,
+      381,
+      382,
+      385,
+      386,
+      387,
+      391,
+      392,
+      393,
+      394,
+      396
+    ],
+    "invalidPriorField": "dis.Instruction.starts_line is bool",
+    "nonObserved": [
+      {
+        "type": "FunctionDef",
+        "line": 313
+      },
+      {
+        "type": "Expr",
+        "line": 314
+      }
+    ],
+    "note": "Compiled instructions cover 15 of 17 AST statement nodes; FunctionDef and docstring Expr are structural/compiler metadata, not runtime CALL statements; their absence from line trace is expected and not a coverage failure. co_lines and positions.lineno are authoritative; starts_line is only a bool."
+  }
+}

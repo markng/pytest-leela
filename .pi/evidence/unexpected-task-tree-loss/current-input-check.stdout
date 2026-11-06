@@ -1,0 +1,70 @@
+.github/workflows/publish.yml: FAILED open or read
+.github/workflows/python-package.yml: FAILED open or read
+.gitignore: FAILED open or read
+CHANGELOG.md: FAILED open or read
+LICENSE: FAILED open or read
+README.md: OK
+pyproject.toml: OK
+src/pytest_leela/__init__.py: FAILED open or read
+src/pytest_leela/ast_analysis.py: FAILED open or read
+src/pytest_leela/benchmark.py: FAILED open or read
+src/pytest_leela/config.py: FAILED open or read
+src/pytest_leela/coverage_collector.py: FAILED open or read
+src/pytest_leela/coverage_tracker.py: FAILED open or read
+src/pytest_leela/daemon.py: OK
+src/pytest_leela/engine.py: FAILED open or read
+src/pytest_leela/git_diff.py: FAILED open or read
+src/pytest_leela/html_report.py: FAILED open or read
+src/pytest_leela/import_hook.py: FAILED open or read
+src/pytest_leela/index.py: OK
+src/pytest_leela/models.py: FAILED open or read
+src/pytest_leela/operators.py: FAILED open or read
+src/pytest_leela/output.py: FAILED open or read
+src/pytest_leela/plugin.py: FAILED open or read
+src/pytest_leela/resources.py: FAILED open or read
+src/pytest_leela/runner.py: FAILED open or read
+src/pytest_leela/type_extractor.py: FAILED open or read
+target/__init__.py: FAILED open or read
+target/assignment_targets.py: FAILED open or read
+target/calculator.py: FAILED open or read
+target/collections_utils.py: FAILED open or read
+target/strings.py: FAILED open or read
+target/validators.py: FAILED open or read
+tests/__init__.py: FAILED open or read
+tests/conftest.py: FAILED open or read
+tests/leela/__init__.py: FAILED open or read
+tests/leela/describe_annotation_policy.py: FAILED open or read
+tests/leela/describe_assignment_targets.py: FAILED open or read
+tests/leela/describe_ast_analysis.py: FAILED open or read
+tests/leela/describe_benchmark.py: FAILED open or read
+tests/leela/describe_config.py: FAILED open or read
+tests/leela/describe_coverage_collector.py: FAILED open or read
+tests/leela/describe_coverage_tracker.py: OK
+tests/leela/describe_daemon.py: OK
+tests/leela/describe_daemon_contracts.py: FAILED open or read
+tests/leela/describe_daemon_shutdown.py: FAILED open or read
+tests/leela/describe_end_to_end.py: FAILED open or read
+tests/leela/describe_engine.py: FAILED open or read
+tests/leela/describe_engine_integration.py: FAILED open or read
+tests/leela/describe_execution_freshness.py: FAILED open or read
+tests/leela/describe_git_diff.py: FAILED open or read
+tests/leela/describe_html_report.py: FAILED open or read
+tests/leela/describe_import_hook.py: FAILED open or read
+tests/leela/describe_index.py: OK
+tests/leela/describe_models.py: FAILED open or read
+tests/leela/describe_operators.py: FAILED open or read
+tests/leela/describe_output.py: FAILED open or read
+tests/leela/describe_plugin.py: FAILED open or read
+tests/leela/describe_resources.py: FAILED open or read
+tests/leela/describe_runner.py: FAILED open or read
+tests/leela/describe_type_extractor.py: FAILED open or read
+tests/leela/describe_watcher_retained_probes.py: FAILED open or read
+tests/leela/describe_watcher_wheel.py: FAILED open or read
+tests/target/__init__.py: FAILED open or read
+tests/target/describe_assignment_targets.py: FAILED open or read
+tests/target/describe_calculator.py: FAILED open or read
+tests/target/describe_change_me.py: FAILED open or read
+tests/target/describe_collections_utils.py: FAILED open or read
+tests/target/describe_strings.py: FAILED open or read
+tests/target/describe_validators.py: FAILED open or read
+uv.lock: OK

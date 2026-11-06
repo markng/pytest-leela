@@ -1,0 +1,62 @@
+{
+  "sourceRoot": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+  "sourceHead": "b1bb565883c75356be1a493c64084607d5769f3f",
+  "sourceManifest": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/RESTORED-SOURCE.sha256",
+  "runtimeRoot": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029",
+  "environments": {
+    "env312": {
+      "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env312/bin/python",
+      "pythonVersion": "3.12.12",
+      "pytestVersion": "7.0.0",
+      "freeze": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/env312-freeze.txt",
+      "packageProvenance": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/env312-distributions.json",
+      "packageProvenanceSha256": "c4d5baf2692acea0ef0f5912821a40d871e6b349eeccf8b99dc67adad437cc27",
+      "pythonBinarySha256": "0bfeb6eebcacdfaa6dd02ce35053df6902910e77adf64c93d04fce358a0375a7",
+      "editableSource": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+      "editableDirectUrl": {
+        "url": "file:///Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+        "dir_info": {
+          "editable": true
+        }
+      },
+      "constraints": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/constraints312.txt",
+      "installLog": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/timeout-enforcement-fix/install-env312.log"
+    },
+    "env313": {
+      "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python",
+      "pythonVersion": "3.13.11",
+      "pytestVersion": "9.1.1",
+      "freeze": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/env313-freeze.txt",
+      "packageProvenance": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/env313-distributions.json",
+      "packageProvenanceSha256": "88ce60fd49b49904ff5898dbafff0b399d2ae2324213515576c64f03018b23e1",
+      "pythonBinarySha256": "98ebb7c41c86d099dc16c02320f3634b5665bbe2bdf064e642fefc923262fbb1",
+      "editableSource": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+      "editableDirectUrl": {
+        "url": "file:///Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+        "dir_info": {
+          "editable": true
+        }
+      },
+      "constraints": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/constraints313.txt",
+      "installLog": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/timeout-enforcement-fix/install-env313.log"
+    },
+    "env314": {
+      "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env314/bin/python",
+      "pythonVersion": "3.14.8",
+      "pytestVersion": "9.1.1",
+      "freeze": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/env314-freeze.txt",
+      "packageProvenance": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/env314-distributions.json",
+      "packageProvenanceSha256": "33b3648d1ac41fc82f7a733384ba5ee012068393bf1f49c1f29faccd02e79322",
+      "pythonBinarySha256": "7ebde552773a4045532637b114d645a313e045ac07b26f5e520bf039f1e34063",
+      "editableSource": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+      "editableDirectUrl": {
+        "url": "file:///Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+        "dir_info": {
+          "editable": true
+        }
+      },
+      "constraints": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/constraints314.txt",
+      "installLog": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/timeout-enforcement-fix/install-env314.log"
+    }
+  }
+}

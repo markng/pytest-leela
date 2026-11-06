@@ -1,0 +1,30 @@
+........................................................................ [ 74%]
+..............F..........                                                [100%]
+=================================== FAILURES ===================================
+____________ test_inspection_expected_receipt_binding[inspect_6.py] ____________
+
+name = 'inspect_6.py'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10c2f74d0>
+capsys = <_pytest.capture.CaptureFixture object at 0x10d073b60>
+
+    @pytest.mark.parametrize("name", sorted(INSPECTION_ARTIFACTS))
+    def test_inspection_expected_receipt_binding(name, monkeypatch, capsys):
+        monkeypatch.syspath_prepend(str(DIRECTORY))
+        module_name = Path(name).stem
+        artifact_contracts.importlib.import_module(module_name)
+        artifact_contracts.importlib.reload(artifact_contracts.sys.modules[module_name])
+        expected = (DIRECTORY / (Path(name).stem + ".txt")).read_text()
+        actual = capsys.readouterr().out
+        if actual != expected:
+            refreshed = "\n".join(
+                sorted(set(expected.splitlines()) | set(actual.splitlines()))
+            ) + "\n"
+            if actual == refreshed:
+                pytest.fail(f"{name} output needs refreshed golden input")
+>           raise
+E           RuntimeError: No active exception to reraise
+
+.pi/evidence/inline-source/test_artifact_qualification.py:81: RuntimeError
+=========================== short test summary info ============================
+FAILED .pi/evidence/inline-source/test_artifact_qualification.py::test_inspection_expected_receipt_binding[inspect_6.py]
+1 failed, 96 passed in 15.31s

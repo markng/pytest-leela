@@ -1,0 +1,2130 @@
+{
+  "src/pytest_leela/daemon.py": {
+    "ast_statements": [
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 520
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 268
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 521
+      },
+      {
+        "covered": true,
+        "kind": "Try",
+        "line": 522
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 531
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 655
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 523
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 526
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 527
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 532
+      },
+      {
+        "covered": true,
+        "kind": "Return",
+        "line": 534
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 686
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 845
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 524
+      },
+      {
+        "covered": true,
+        "kind": "Pass",
+        "line": 528
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 533
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 689
+      }
+    ],
+    "branch_denominator": 4,
+    "branches": [
+      [
+        531,
+        532
+      ],
+      [
+        531,
+        535
+      ],
+      [
+        686,
+        689
+      ],
+      [
+        686,
+        690
+      ]
+    ],
+    "changed_lines": [
+      23,
+      24,
+      264,
+      265,
+      268,
+      495,
+      519,
+      520,
+      521,
+      522,
+      523,
+      524,
+      525,
+      526,
+      527,
+      528,
+      529,
+      531,
+      532,
+      533,
+      534,
+      652,
+      653,
+      654,
+      655,
+      686,
+      687,
+      688,
+      689,
+      845
+    ],
+    "executable_lines": [
+      268,
+      519,
+      520,
+      521,
+      522,
+      523,
+      524,
+      526,
+      527,
+      528,
+      531,
+      532,
+      533,
+      534,
+      655,
+      686,
+      689,
+      845
+    ],
+    "line_denominator": 18,
+    "missing_branches": [],
+    "missing_lines": [],
+    "sha256": "954aa65ebc2a9811c2821b875c680fbbcbf15c7a43ed952c95d3d76aafd602bf",
+    "statement_denominator": 17
+  },
+  "src/pytest_leela/index.py": {
+    "ast_statements": [
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 395
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 410
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 265
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 266
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 403
+      },
+      {
+        "covered": true,
+        "kind": "Try",
+        "line": 405
+      },
+      {
+        "covered": true,
+        "kind": "Return",
+        "line": 411
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 655
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 671
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 404
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 406
+      },
+      {
+        "covered": true,
+        "kind": "Delete",
+        "line": 408
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 472
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 474
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 656
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 672
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 673
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 675
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 676
+      },
+      {
+        "covered": true,
+        "kind": "Return",
+        "line": 682
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 812
+      },
+      {
+        "covered": true,
+        "kind": "Return",
+        "line": 473
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 475
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 657
+      },
+      {
+        "covered": true,
+        "kind": "Return",
+        "line": 674
+      },
+      {
+        "covered": true,
+        "kind": "Return",
+        "line": 813
+      }
+    ],
+    "branch_denominator": 10,
+    "branches": [
+      [
+        472,
+        473
+      ],
+      [
+        472,
+        474
+      ],
+      [
+        474,
+        475
+      ],
+      [
+        474,
+        476
+      ],
+      [
+        656,
+        -648
+      ],
+      [
+        656,
+        657
+      ],
+      [
+        673,
+        674
+      ],
+      [
+        673,
+        675
+      ],
+      [
+        812,
+        813
+      ],
+      [
+        812,
+        814
+      ]
+    ],
+    "changed_lines": [
+      265,
+      266,
+      394,
+      395,
+      396,
+      397,
+      398,
+      399,
+      400,
+      401,
+      402,
+      403,
+      404,
+      405,
+      406,
+      407,
+      408,
+      409,
+      410,
+      411,
+      412,
+      472,
+      473,
+      474,
+      475,
+      655,
+      656,
+      657,
+      658,
+      659,
+      660,
+      671,
+      672,
+      673,
+      674,
+      675,
+      676,
+      677,
+      678,
+      679,
+      680,
+      681,
+      682,
+      812,
+      813
+    ],
+    "executable_lines": [
+      265,
+      266,
+      394,
+      395,
+      403,
+      404,
+      405,
+      406,
+      408,
+      410,
+      411,
+      472,
+      473,
+      474,
+      475,
+      655,
+      656,
+      657,
+      671,
+      672,
+      673,
+      674,
+      675,
+      676,
+      682,
+      812,
+      813
+    ],
+    "line_denominator": 27,
+    "missing_branches": [],
+    "missing_lines": [],
+    "sha256": "41dff732ab5e2f1918f65286bcb9640372c4422d71717fdd24c0c904e5e14b96",
+    "statement_denominator": 26
+  },
+  "tests/leela/describe_daemon.py": {
+    "ast_statements": [
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4057
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4216
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4274
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4292
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4315
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4338
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4356
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4374
+      },
+      {
+        "covered": true,
+        "kind": "Import",
+        "line": 4217
+      },
+      {
+        "covered": true,
+        "kind": "ImportFrom",
+        "line": 4218
+      },
+      {
+        "covered": true,
+        "kind": "Import",
+        "line": 4219
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4221
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4222
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4223
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4224
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4225
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4226
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4227
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4228
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 4230
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4238
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4239
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4275
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4276
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4277
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4278
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4279
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4280
+      },
+      {
+        "covered": true,
+        "kind": "Import",
+        "line": 4293
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4295
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4296
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4297
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4298
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4299
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4300
+      },
+      {
+        "covered": true,
+        "kind": "Import",
+        "line": 4316
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4318
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4319
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4320
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4321
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4322
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4323
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4339
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4340
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4341
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4342
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4343
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4344
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4345
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4357
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4358
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4359
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4360
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4361
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4362
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4363
+      },
+      {
+        "covered": true,
+        "kind": "Import",
+        "line": 4375
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4377
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4378
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4379
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4380
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4381
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4382
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4383
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4179
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4181
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 4187
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 4189
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 4206
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4231
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 4232
+      },
+      {
+        "covered": true,
+        "kind": "Return",
+        "line": 4236
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4240
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4241
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4242
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4243
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 4244
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4248
+      },
+      {
+        "covered": true,
+        "kind": "Try",
+        "line": 4249
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4260
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4261
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4262
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4263
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4264
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4265
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 4266
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4281
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4282
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4283
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4284
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4285
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4286
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4287
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4288
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4289
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4301
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4302
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4303
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4304
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4305
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4306
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4307
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4308
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4309
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4310
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4311
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4312
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4324
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4325
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4326
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4327
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4328
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4329
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4330
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4331
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4332
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4333
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4334
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4335
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4346
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4347
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4348
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4349
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4350
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4351
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4352
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4353
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4364
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4365
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4366
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4367
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4368
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4369
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4370
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4371
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4384
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4385
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4386
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4387
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4388
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4389
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4390
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4391
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4392
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4393
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4394
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4597
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4598
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4602
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4149
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4152
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4153
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4154
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4155
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4156
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4157
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4158
+      },
+      {
+        "covered": true,
+        "kind": "ImportFrom",
+        "line": 4164
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4165
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 4166
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4169
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4170
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4171
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4190
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4191
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4192
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4193
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4233
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4234
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4235
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4245
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4247
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4252
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4254
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4256
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4257
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4267
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4269
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4270
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4271
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4491
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4492
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 4589
+      },
+      {
+        "covered": true,
+        "kind": "If",
+        "line": 4042
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4167
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4168
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4043
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 4044
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 4045
+      }
+    ],
+    "branch_denominator": 14,
+    "branches": [
+      [
+        4042,
+        4043
+      ],
+      [
+        4042,
+        4046
+      ],
+      [
+        4187,
+        4188
+      ],
+      [
+        4187,
+        4189
+      ],
+      [
+        4189,
+        4190
+      ],
+      [
+        4189,
+        4196
+      ],
+      [
+        4206,
+        4207
+      ],
+      [
+        4206,
+        4208
+      ],
+      [
+        4232,
+        4233
+      ],
+      [
+        4232,
+        4236
+      ],
+      [
+        4244,
+        4245
+      ],
+      [
+        4244,
+        4247
+      ],
+      [
+        4266,
+        4267
+      ],
+      [
+        4266,
+        4269
+      ]
+    ],
+    "changed_lines": [
+      4042,
+      4043,
+      4044,
+      4045,
+      4056,
+      4057,
+      4149,
+      4151,
+      4152,
+      4153,
+      4154,
+      4155,
+      4156,
+      4157,
+      4158,
+      4159,
+      4164,
+      4165,
+      4166,
+      4167,
+      4168,
+      4169,
+      4170,
+      4171,
+      4179,
+      4180,
+      4181,
+      4187,
+      4189,
+      4190,
+      4191,
+      4192,
+      4193,
+      4206,
+      4215,
+      4216,
+      4217,
+      4218,
+      4219,
+      4220,
+      4221,
+      4222,
+      4223,
+      4224,
+      4225,
+      4226,
+      4227,
+      4228,
+      4229,
+      4230,
+      4231,
+      4232,
+      4233,
+      4234,
+      4235,
+      4236,
+      4237,
+      4238,
+      4239,
+      4240,
+      4241,
+      4242,
+      4243,
+      4244,
+      4245,
+      4246,
+      4247,
+      4248,
+      4249,
+      4250,
+      4251,
+      4252,
+      4253,
+      4254,
+      4255,
+      4256,
+      4257,
+      4258,
+      4259,
+      4260,
+      4261,
+      4262,
+      4263,
+      4264,
+      4265,
+      4266,
+      4267,
+      4268,
+      4269,
+      4270,
+      4271,
+      4272,
+      4273,
+      4274,
+      4275,
+      4276,
+      4277,
+      4278,
+      4279,
+      4280,
+      4281,
+      4282,
+      4283,
+      4284,
+      4285,
+      4286,
+      4287,
+      4288,
+      4289,
+      4290,
+      4291,
+      4292,
+      4293,
+      4294,
+      4295,
+      4296,
+      4297,
+      4298,
+      4299,
+      4300,
+      4301,
+      4302,
+      4303,
+      4304,
+      4305,
+      4306,
+      4307,
+      4308,
+      4309,
+      4310,
+      4311,
+      4312,
+      4313,
+      4314,
+      4315,
+      4316,
+      4317,
+      4318,
+      4319,
+      4320,
+      4321,
+      4322,
+      4323,
+      4324,
+      4325,
+      4326,
+      4327,
+      4328,
+      4329,
+      4330,
+      4331,
+      4332,
+      4333,
+      4334,
+      4335,
+      4336,
+      4337,
+      4338,
+      4339,
+      4340,
+      4341,
+      4342,
+      4343,
+      4344,
+      4345,
+      4346,
+      4347,
+      4348,
+      4349,
+      4350,
+      4351,
+      4352,
+      4353,
+      4354,
+      4355,
+      4356,
+      4357,
+      4358,
+      4359,
+      4360,
+      4361,
+      4362,
+      4363,
+      4364,
+      4365,
+      4366,
+      4367,
+      4368,
+      4369,
+      4370,
+      4371,
+      4372,
+      4373,
+      4374,
+      4375,
+      4376,
+      4377,
+      4378,
+      4379,
+      4380,
+      4381,
+      4382,
+      4383,
+      4384,
+      4385,
+      4386,
+      4387,
+      4388,
+      4389,
+      4390,
+      4391,
+      4392,
+      4393,
+      4394,
+      4395,
+      4396,
+      4491,
+      4492,
+      4589,
+      4597,
+      4598,
+      4601,
+      4602
+    ],
+    "executable_lines": [
+      4042,
+      4043,
+      4044,
+      4045,
+      4056,
+      4057,
+      4149,
+      4152,
+      4153,
+      4154,
+      4155,
+      4156,
+      4157,
+      4158,
+      4164,
+      4165,
+      4166,
+      4167,
+      4168,
+      4169,
+      4170,
+      4171,
+      4179,
+      4181,
+      4187,
+      4189,
+      4190,
+      4191,
+      4192,
+      4193,
+      4206,
+      4215,
+      4216,
+      4217,
+      4218,
+      4219,
+      4221,
+      4222,
+      4223,
+      4224,
+      4225,
+      4226,
+      4227,
+      4228,
+      4230,
+      4231,
+      4232,
+      4233,
+      4234,
+      4235,
+      4236,
+      4238,
+      4239,
+      4240,
+      4241,
+      4242,
+      4243,
+      4244,
+      4245,
+      4247,
+      4248,
+      4249,
+      4252,
+      4254,
+      4256,
+      4257,
+      4260,
+      4261,
+      4262,
+      4263,
+      4264,
+      4265,
+      4266,
+      4267,
+      4269,
+      4270,
+      4271,
+      4274,
+      4275,
+      4276,
+      4277,
+      4278,
+      4279,
+      4280,
+      4281,
+      4282,
+      4283,
+      4284,
+      4285,
+      4286,
+      4287,
+      4288,
+      4289,
+      4292,
+      4293,
+      4295,
+      4296,
+      4297,
+      4298,
+      4299,
+      4300,
+      4301,
+      4302,
+      4303,
+      4304,
+      4305,
+      4306,
+      4307,
+      4308,
+      4309,
+      4310,
+      4311,
+      4312,
+      4315,
+      4316,
+      4318,
+      4319,
+      4320,
+      4321,
+      4322,
+      4323,
+      4324,
+      4325,
+      4326,
+      4327,
+      4328,
+      4329,
+      4330,
+      4331,
+      4332,
+      4333,
+      4334,
+      4335,
+      4338,
+      4339,
+      4340,
+      4341,
+      4342,
+      4343,
+      4344,
+      4345,
+      4346,
+      4347,
+      4348,
+      4349,
+      4350,
+      4351,
+      4352,
+      4353,
+      4356,
+      4357,
+      4358,
+      4359,
+      4360,
+      4361,
+      4362,
+      4363,
+      4364,
+      4365,
+      4366,
+      4367,
+      4368,
+      4369,
+      4370,
+      4371,
+      4374,
+      4375,
+      4377,
+      4378,
+      4379,
+      4380,
+      4381,
+      4382,
+      4383,
+      4384,
+      4385,
+      4386,
+      4387,
+      4388,
+      4389,
+      4390,
+      4391,
+      4392,
+      4393,
+      4394,
+      4491,
+      4492,
+      4589,
+      4597,
+      4598,
+      4602
+    ],
+    "line_denominator": 191,
+    "missing_branches": [],
+    "missing_lines": [],
+    "sha256": "f945e6cd69d164da43262d96bf715256b784b447a2a4deb21ab004e285e68dfa",
+    "statement_denominator": 189
+  },
+  "tests/leela/describe_index.py": {
+    "ast_statements": [
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 1787
+      },
+      {
+        "covered": true,
+        "kind": "Import",
+        "line": 1788
+      },
+      {
+        "covered": true,
+        "kind": "ImportFrom",
+        "line": 1789
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 1791
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 1792
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 1793
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1794
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 1795
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 1796
+      },
+      {
+        "covered": true,
+        "kind": "FunctionDef",
+        "line": 1798
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 1814
+      },
+      {
+        "covered": true,
+        "kind": "Try",
+        "line": 1815
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1825
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1826
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1827
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 1799
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 1809
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1812
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1816
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1817
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1818
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1819
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1820
+      },
+      {
+        "covered": true,
+        "kind": "Assign",
+        "line": 1821
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1823
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1824
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1800
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1801
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1802
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1803
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1804
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1805
+      },
+      {
+        "covered": true,
+        "kind": "Expr",
+        "line": 1806
+      },
+      {
+        "covered": true,
+        "kind": "Assert",
+        "line": 1807
+      },
+      {
+        "covered": true,
+        "kind": "With",
+        "line": 1810
+      },
+      {
+        "covered": true,
+        "kind": "Raise",
+        "line": 1811
+      }
+    ],
+    "branch_denominator": 0,
+    "branches": [],
+    "changed_lines": [
+      1785,
+      1786,
+      1787,
+      1788,
+      1789,
+      1790,
+      1791,
+      1792,
+      1793,
+      1794,
+      1795,
+      1796,
+      1797,
+      1798,
+      1799,
+      1800,
+      1801,
+      1802,
+      1803,
+      1804,
+      1805,
+      1806,
+      1807,
+      1808,
+      1809,
+      1810,
+      1811,
+      1812,
+      1813,
+      1814,
+      1815,
+      1816,
+      1817,
+      1818,
+      1819,
+      1820,
+      1821,
+      1822,
+      1823,
+      1824,
+      1825,
+      1826,
+      1827
+    ],
+    "executable_lines": [
+      1787,
+      1788,
+      1789,
+      1791,
+      1792,
+      1793,
+      1794,
+      1795,
+      1796,
+      1798,
+      1799,
+      1800,
+      1801,
+      1802,
+      1803,
+      1804,
+      1805,
+      1806,
+      1807,
+      1809,
+      1810,
+      1811,
+      1812,
+      1814,
+      1815,
+      1816,
+      1817,
+      1818,
+      1819,
+      1820,
+      1821,
+      1823,
+      1824,
+      1825,
+      1826,
+      1827
+    ],
+    "line_denominator": 36,
+    "missing_branches": [],
+    "missing_lines": [],
+    "sha256": "52154a871c9f154e06a26e748ae26e04d7b082cde4c4ecdbeca534ca6f86b6d1",
+    "statement_denominator": 36
+  }
+}

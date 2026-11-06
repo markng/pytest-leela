@@ -1,0 +1,39 @@
+# Recovery inventory — administrative stage, original task incomplete
+
+## Verified current source and preservation
+
+Recovery checkout `/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z`, branch `fix/timeout-recovery-20261029`, HEAD `b1bb565883c75356be1a493c64084607d5769f3f`. `shasum -a256 -c .pi/RESTORED-SOURCE.sha256` verified all 17 preserved product/test/config/doc identities; the manifest SHA is `d7fbe84cbfafaf39a4724a3b083593d46b9b01ace8fec357b15e980290b31314`. Empty index. The `git diff --binary` SHA is `ddfc531a2d3b5a11b07250c6bd338f11084110b210991b5de29efff9eab93b78`, matching the durable tracked patch. No source or canonical-checkout changes in this stage. Durable originals: `/Users/mng/Projects/pytest-leela/.pi/evidence/r-compaction-bounded-20261029T071442Z/{source,source.sha256,tracked.patch,worker-STATUS.md}` and `/Users/mng/Projects/pytest-leela/.pi/evidence/timeout-fix-dispatch/1156139e-final-20261029T024356Z/`.
+
+## Documentary results, not fresh raw proof
+
+The surviving worker STATUS documents T1 origin `38978dff` with 136 selected, controls and genuine CALL; runner DEFAULT60/ALL90, old runner-test DEFAULT157/ALL163 with bridge `12216b90393e40c6af98847ca627d0b3`, process tests 255/261, new14 56/56, index 8/8, early 5/5, timeout 22/24, Django 9/9. Historical ordinary tests: 1723 on each of three environments; mypy 13/14 reported 22, clean-export lint zero, root fatal lint 146. These are documentary historical results, not verified raw ledger contents or current reruns. The historical root lint failure is not green. Generated DEFAULT330 had 198 genuine, 129 unqualified and three other records requiring interpretation; ALL pending; statements 1861/1886; Django bootstrap bindings and substrate bridges remain. No fresh per-mutant ledger exists here. The existing final-canonical-inventory.json is a historical source-bound candidate/domain inventory, not a results ledger.
+
+## Missing or unverified inputs
+
+The original `/private/tmp/pi-leela-responsive-watch-20261022` and its `.pi/evidence` are absent, including original native raw ledgers, current-inventory.json, former task helper directory and env312/313/314. The three already-missing historical worker-native-default/all and process-native-all receipt originals were a T4 blocker even before this loss; do not manufacture replacements. The old guardian exact-copy recovery described in artifact-inventory is historical documentation; those raw bytes are also unavailable in the missing tree. Cause of temporary checkout loss is unknown. The clean task session remains a restricted possible source for individual helper write/read records, not a substitute for native raw receipts.
+
+All three pinned environment executables under old `.pi/evidence/local-recovery-20261027/environments/env{312,313,314}/bin/python` are absent. Read-only PATH checks found Homebrew Python 3.12.12, 3.13.11 and 3.14.8, respectively; this does not establish pytest 7.0.0/9.1.1/9.1.1, the editable checkout or the rest of the pinned dependency environments. Filename-level search in `/Users/mng/Projects/pytest-leela-local-backups` found no pytest-named files, wheels, or named guard helpers; it is not proof no packages exist elsewhere. No installation, sync, or foreign environment activation was attempted.
+
+## Executable artifact classification and recovery
+
+Product and maintained tests in the 17-file manifest are restored, unchanged this stage, and retain original strict T1–T4 requirements. Generated runtime fixture strings are executable code and still require original qualification. Historical `artifact-inventory.md` lists prior single-task diagnostic tools and controls; missing raw controls cannot be treated as fresh proof.
+
+Exact source-only recovered copies, not executed or adopted, in `.pi/recovered-helpers/`:
+
+| Artifact | SHA-256 | Classification / provenance |
+| --- | --- | --- |
+| `native_partition.py` | `5012e84e3e6c414554109d0aa3beefb7db926133a642b7693188ddd6c9cf43c4` | Single-investigation diagnostic; complete session write plus unique exact edits reconstructed, matched retained recorded digest. |
+| `passive_timeout_observer.py` | `9facc5f24b9d55c495e954fadac8c4427eb8acdf53d3b205a7580e36e15d8f54` | Single-investigation diagnostic; same method and digest check. |
+| `run_check.py` | `7432a1eb977da1cdc83a5ce09e587c2ec03ec2ca9fbd75a64adbcb9f828a4e1e` | Reused guard source; exact recorded read result matched digest; classification/operational readiness requires reassessment before activation. |
+| `resource_guard_poller.py` | `917ad76e62d9d3ce4a34ea3a6efdec49d93328110e83a2c2c0790e5ca6cf5263` | Reused guard source; exact recorded read result matched digest; security/containment readiness is not established by copying. |
+
+All recovered bytes were checked against independent digests recorded in the task session; reconstruction required every edit to match exactly once. These source copies are not recovered original receipts. Historical controls are described in the old inventory but raw results are missing. Before any activation, verify source-specific syntax and relevant positive/negative/cleanup and containment controls on approved inputs; if a helper is promoted to maintained/ongoing operations, strict line/branch/mutation quality applies. Other helper records including `observer_controls.py`, `verify_partition.py` and supporting tools lack a verified current identity in the bounded search, so are not restored or asserted irrecoverable. No new executable diagnostic was authored; the one-shot in-memory reconstruction/check commands did not persist executable scripts.
+
+## Concrete next action and decisions
+
+1. Preserve this checkout and recheck `test "$(git rev-parse HEAD)" = b1bb565883c75356be1a493c64084607d5769f3f && test -z "$(git diff --cached --name-only)" && shasum -a256 -c .pi/RESTORED-SOURCE.sha256`. Recheck the four helper digests above. No mutant until independent approved containment and clean controls are verified.
+2. Obtain owner-provided exact old evidence/environment backup if available, including the three pre-existing T4 receipt originals, and verify byte hashes and provenance without overwriting historical originals. Alternatively, owner must authorize a specific safe way to provision/reconstruct isolated pinned 3.12.12/pytest7.0.0, 3.13.11/pytest9.1.1 and 3.14.8/pytest9.1.1 environments; this dispatch expressly forbids installs/sync and another project's activation. Merely locating existing packages does not authorize installation. No decision is needed to continue safe read-only inspection within the named scope.
+3. With inputs and readiness established, map preserved source hashes and relevant runner/loader/selection inputs to surviving evidence, requalify rather than merge historical counts, then work generated DEFAULT unqualified records and full ALL domain, Django 20 bootstrap bindings, substrate/bridge and changed-code line/branch/native CALL gaps. Run only bounded approved campaigns with clean controls, per-mutant ledgers and real containment; do not repeat completed campaigns solely for prose. Follow original T3 gates and review before scheduling full native 13/14 campaigns.
+4. If three original receipts cannot be recovered after an appropriately scoped search, T4 remains unsatisfied; only the owner can decide the actual preservation disposition, without falsifying originals or weakening quality gates. Publication and original task remain blocked pending all original requirements and review. PR19 credential/key-ready issue belongs to separate parent work; this stage neither tests credentials nor requests duplicate approval.
+
+No profile/skill learning edits: narrow stage forbids outside writes. Candidate pending lesson for parent: a retained complete read/write transcript plus independent SHA can recover helper bytes, but cannot recover a missing run receipt or establish containment readiness.

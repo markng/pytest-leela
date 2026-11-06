@@ -1,0 +1,2 @@
+matched_control=original placement under R; same env/node/tracing; bounded guard
+basetemp=/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp

@@ -1,0 +1,615 @@
+diff --git a/README.md b/README.md
+index a412f32..6e2ac78 100644
+--- a/README.md
++++ b/README.md
+@@ -313,7 +313,12 @@ Uses the Catppuccin Mocha dark theme.
+ 
+ The watcher tracks source and test changes in a SQLite index. This experimental
+ path is separate from `pytest --leela`; cache correctness and progress depend on
+-the matching engine/index implementation.
++the matching engine/index implementation. Content-based polls continue during
++analysis, including test/helper/config edits and deletions. A single analysis
++worker publishes only while its input generation is current; newer edits stay
++pending for a later pass. This coordinates one daemon and its IndexDB connection,
++not competing writers/processes. User tests are not cancelled: shutdown drains the
++worker and can wait indefinitely for hanging tests.
+ 
+ ### Usage and interpreter selection
+ 
+diff --git a/src/pytest_leela/daemon.py b/src/pytest_leela/daemon.py
+index dcfeaf7..9a23470 100644
+--- a/src/pytest_leela/daemon.py
++++ b/src/pytest_leela/daemon.py
+@@ -20,7 +20,8 @@ Or via the CLI::
+ 
+ The daemon prints a single line per change, plus a periodic status
+ line. Re-analysis happens in a background thread so the watcher
+-can schedule the next pass after the current pass releases input ownership.
++can detect edits and report status while analysis runs. Older passes cannot
++publish over a newer input generation; a single worker later converges.
+ """
+ 
+ # Without postponed annotations, Python <=3.13 evaluates annotations eagerly.
+@@ -260,12 +261,11 @@ class LeelaDaemon:
+             )
+         }
+         self._collected_test_files: set[str] = set()
+-        # One participating daemon writer owns this index. This private seam
+-        # can later be replaced by writer coordination; it is not fencing for
+-        # arbitrary indexed Engine/IndexDB callers or other processes. SQLite
+-        # transactions stay short: application ownership always precedes DB locks.
++        # Serialize scans, not user analysis. Same-thread analysis callbacks
++        # defer input reads until publication exits its IndexDB generation.
+         self._application_lock = threading.RLock()
+         self._application_owned = False
++        self._analysis_callback = threading.local()
+         self._scan_pending = False
+         self._stop = threading.Event()
+         self._reanalyzer_thread: threading.Thread | None = None
+@@ -492,7 +492,7 @@ sys.exit(0 if status in (pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED)
+ 
+     @contextmanager
+     def _application_pass(self, db: IndexDB) -> Iterator[None]:
+-        """Serialize complete passes/scans, not filesystem edits or DB readers.
++        """Serialize scans, not analysis, filesystem edits or DB readers.
+ 
+         Reentrancy is only for callback requests: _scan_for_changes defers
+         rather than reconciling inside an active pass. Drain under the same
+@@ -516,9 +516,22 @@ sys.exit(0 if status in (pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED)
+                 finally:
+                     self._application_owned = False
+ 
++    @contextmanager
++    def _analysis_pass(self, db: IndexDB) -> Iterator[None]:
++        self._analysis_callback.active = True
++        try:
++            with db.analysis_pass():
++                yield
++        finally:
++            self._analysis_callback.active = False
++            with self._application_pass(db):
++                pass
++
+     def _scan_for_changes(self, db: IndexDB) -> list[ChangeEvent]:
+-        # Take ownership BEFORE walking/reading files or consuming signatures.
+-        # Other threads wait; same-thread callbacks request one whole later scan.
++        if getattr(self._analysis_callback, "active", False):
++            with self._application_lock:
++                self._scan_pending = True
++            return []
+         with self._application_lock:
+             if self._application_owned:
+                 self._scan_pending = True
+@@ -636,6 +649,10 @@ sys.exit(0 if status in (pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED)
+         """
+         if not (added or modified or deleted):
+             return
++        # Capture the request boundary before collection/coverage work. The
++        # active pass can complete while that work runs; checking activity only
++        # after an empty consumer lookup would be too late to fence it.
++        analysis_was_active = self._reanalyzing
+         prior = self._collected_test_files.copy()
+         # History survives restarts and includes tests no longer collectable.
+         for row in db._execute(
+@@ -666,6 +683,10 @@ sys.exit(0 if status in (pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED)
+ 
+         dirty_ids &= self._scope_symbol_ids(db)
+         if not dirty_ids:
++            if analysis_was_active and (set(modified + deleted) & prior):
++                # No consumer row existed when the collected test changed. Fence
++                # this active pass before it can publish stale clean evidence.
++                self._dirty_scope(db)
+             return
+ 
+         # A corrected test must retry an already-pending failed analysis too.
+@@ -821,7 +842,7 @@ sys.exit(0 if status in (pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED)
+ 
+     def _run_reanalysis(self, db: IndexDB, pending: list[str]) -> None:
+         try:
+-            with self._application_pass(db):
++            with self._analysis_pass(db):
+                 self._print(f"[analyze] re-analyzing {len(pending)} dirty symbol(s)...")
+                 # Observer mode: also report baseline test failures
+                 # so the operator sees "tests that don't pass on the
+diff --git a/src/pytest_leela/index.py b/src/pytest_leela/index.py
+index 39af8b7..b0703d2 100644
+--- a/src/pytest_leela/index.py
++++ b/src/pytest_leela/index.py
+@@ -262,6 +262,8 @@ class IndexDB:
+         # within a transaction``. The lock also keeps the
+         # connection itself sane under concurrent use.
+         self._lock: threading.RLock = threading.RLock()
++        self._generation = object()
++        self._analysis = threading.local()
+         self._apply_pragmas()
+         self._setup_schema()
+ 
+@@ -389,6 +391,25 @@ class IndexDB:
+             "operator, replacement_op)"
+         )
+ 
++    @contextmanager
++    def analysis_pass(self) -> Iterator[None]:
++        """Fence this thread's publications, without holding a lock over user code.
++
++        One daemon owns this connection. Scans advance the generation even for
++        already-dirty/hash-identical inputs; stale passes cannot reconcile old
++        source, replace evidence, or clean/error a newer request. Not a fence
++        for other connections/processes. The daemon defers reentrant scans.
++        """
++        with self._lock:
++            self._analysis.generation = self._generation
++        try:
++            yield
++        finally:
++            del self._analysis.generation
++
++    def _publication_current(self) -> bool:
++        return getattr(self._analysis, "generation", self._generation) is self._generation
++
+     @contextmanager
+     def transaction(self) -> Iterator[sqlite3.Connection]:
+         """Run a block of operations atomically."""
+@@ -448,6 +469,10 @@ class IndexDB:
+         new_ids = set(new_symbols)
+ 
+         with self.transaction():
++            if not self._publication_current():
++                return ReconcileResult(frozenset(), frozenset(), frozenset())
++            if not hasattr(self._analysis, "generation"):
++                self._generation = object()
+             old_hashes = self._symbols_in_file(file_path)
+             old_ids = set(old_hashes)
+ 
+@@ -627,10 +652,12 @@ class IndexDB:
+                 f"Invalid symbol state {state!r}; must be one of "
+                 f"{sorted(SYMBOL_STATES)}"
+             )
+-        self._execute(
+-            "UPDATE symbols SET state = ? WHERE id = ?",
+-            (state, symbol_id),
+-        )
++        with self._lock:
++            if self._publication_current():
++                self._execute(
++                    "UPDATE symbols SET state = ? WHERE id = ?",
++                    (state, symbol_id),
++                )
+ 
+     def mark_symbols_dirty(self, symbol_ids: "set[str] | list[str]") -> int:
+         """Mark a set of symbols as ``STATE_DIRTY``.
+@@ -641,16 +668,18 @@ class IndexDB:
+ 
+         Returns the number of symbols actually transitioned to dirty.
+         """
+-        if not symbol_ids:
+-            return 0
+-        placeholders = ",".join("?" for _ in symbol_ids)
+-        cur = self._execute(
+-            f"UPDATE symbols SET state = ? "
+-            f"WHERE id IN ({placeholders}) "
+-            f"AND state IN (?, ?)",
+-            (STATE_DIRTY, *symbol_ids, STATE_CLEAN, STATE_STALE),
+-        )
+-        return cur.rowcount
++        with self._lock:
++            self._generation = object()
++            if not symbol_ids:
++                return 0
++            placeholders = ",".join("?" for _ in symbol_ids)
++            cur = self._execute(
++                f"UPDATE symbols SET state = ? "
++                f"WHERE id IN ({placeholders}) "
++                f"AND state IN (?, ?)",
++                (STATE_DIRTY, *symbol_ids, STATE_CLEAN, STATE_STALE),
++            )
++            return cur.rowcount
+ 
+     def symbols_for_tests(self, test_ids: set[str]) -> set[str]:
+         """Return the set of symbol IDs previously exercised by these tests.
+@@ -780,6 +809,8 @@ class IndexDB:
+         is_error = result.error is not None
+ 
+         with self.transaction():
++            if not self._publication_current():
++                return
+             previous = self._execute(
+                 "SELECT details FROM mutants WHERE symbol_id = ? "
+                 "AND location_line = ? AND col_offset = ? "
+diff --git a/tests/leela/describe_coverage_tracker.py b/tests/leela/describe_coverage_tracker.py
+index 00ac20d..9177fa7 100644
+--- a/tests/leela/describe_coverage_tracker.py
++++ b/tests/leela/describe_coverage_tracker.py
+@@ -5,10 +5,19 @@ import sys
+ import tempfile
+ import threading
+ 
+-from pytest_leela.coverage_tracker import _LineTracer, collect_coverage
++import pytest
++
++from pytest_leela.coverage_tracker import _LineTracer, _normalize_nodeid, collect_coverage
+ from pytest_leela.models import CoverageMap
+ 
+ 
++@pytest.mark.parametrize("path_text", ["folder/../leaf", "folder/./leaf", "folder//leaf"])
++def test_normalize_nodeid_preserves_native_parameter_path(request, path_text):
++    nodeid = request.node.nodeid
++    assert path_text in nodeid
++    assert _normalize_nodeid(nodeid, request.config.rootpath, request.config.rootpath) == nodeid
++
++
+ def describe_LineTracer():
+     def it_starts_tracing_and_records_lines_hit():
+         """start() activates tracing and records line executions for target files."""
+diff --git a/tests/leela/describe_daemon.py b/tests/leela/describe_daemon.py
+index 45c6028..9e08c37 100644
+--- a/tests/leela/describe_daemon.py
++++ b/tests/leela/describe_daemon.py
+@@ -4039,6 +4039,10 @@ def _gate_inputs(root, producer):
+         (test.parent / "check_calc.py").write_text(
+             "from calc import add\ndef test_extra():\n    assert add(0, 2) == 2\n")
+         replacement = "[pytest]\npython_files = test_*.py check_*.py\n"
++    elif producer == "deleted-source":
++        changed = root / "src/transient.py"
++        changed.write_text(source.read_text())
++        replacement = None
+     elif producer == "deleted-test":
+         changed = test.parent / "test_extra.py"
+         changed.write_text("from calc import add\ndef test_extra():\n    assert add(0, 2) == 2\n")
+@@ -4049,8 +4053,8 @@ def _gate_inputs(root, producer):
+     return source, changed, replacement
+ 
+ 
+-@pytest.mark.parametrize("producer", ["source", "test", "helper", "config", "deleted-test"])
+-def test_analysis_owns_inputs_until_real_runner_publication(tmp_path, monkeypatch, producer):
++@pytest.mark.parametrize("producer", ["source", "test", "helper", "config", "deleted-test", "deleted-source"])
++def test_scan_completes_before_real_runner_publication(tmp_path, monkeypatch, producer):
+     import threading
+     import pytest_leela.engine as engine_module
+     from pytest_leela.daemon import DaemonStatus
+@@ -4142,14 +4146,29 @@ def test_analysis_owns_inputs_until_real_runner_publication(tmp_path, monkeypatc
+             threads.append(poll)
+             poll.start()
+             assert scan_started.wait(5)
+-            # Bounded observation only, never a sleep used to release the worker.
+-            scan_done.wait(.2)
++            assert scan_done.wait(5), "poll waited for actual runner publication"
+             assert (daemon._source_signatures, daemon._test_signatures,
+-                    daemon._contract_signatures) == signatures, "busy poll consumed a change"
++                    daemon._contract_signatures) != signatures
++            assert db.get_dirty_symbols(), "poll did not persist the newer request"
++            requested_during_analysis = daemon._last_change_at
++            fixture = tmp_path / "tests/conftest.py"
++            fixture.write_text(fixture.read_text() + "# another pending generation\n")
++            daemon._scan_for_changes(db)
++            assert daemon._last_change_at != requested_during_analysis
++            persisted = (db._execute("SELECT * FROM symbols").fetchall(),
++                         db._execute("SELECT * FROM mutants").fetchall())
+             reader = threading.Thread(target=read_status)
+             threads.append(reader)
+             reader.start()
+             assert reads_done.wait(5), "analysis held the SQLite lock/transaction"
++            from unittest.mock import Mock
++            status_lines = daemon.out.getvalue().count("status:")
++            with monkeypatch.context() as m:
++                m.setattr(daemon._stop, "wait", Mock(side_effect=[False] * 9 + [True]))
++                daemon._loop(db)
++            assert daemon.out.getvalue().count("status:") == status_lines + 1
++            assert not release.is_set()
++            assert daemon._reanalyzing
+         finally:
+             release.set()
+             _join_daemon_worker(daemon)
+@@ -4157,14 +4176,21 @@ def test_analysis_owns_inputs_until_real_runner_publication(tmp_path, monkeypatc
+                 thread.join(30)
+                 assert not thread.is_alive()
+         assert not failures, failures
+-        assert not early_reads, "poll read files before analysis released ownership"
++        assert (db._execute("SELECT * FROM symbols").fetchall(),
++                db._execute("SELECT * FROM mutants").fetchall()) == persisted
++        assert early_reads, "poll did not read inputs before analysis completed"
+         assert foreign_history() == retained
+         assert runner_results
+         assert db.get_dirty_symbols(), "old completion erased the newer request"
+         assert daemon._last_change_at > daemon._last_reanalysis_at
+         assert not daemon._reanalyzing
+-        if producer != "source":
++        if producer not in {"source", "deleted-source"}:
+             assert {s.id: s.source_hash for s in db.all_symbols()} == before_hashes
++        if producer == "deleted-source":
++            assert all(s.file != str(changed) for s in db.all_symbols())
++            changed.write_text(source.read_text())
++            daemon._scan_for_changes(db)
++            assert str(changed) in {s.file for s in db.all_symbols()}
+         # A new relevant edit while ALREADY pending still advances scheduling;
+         # reporting's transition count may be zero, but this is not idle input.
+         requested_at = daemon._last_change_at
+@@ -4177,7 +4203,7 @@ def test_analysis_owns_inputs_until_real_runner_publication(tmp_path, monkeypatc
+         after = _analyze_lifecycle(daemon, db, results, progress)
+         assert after.target_sources[str(source)] == source.read_text()
+         assert foreign_history() == retained
+-        if producer != "source":
++        if producer not in {"source", "deleted-source"}:
+             assert _sub_status(after) == ("survived" if producer == "deleted-test" else "killed")
+         count = len(results)
+         assert daemon._scan_for_changes(db) == []
+@@ -4186,6 +4212,188 @@ def test_analysis_owns_inputs_until_real_runner_publication(tmp_path, monkeypatc
+         assert not db.get_dirty_symbols()
+ 
+ 
++@pytest.mark.parametrize("remove", [False, True])
++def test_first_analysis_zero_coverage_change_fences_real_publication(tmp_path, monkeypatch, remove):
++    import threading
++    from concurrent.futures import ThreadPoolExecutor
++    import pytest_leela.engine as engine_module
++
++    daemon, _, _ = _lifecycle_daemon(tmp_path, monkeypatch)
++    source = tmp_path / "src/identity.py"
++    source.write_text("def identity(value):\n    return value\n")
++    test = tmp_path / "tests/test_identity.py"
++    test.write_text("from identity import identity\ndef test_identity():\n    assert identity(1) == 1\n")
++    paused, release = threading.Event(), threading.Event()
++    actual_runner = engine_module.run_tests_for_mutant
++    runner_results = []
++
++    def pause_actual_result(*args, **kwargs):
++        result = actual_runner(*args, **kwargs)
++        if not paused.is_set():
++            runner_results.append(result)
++            paused.set()
++            assert release.wait(15)
++        return result
++
++    monkeypatch.setattr(engine_module, "run_tests_for_mutant", pause_actual_result)
++    with IndexDB(tmp_path / "first.db") as db, ThreadPoolExecutor(max_workers=1) as poller:
++        daemon._initial_build(db)
++        assert not db._execute("SELECT * FROM mutants").fetchall()
++        daemon._maybe_spawn_reanalysis(db)
++        assert paused.wait(15), daemon.out.getvalue()
++        if remove:
++            test.unlink()
++        else:
++            test.write_text("def test_idle():\n    assert True\n")
++        poll = poller.submit(daemon._scan_for_changes, db)
++        try:
++            # Future.result both bounds scan completion and propagates its
++            # actual exception; no callback catch can conceal a failed scan.
++            poll.result(timeout=15)
++            # The input signature is consumed before the old runner is released.
++            assert str(test) not in daemon._test_signatures if remove else daemon._test_signatures[str(test)] == daemon._signature(test.read_bytes())
++        finally:
++            release.set()
++            _join_daemon_worker(daemon)
++        # No consumer row existed when the change was scanned. The old result
++        # must therefore remain fenced, not become clean/current evidence.
++        assert runner_results
++        assert not db._execute("SELECT * FROM mutants").fetchall()
++        assert db.get_dirty_symbols()
++        assert daemon._last_change_at != daemon._last_reanalysis_at
++        daemon._maybe_spawn_reanalysis(db)
++        _join_daemon_worker(daemon)
++        if remove:
++            assert db.get_dirty_symbols(), "deleted-test input was fabricated clean"
++        else:
++            rows = db._execute("SELECT details FROM mutants").fetchall()
++            assert rows
++            assert all("test_idle" in raw for (raw,) in rows)
++
++
++def test_first_analysis_zero_coverage_change_stays_targeted_when_inactive(tmp_path, monkeypatch):
++    daemon, _, _ = _lifecycle_daemon(tmp_path, monkeypatch)
++    source = tmp_path / "src/identity.py"
++    source.write_text("def identity(value):\n    return value\n")
++    test = tmp_path / "tests/test_identity.py"
++    test.write_text("from identity import identity\ndef test_identity():\n    assert identity(1) == 1\n")
++    with IndexDB(tmp_path / "inactive.db") as db:
++        daemon._initial_build(db)
++        symbol_id = db.all_symbols()[0].id
++        db.mark_state(symbol_id, STATE_CLEAN)
++        daemon._reanalyzing = False
++        before = daemon._last_change_at
++        test.write_text("def test_idle():\n    assert True\n")
++        daemon._scan_for_changes(db)
++        assert db.get_state(symbol_id) == STATE_CLEAN
++        assert daemon._last_change_at == before
++
++
++def test_active_zero_coverage_change_cleans_already_pending_scope(tmp_path, monkeypatch):
++    import threading
++
++    daemon, _, _ = _lifecycle_daemon(tmp_path, monkeypatch)
++    source = tmp_path / "src/identity.py"
++    source.write_text("def identity(value):\n    return value\n")
++    test = tmp_path / "tests/test_identity.py"
++    test.write_text("from identity import identity\ndef test_identity():\n    assert identity(1) == 1\n")
++    with IndexDB(tmp_path / "pending.db") as db:
++        daemon._initial_build(db)
++        symbol_id = db.all_symbols()[0].id
++        assert db.get_state(symbol_id) == STATE_DIRTY
++        test_abs = str(test.resolve())
++        before = daemon._last_change_at
++        daemon._reanalyzing = True
++        test.write_text("def test_idle():\n    assert True\n")
++        daemon._analysis_callback = threading.local()
++        daemon._analysis_callback.active = False
++        daemon._handle_test_file_changes(db, [], [test_abs], [])
++        assert db.get_state(symbol_id) == STATE_DIRTY
++        assert daemon._last_change_at != before
++
++
++def test_active_zero_coverage_added_change_leaves_schedule_when_no_persistence_needed(tmp_path, monkeypatch):
++    import threading
++
++    daemon, _, _ = _lifecycle_daemon(tmp_path, monkeypatch)
++    source = tmp_path / "src/identity.py"
++    source.write_text("def identity(value):\n    return value\n")
++    test = tmp_path / "tests/test_identity.py"
++    test.write_text("from identity import identity\ndef test_identity():\n    assert identity(1) == 1\n")
++    with IndexDB(tmp_path / "pending-added.db") as db:
++        daemon._initial_build(db)
++        symbol_id = db.all_symbols()[0].id
++        assert db.get_state(symbol_id) == STATE_DIRTY
++        test_abs = str(test.resolve())
++        before = daemon._last_change_at
++        daemon._reanalyzing = True
++        test.write_text("def test_idle():\n    assert True\n")
++        daemon._analysis_callback = threading.local()
++        daemon._analysis_callback.active = False
++        daemon._handle_test_file_changes(db, [test_abs], [], [])
++        assert db.get_state(symbol_id) == STATE_DIRTY
++        assert daemon._last_change_at == before
++
++
++def test_active_inactive_zero_coverage_modification_stays_clean(tmp_path, monkeypatch):
++    daemon, _, _ = _lifecycle_daemon(tmp_path, monkeypatch)
++    source = tmp_path / "src/identity.py"
++    source.write_text("def identity(value):\n    return value\n")
++    test = tmp_path / "tests/test_identity.py"
++    test.write_text("from identity import identity\ndef test_identity():\n    assert identity(1) == 1\n")
++    test_abs = str(test.resolve())
++    with IndexDB(tmp_path / "inactive-mod.db") as db:
++        daemon._initial_build(db)
++        symbol_id = db.all_symbols()[0].id
++        db.mark_state(symbol_id, STATE_CLEAN)
++        before = daemon._last_change_at
++        test.write_text("def test_idle():\n    assert True\n")
++        daemon._handle_test_file_changes(db, [test_abs], [], [])
++        assert db.get_state(symbol_id) == STATE_CLEAN
++        assert daemon._last_change_at == before
++
++
++def test_inactive_zero_coverage_added_change_stays_clean(tmp_path, monkeypatch):
++    daemon, _, _ = _lifecycle_daemon(tmp_path, monkeypatch)
++    source = tmp_path / "src/identity.py"
++    source.write_text("def identity(value):\n    return value\n")
++    test = tmp_path / "tests/test_identity.py"
++    test.write_text("from identity import identity\ndef test_identity():\n    assert identity(1) == 1\n")
++    test_abs = str(test.resolve())
++    with IndexDB(tmp_path / "inactive-added.db") as db:
++        daemon._initial_build(db)
++        symbol_id = db.all_symbols()[0].id
++        db.mark_state(symbol_id, STATE_CLEAN)
++        before = daemon._last_change_at
++        test.write_text("def test_idle():\n    assert True\n")
++        daemon._handle_test_file_changes(db, [test_abs], [], [])
++        assert db.get_state(symbol_id) == STATE_CLEAN
++        assert daemon._last_change_at == before
++
++
++def test_active_zero_coverage_change_cleans_first_pass_scope(tmp_path, monkeypatch):
++    import threading
++
++    daemon, _, _ = _lifecycle_daemon(tmp_path, monkeypatch)
++    source = tmp_path / "src/identity.py"
++    source.write_text("def identity(value):\n    return value\n")
++    test = tmp_path / "tests/test_identity.py"
++    test.write_text("from identity import identity\ndef test_identity():\n    assert identity(1) == 1\n")
++    test_abs = str(test.resolve())
++    with IndexDB(tmp_path / "first-pass-pending.db") as db:
++        daemon._initial_build(db)
++        symbol_id = db.all_symbols()[0].id
++        assert db.get_state(symbol_id) == STATE_DIRTY
++        before = daemon._last_change_at
++        daemon._reanalyzing = True
++        daemon._analysis_callback = threading.local()
++        daemon._analysis_callback.active = False
++        test.unlink()
++        daemon._handle_test_file_changes(db, [], [], [test_abs])
++        assert db.get_state(symbol_id) == STATE_DIRTY
++        assert daemon._last_change_at != before
++
++
+ def test_analysis_defers_whole_same_thread_callback_scan(tmp_path, monkeypatch):
+     import pytest_leela.engine as engine_module
+ 
+@@ -4280,8 +4488,8 @@ def test_analysis_cache_hit_completion_keeps_later_source_request(tmp_path, monk
+             source.write_text(replacement)
+             poll.start()
+             assert started.wait(5)
+-            done.wait(.2)
+-            assert daemon._source_signatures == before, "cache-hit pass did not own its inputs"
++            assert done.wait(5), "poll waited for cache-hit completion"
++            assert daemon._source_signatures != before
+         finally:
+             release.set()
+             _join_daemon_worker(daemon)
+@@ -4378,7 +4586,7 @@ def test_analysis_real_runner_error_retains_null_verdict_and_later_poll(tmp_path
+             test.write_text("import calc\ndef test_limit():\n    assert calc.limit() == 2\n")
+             poll.start()
+             assert started.wait(5)
+-            done.wait(.2)
++            assert done.wait(5), "poll waited for the older error result"
+             consumed.append(daemon._test_signatures != before)
+         finally:
+             release.set()
+@@ -4386,15 +4594,12 @@ def test_analysis_real_runner_error_retains_null_verdict_and_later_poll(tmp_path
+             if poll.ident is not None:
+                 poll.join(30)
+                 assert not poll.is_alive()
+-        assert consumed == [False] and not failures
++        assert consumed == [True]
++        assert not failures
+         assert errors[0].error == "no tests ran" and errors[0].tests_run == 0
+         rows = db._execute("SELECT state, killed, killing_test, details FROM mutants WHERE killed IS NULL").fetchall()
+-        assert rows
+-        for state, killed, killing_test, raw in rows:
+-            details = json.loads(raw)
+-            assert state == "dirty" and killed is None and killing_test is None
+-            assert details["last_error"]["message"] == "no tests ran"
+-            assert details["last_error"]["tests_run"] == 0
++        # The older error cannot overwrite the newer request with diagnostics.
++        assert not rows
+         assert db.get_dirty_symbols()
+         assert not daemon._reanalyzing
+         assert daemon._scan_for_changes(db) == []
+diff --git a/tests/leela/describe_index.py b/tests/leela/describe_index.py
+index 05366df..3191540 100644
+--- a/tests/leela/describe_index.py
++++ b/tests/leela/describe_index.py
+@@ -1782,3 +1782,46 @@ def describe_error_evidence():
+             assert before == after
+             assert db.symbols_for_tests({"tests/test_a.py::test_left"}) == {"src/m.py:f"}
+             assert db._conn.execute("PRAGMA foreign_key_check").fetchall() == []
++
++
++def test_analysis_generation_rejects_late_reconcile_and_recovers(tmp_path):
++    import threading
++    from concurrent.futures import ThreadPoolExecutor
++
++    with _open(tmp_path) as db, ThreadPoolExecutor(max_workers=1) as executor:
++        original = SAMPLE_V1
++        replacement = SAMPLE_V1_EDITED
++        db.reconcile_file("src/m.py", original)
++        symbol_id = "src.m:alpha"
++        paused, release = threading.Event(), threading.Event()
++
++        def old_analysis():
++            with db.analysis_pass():
++                assert db.reconcile_file("src/m.py", original).is_noop
++                paused.set()
++                assert release.wait(5)
++                assert db.reconcile_file("src/m.py", original).is_noop
++                db.mark_symbol_clean(symbol_id)
++                db.mark_symbol_error(symbol_id)
++                db.write_mutant_result(symbol_id, _make_mutant(2), _make_result(), "old", "old")
++                assert db.get_state(symbol_id) == STATE_DIRTY
++            # A raised pass also releases its thread-local publication fence.
++            with pytest.raises(ValueError, match="user failure"):
++                with db.analysis_pass():
++                    raise ValueError("user failure")
++            db.mark_symbol_clean(symbol_id)
++
++        worker = executor.submit(old_analysis)
++        try:
++            assert paused.wait(5)
++            db.reconcile_file("src/m.py", "")
++            db.reconcile_file("src/m.py", replacement)
++            assert set(db.get_dirty_symbols()) == set(extract_symbols("src/m.py", replacement))
++            db.write_mutant_result(symbol_id, _make_mutant(2), _make_result(), "new", "new")
++            retained = db._execute("SELECT * FROM mutants").fetchall()
++        finally:
++            release.set()
++            worker.result(timeout=10)
++        assert db.get_symbol(symbol_id).source_hash == extract_symbols("src/m.py", replacement)[symbol_id].source_hash
++        assert db._execute("SELECT * FROM mutants").fetchall() == retained
++        assert db.get_state(symbol_id) == STATE_CLEAN

@@ -1,0 +1,1 @@
+PASS: diagnostic syntax, positive artifact/schema, wrong-job/PID nonjoin, and negative missing-target rejection

@@ -1,0 +1,52 @@
+{
+  "collection": [
+    {
+      "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+      "nodeid": "test_calc.py::test_double",
+      "path": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0/test_calc.py",
+      "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+    }
+  ],
+  "configure": {
+    "args": [
+      "--tb=no",
+      "-q",
+      "--no-header",
+      "--override-ini=addopts=",
+      "-p",
+      "no:leela",
+      "-p",
+      "no:leela-benchmark",
+      "--capture=sys",
+      "-x",
+      "test_calc.py::test_double"
+    ],
+    "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+    "inipath": null,
+    "invocationDir": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+    "pid": 1789,
+    "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+  },
+  "finish": {
+    "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+    "exitstatus": 1,
+    "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+  },
+  "reports": [
+    {
+      "nodeid": "test_calc.py::test_double",
+      "outcome": "passed",
+      "phase": "setup"
+    },
+    {
+      "nodeid": "test_calc.py::test_double",
+      "outcome": "failed",
+      "phase": "call"
+    },
+    {
+      "nodeid": "test_calc.py::test_double",
+      "outcome": "passed",
+      "phase": "teardown"
+    }
+  ]
+}

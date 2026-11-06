@@ -1,0 +1,5 @@
+ERROR: not found: /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py::does_not_exist
+(no match in any of [<Module describe_end_to_end.py>])
+
+
+no tests collected in 0.01s

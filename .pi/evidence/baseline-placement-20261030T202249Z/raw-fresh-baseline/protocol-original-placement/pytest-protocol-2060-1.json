@@ -1,0 +1,27 @@
+{
+  "collection": [],
+  "configure": {
+    "args": [
+      "--tb=no",
+      "-q",
+      "--no-header",
+      "--override-ini=addopts=",
+      "-p",
+      "no:leela",
+      "-p",
+      "no:leela-benchmark",
+      "--capture=sys",
+      ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0/test_calc.py::test_double"
+    ],
+    "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0",
+    "inipath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/pyproject.toml",
+    "invocationDir": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0",
+    "pid": 2060,
+    "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+  },
+  "finish": {
+    "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0",
+    "exitstatus": 0,
+    "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+  }
+}

@@ -1,7 +1,6 @@
 """Tests for pytest_leela.type_extractor — type annotation enrichment."""
 
 import ast
-from unittest.mock import patch
 
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.models import MutationPoint
@@ -1407,3 +1406,55 @@ def describe_operand_from_env_not_param():
         param_types: dict = {}
         node = ast.parse("42", mode="eval").body
         assert _operand_from_env_not_param(node, env, param_types) is False
+
+    def it_processes_every_point_when_some_have_no_enclosing_func():
+        """Kills the ``continue`` → ``break`` mutation at L457.
+
+        The original code:
+            for point in points:
+                func = _find_enclosing_func(...)
+                if func is None:
+                    enriched.append(point)
+                    continue  # mutated to break
+
+        With the mutation, the loop EXITS on the first
+        ``func is None`` point, so subsequent points (whose
+        ``func`` lookup would have succeeded) are never
+        appended to ``enriched``. Pass two points where the
+        first maps to no enclosing function (a module-level
+        statement) and the second maps to a real function;
+        the original processes both, the mutation only the
+        first.
+        """
+        source = (
+            "x = 1\n"  # module-level — func is None
+            "def f(y: int):\n"
+            "    return y\n"
+        )
+        # Build two MutationPoints: the first is on the module-
+        # level ``x = 1`` line (no enclosing func), the second
+        # is on a line inside ``f`` (func is found).
+        p_module = MutationPoint(
+            file_path="test.py",
+            module_name="test",
+            lineno=1,
+            col_offset=0,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type=None,
+        )
+        p_in_func = MutationPoint(
+            file_path="test.py",
+            module_name="test",
+            lineno=3,
+            col_offset=4,
+            node_type="Return",
+            original_op="expr",
+            inferred_type=None,
+        )
+        enriched, _stats = enrich_mutation_points(source, [p_module, p_in_func])
+        # Both points must make it into ``enriched``. With the
+        # ``break`` mutation, the module-level point's ``continue``
+        # becomes ``break`` and the in-function point is never
+        # appended.
+        assert len(enriched) == 2

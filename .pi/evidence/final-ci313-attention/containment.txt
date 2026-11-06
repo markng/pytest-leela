@@ -1,0 +1,4 @@
+inspection=2026-10-27T19:42:58Z
+verified_native_pid=50136
+reason=same candidate >45min versus displayed286.7s timeout; evidence preserved; single SIGINT, no retry
+SIGINT did not produce process exit; no child PIDs observed. Escalating only verified native PID50136 to SIGTERM; preserve raw/pipeline exit, never kill credit.

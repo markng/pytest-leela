@@ -1,0 +1,31 @@
+import dataclasses
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+from pytest_leela.ast_analysis import find_mutation_points
+from pytest_leela.git_diff import changed_lines
+from pytest_leela.operators import DEFAULT_OPERATORS, build_allowed_keys, count_pruned, mutations_for
+from pytest_leela.type_extractor import enrich_mutation_points
+
+
+def build_report(changes, files):
+    report = {}
+    for name in files:
+        path = Path(name).resolve()
+        source = path.read_text()
+        points, stats = enrich_mutation_points(source, find_mutation_points(source,str(path),name.removesuffix('.py').replace('/','.')))
+        points = [p for p in points if p.lineno in changes[str(path)]]
+        default = build_allowed_keys(DEFAULT_OPERATORS)
+        report[name] = {'sha256':hashlib.sha256(source.encode()).hexdigest(),'changed_lines': sorted(changes[str(path)]), 'default_pruned':count_pruned(points, True, default),'all_pruned':count_pruned(points,True), 'points':[{'point':dataclasses.asdict(p), 'default_mutations':mutations_for(p,True,default),'all_mutations':mutations_for(p,True)} for p in points]}
+    return report
+
+
+def main(input_stream=sys.stdin):
+    files = json.load(input_stream)
+    print(json.dumps(build_report(changed_lines('HEAD'), files),indent=2))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,532 @@
+{
+  "source": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+  "sourceSha256": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+  "env": {
+    "python": "3.13.11",
+    "pytest": "9.1.1"
+  },
+  "selection": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+  "exit": 0,
+  "tracedLines": [
+    1,
+    3,
+    4,
+    6,
+    7,
+    8,
+    12,
+    18,
+    110,
+    224,
+    269,
+    296,
+    306,
+    307,
+    313,
+    325,
+    326,
+    327,
+    328,
+    335,
+    336,
+    337,
+    356,
+    357,
+    358,
+    365,
+    366,
+    368,
+    369,
+    374,
+    375,
+    381,
+    382,
+    385,
+    386,
+    387,
+    391,
+    392,
+    393,
+    394,
+    396,
+    399,
+    400,
+    401,
+    405,
+    406,
+    428,
+    449,
+    456,
+    457,
+    458,
+    475,
+    477,
+    478,
+    479,
+    480,
+    481,
+    483,
+    484,
+    485,
+    486,
+    493,
+    494
+  ],
+  "rawProducerAstStatements": 17,
+  "lineObservedStatements": 16,
+  "unobserved": [
+    {
+      "node": "Expr",
+      "line": 314,
+      "reason": "docstring Expr is compiler docstring constant, not executable expression"
+    }
+  ],
+  "compiledFullModuleCoLines": [
+    [
+      0,
+      2,
+      0
+    ],
+    [
+      2,
+      6,
+      1
+    ],
+    [
+      6,
+      14,
+      3
+    ],
+    [
+      14,
+      22,
+      4
+    ],
+    [
+      22,
+      26,
+      6
+    ],
+    [
+      26,
+      28,
+      8
+    ],
+    [
+      28,
+      30,
+      7
+    ],
+    [
+      30,
+      36,
+      12
+    ],
+    [
+      36,
+      42,
+      18
+    ],
+    [
+      42,
+      48,
+      110
+    ],
+    [
+      48,
+      54,
+      224
+    ],
+    [
+      54,
+      60,
+      269
+    ],
+    [
+      60,
+      66,
+      296
+    ],
+    [
+      66,
+      68,
+      307
+    ],
+    [
+      68,
+      70,
+      306
+    ],
+    [
+      70,
+      76,
+      313
+    ],
+    [
+      76,
+      82,
+      399
+    ],
+    [
+      82,
+      92,
+      405
+    ]
+  ],
+  "compiledNestedCodeObjects": [
+    {
+      "name": "_leela",
+      "firstline": 12,
+      "linenos": [
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "name": "describe_import_breaking_mutant",
+      "firstline": 18,
+      "linenos": [
+        18,
+        19,
+        36,
+        59,
+        86
+      ]
+    },
+    {
+      "name": "it_counts_a_target_that_raises_on_import_as_killed",
+      "firstline": 19,
+      "linenos": [
+        19,
+        21,
+        22,
+        24,
+        30,
+        32,
+        33,
+        34
+      ]
+    },
+    {
+      "name": "it_keeps_a_caught_import_error_with_green_tests_survived",
+      "firstline": 36,
+      "linenos": [
+        36,
+        39,
+        40,
+        42,
+        53,
+        55,
+        56,
+        57
+      ]
+    },
+    {
+      "name": "it_reports_a_module_level_skip_on_import_error_as_an_error",
+      "firstline": 59,
+      "linenos": [
+        59,
+        62,
+        63,
+        65,
+        75,
+        77,
+        78,
+        79,
+        80,
+        83,
+        84
+      ]
+    },
+    {
+      "name": "it_reports_a_skip_marker_on_import_error_as_an_error",
+      "firstline": 86,
+      "linenos": [
+        86,
+        89,
+        90,
+        92,
+        103,
+        105,
+        106,
+        107
+      ]
+    },
+    {
+      "name": "describe_collection_failures",
+      "firstline": 110,
+      "linenos": [
+        110,
+        111,
+        135,
+        165,
+        195
+      ]
+    },
+    {
+      "name": "it_kills_when_a_module_level_assert_fails_under_the_mutant",
+      "firstline": 111,
+      "linenos": [
+        111,
+        114,
+        116,
+        120,
+        127,
+        129,
+        130,
+        132,
+        133
+      ]
+    },
+    {
+      "name": "it_reports_a_conftest_that_skips_itself_as_an_error",
+      "firstline": 135,
+      "linenos": [
+        135,
+        138,
+        139,
+        141,
+        148,
+        154,
+        156,
+        157,
+        158,
+        159,
+        162,
+        163
+      ]
+    },
+    {
+      "name": "it_reports_a_conftest_that_exits_on_a_failed_import_as_an_error",
+      "firstline": 165,
+      "linenos": [
+        165,
+        168,
+        169,
+        171,
+        178,
+        184,
+        186,
+        187,
+        188,
+        189,
+        192,
+        193
+      ]
+    },
+    {
+      "name": "it_reports_a_test_module_that_exits_on_a_failed_import_as_an_error",
+      "firstline": 195,
+      "linenos": [
+        195,
+        199,
+        200,
+        202,
+        212,
+        214,
+        215,
+        216,
+        217,
+        220,
+        221
+      ]
+    },
+    {
+      "name": "describe_error_mutants",
+      "firstline": 224,
+      "linenos": [
+        224,
+        225,
+        245,
+        260
+      ]
+    },
+    {
+      "name": "_project",
+      "firstline": 225,
+      "linenos": [
+        225,
+        228,
+        229,
+        231,
+        239,
+        240,
+        241,
+        242
+      ]
+    },
+    {
+      "name": "it_shows_the_error_and_fails_the_session",
+      "firstline": 245,
+      "linenos": [
+        245,
+        246,
+        248,
+        250,
+        251,
+        252,
+        258
+      ]
+    },
+    {
+      "name": "it_passes_when_fail_on_error_is_false",
+      "firstline": 260,
+      "linenos": [
+        260,
+        261,
+        263,
+        265,
+        266
+      ]
+    },
+    {
+      "name": "describe_baseline_abort",
+      "firstline": 269,
+      "linenos": [
+        269,
+        270
+      ]
+    },
+    {
+      "name": "it_aborts_when_a_test_only_passes_once_per_process",
+      "firstline": 270,
+      "linenos": [
+        270,
+        271,
+        272,
+        274,
+        282,
+        284,
+        285,
+        286,
+        288,
+        293
+      ]
+    },
+    {
+      "name": "describe_clean_project",
+      "firstline": 296,
+      "linenos": [
+        296,
+        297
+      ]
+    },
+    {
+      "name": "it_kills_every_mutant_and_passes",
+      "firstline": 297,
+      "linenos": [
+        297,
+        298,
+        300,
+        302,
+        303
+      ]
+    },
+    {
+      "name": "_django_project",
+      "firstline": 313,
+      "linenos": [
+        313,
+        325,
+        326,
+        327,
+        328,
+        335,
+        336,
+        337,
+        356,
+        357,
+        358,
+        365,
+        366,
+        368,
+        369,
+        374,
+        375,
+        381,
+        382,
+        385,
+        386,
+        387,
+        391,
+        392,
+        393,
+        394,
+        396
+      ]
+    },
+    {
+      "name": "_leela_django",
+      "firstline": 399,
+      "linenos": [
+        399,
+        400,
+        401
+      ]
+    },
+    {
+      "name": "describe_django_project",
+      "firstline": 405,
+      "linenos": [
+        405,
+        406,
+        428,
+        449
+      ]
+    },
+    {
+      "name": "it_runs_database_tests_inside_the_inner_session",
+      "firstline": 406,
+      "linenos": [
+        406,
+        412,
+        413,
+        414,
+        422,
+        424,
+        425,
+        426
+      ]
+    },
+    {
+      "name": "it_lifts_the_outer_db_block_inside_inner_sessions",
+      "firstline": 428,
+      "linenos": [
+        428,
+        434,
+        435,
+        436,
+        444,
+        446,
+        447
+      ]
+    },
+    {
+      "name": "it_imports_models_admin_and_references_once_per_process",
+      "firstline": 449,
+      "linenos": [
+        449,
+        456,
+        457,
+        458,
+        475,
+        477,
+        478,
+        479,
+        480,
+        481,
+        483,
+        484,
+        485,
+        486,
+        493,
+        494
+      ]
+    }
+  ],
+  "docstring": "A small Django project on sqlite.\n\nEvery project module appends its name to imports.log when executed, so\na test can count re-executions across leela's inner sessions.\n``shop.backoffice`` registers a project-defined ModelAdmin and is\nimported only from ``ShopConfig.ready()``: nothing references it, so\nonly leela's walk of the admin registry can keep it loaded.\n``shop.admin`` registers nothing and ``stock`` has no admin, so only the\n``<app>.admin`` and models-module roots keep those modules loaded.",
+  "docstringConstantInFunctionCode": "A small Django project on sqlite.\n\n    Every project module appends its name to imports.log when executed, so\n    a test can count re-executions across leela's inner sessions.\n    ``shop.backoffice`` registers a project-defined ModelAdmin and is\n    imported only from ``ShopConfig.ready()``: nothing references it, so\n    only leela's walk of the admin registry can keep it loaded.\n    ``shop.admin`` registers nothing and ``stock`` has no admin, so only the\n    ``<app>.admin`` and models-module roots keep those modules loaded.\n    ",
+  "invalidStartsLineAttempt": "preserved in sibling compiled-statement-evidence.json; starts_line booleans are not line evidence",
+  "probeIdentity": "5669251aab377582ec4bcca0a10cf614dac5abc7fe7a55ffc582e703d50cd426"
+}

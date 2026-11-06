@@ -1,0 +1,6 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [],
+  "sha256": "eb685a155154a2ee87be15b85d26f289fd72410a9cad0ae7316de9d57ef01bcc"
+}

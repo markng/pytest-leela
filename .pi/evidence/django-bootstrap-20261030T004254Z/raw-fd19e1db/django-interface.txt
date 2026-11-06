@@ -1,0 +1,4 @@
+django 6.1.2 /Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/lib/python3.13/site-packages/django/__init__.py
+apps.get_models (include_auto_created=False, include_swapped=False) /Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/lib/python3.13/site-packages/django/apps/registry.py
+AdminSite._registry type dict
+AdminSite.register (self, model_or_iterable, admin_class=None, **options) /Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/lib/python3.13/site-packages/django/contrib/admin/sites.py

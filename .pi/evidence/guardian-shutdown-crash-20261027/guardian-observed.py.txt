@@ -1,0 +1,36 @@
+"""Private exec guardian: caller pipe EOF cancels and reaps its worker group."""
+
+import json
+import sys
+import threading
+import time
+from pathlib import Path
+
+
+def main() -> None:
+    request = json.loads(Path(sys.argv[1]).read_text())
+    sys.path[:] = request["path"]
+    for name, value in request["prefixes"].items():
+        setattr(sys, name, value)
+    from pytest_leela._timeout_process import DirectTestProcess, ParentExited
+
+    worker = DirectTestProcess()
+
+    def watch_parent() -> None:
+        sys.stdin.buffer.read()
+        worker.reply.put(ParentExited("leela: caller exited"))
+
+    threading.Thread(target=watch_parent, daemon=True).start()
+    try:
+        response = worker.run(
+            json.dumps(request).encode(), max(0, request["deadline"] - time.monotonic()),
+        )
+        envelope = {"result": json.loads(response)}
+    except Exception as exc:
+        envelope = {"failure": type(exc).__name__, "message": str(exc)}
+    sys.stdout.write(json.dumps(envelope) + "\n")
+    sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    main()

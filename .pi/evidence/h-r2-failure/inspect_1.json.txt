@@ -1,0 +1,24 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 155,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_1.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_1",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    }
+  ],
+  "sha256": "8528ef32ef89fcc247aa755facb8e84bf098751dea200988bbdee6e62ef2c608"
+}

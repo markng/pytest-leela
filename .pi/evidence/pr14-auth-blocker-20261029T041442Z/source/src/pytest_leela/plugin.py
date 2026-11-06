@@ -1,0 +1,305 @@
+"""pytest plugin entry point for leela mutation testing."""
+
+# NOTE: Do NOT add ``from __future__ import annotations`` here.
+# On Python <=3.13, this lets an invalid ``BitOr -> BitAnd`` annotation
+# mutation fail while the definition is executed. Python 3.14 uses PEP 649
+# lazy annotations instead; the annotation-policy regression reads supported
+# hints to exercise that failure. See ``pytest_leela.import_hook`` for why
+# its ``compile()`` call must also remain unflagged.
+
+import contextlib
+import fnmatch
+import glob as _glob
+import os
+import sys
+from collections.abc import Generator
+from pathlib import Path
+
+import pytest
+
+from pytest_leela.config import load_config
+from pytest_leela.coverage_tracker import CoveragePlugin
+from pytest_leela.engine import BaselineFailure, Engine
+from pytest_leela.git_diff import changed_files
+from pytest_leela.operators import ALL_OPERATORS
+from pytest_leela.output import format_terminal_report
+from pytest_leela.resources import ResourceLimits
+
+
+def _is_test_file(basename: str, python_files: list[str]) -> bool:
+    """Return True if the filename matches the project's test-file patterns."""
+    return basename == "conftest.py" or any(
+        fnmatch.fnmatch(basename, p) for p in python_files
+    )
+
+
+_SKIP_DIRS = {
+    ".venv",
+    "venv",
+    ".tox",
+    "build",
+    "dist",
+    ".git",
+    ".hg",
+    "__pycache__",
+    "node_modules",
+    ".eggs",
+    "*.egg-info",
+}
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    group = parser.getgroup("leela", "mutation testing")
+    group.addoption(
+        "--leela", action="store_true", default=False, help="Enable mutation testing"
+    )
+    group.addoption(
+        "--diff", default=None, help="Only mutate files changed since this git ref"
+    )
+    group.addoption(
+        "--target",
+        action="append",
+        default=[],
+        help="File/directory to mutate (repeatable)",
+    )
+    group.addoption("--max-cores", type=int, default=None, help="Max CPU cores")
+    group.addoption("--max-memory", type=int, default=None, help="Max memory percent")
+    group.addoption(
+        "--leela-html",
+        default=None,
+        metavar="PATH",
+        help="Generate interactive HTML mutation report at PATH",
+    )
+    group.addoption(
+        "--leela-benchmark",
+        action="store_true",
+        default=False,
+        help="Run benchmark mode",
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    if config.getoption("leela", default=False) or config.getoption(
+        "leela_html", default=None
+    ):
+        config.pluginmanager.register(LeelaPlugin(config), "leela-plugin")
+    elif config.getoption("leela_benchmark", default=False):
+        from pytest_leela.benchmark import BenchmarkPlugin
+
+        config.pluginmanager.register(BenchmarkPlugin(config), "leela-benchmark")
+
+
+def _find_target_files(target: str, python_files: list[str]) -> list[str]:
+    """Resolve a --target path to a list of .py files."""
+    target_path = os.path.abspath(target)
+    if os.path.isfile(target_path) and target_path.endswith(".py"):
+        return [target_path]
+    if os.path.isdir(target_path):
+        return sorted(
+            os.path.abspath(p)
+            for p in _glob.glob(os.path.join(target_path, "**", "*.py"), recursive=True)
+            if not os.path.basename(p).startswith("__")
+            and not _is_test_file(os.path.basename(p), python_files)
+        )
+    return []
+
+
+def _find_default_targets(rootpath: Path, python_files: list[str]) -> list[str]:
+    """Look for common source directories to use as default targets.
+
+    Falls back to rootpath itself when no ``src/`` or ``target/`` directory
+    exists, so that projects with a flat layout still get mutation coverage.
+    """
+    for candidate in ("target", "src"):
+        candidate_dir = rootpath / candidate
+        if candidate_dir.is_dir():
+            return sorted(
+                os.path.abspath(str(p))
+                for p in candidate_dir.rglob("*.py")
+                if not p.name.startswith("__")
+                and not _is_test_file(p.name, python_files)
+            )
+    # Fallback: scan rootpath itself for a flat-layout project
+    return sorted(
+        os.path.abspath(str(p))
+        for p in rootpath.rglob("*.py")
+        if not p.name.startswith("__")
+        and not _is_test_file(p.name, python_files)
+        and not any(
+            part in _SKIP_DIRS or fnmatch.fnmatch(part, "*.egg-info")
+            for part in p.relative_to(rootpath).parts
+        )
+    )
+
+
+def _apply_excludes(
+    files: list[str], excludes: tuple[str, ...] | list[str], rootpath: Path
+) -> list[str]:
+    """Filter out files matching any of the exclude glob patterns.
+
+    Each file path is made relative to *rootpath* before matching against
+    patterns with :func:`fnmatch.fnmatch`.
+    """
+    if not excludes:
+        return files
+    root = str(rootpath)
+    result: list[str] = []
+    for filepath in files:
+        rel = os.path.relpath(filepath, root).replace(os.sep, "/")
+        if not any(fnmatch.fnmatch(rel, pat) for pat in excludes):
+            result.append(filepath)
+    return result
+
+
+class LeelaPlugin:
+    _coverage_plugin: CoveragePlugin | None
+
+    def __init__(self, config: pytest.Config) -> None:
+        self.config = config
+        self._coverage_plugin = None
+
+    def pytest_sessionstart(self, session: pytest.Session) -> None:
+        """Resolve target files early and install coverage tracing.
+
+        By tracing coverage during the normal test run (instead of
+        re-running all tests in Engine.run), we eliminate one full test
+        suite execution from the mutation testing pipeline.
+        """
+        target_files = self._resolve_target_files(session)
+        if target_files:
+            # This map feeds a separate inner pytest invocation, not the
+            # current session's presentation nodeids. Bind its selections
+            # to collected item paths (including parameter/method suffixes).
+            self._coverage_plugin = CoveragePlugin(
+                set(target_files), selectable_nodeids=True
+            )
+            session.config.pluginmanager.register(
+                self._coverage_plugin, "leela-coverage"
+            )
+
+    def _resolve_target_files(self, session: pytest.Session) -> list[str]:
+        """Resolve target files from config options."""
+        rootpath = session.config.rootpath
+        leela_config = load_config(rootpath)
+        python_files = self.config.getini("python_files")
+
+        targets = self.config.getoption("target", default=[])
+        diff_base = self.config.getoption("diff", default=None)
+
+        if targets:
+            target_files: list[str] = []
+            for t in targets:
+                target_files.extend(_find_target_files(t, python_files))
+            target_files = sorted(set(target_files))
+        elif diff_base:
+            target_files = changed_files(diff_base, test_file_patterns=python_files)
+        else:
+            target_files = _find_default_targets(rootpath, python_files)
+
+        return _apply_excludes(target_files, leela_config.exclude, rootpath)
+
+    @contextlib.contextmanager
+    def _outer_django_db_unblocked(self) -> Generator[None]:
+        """Lift the outer session's pytest-django DB block for leela's run.
+
+        pytest-django blocks DB access at configure time and only restores it
+        at unconfigure, so it is still blocked here.  Each inner session's
+        ``DjangoDbBlocker`` records whatever ``ensure_connection`` is on
+        first use as the "real" one (pytest_django/plugin.py,
+        ``_dj_db_wrapper``: "self._real_ensure_connection =
+        BaseDatabaseWrapper.ensure_connection"), so it would record the
+        outer block and its ``unblock()`` could never reach the database.
+        """
+        if "pytest_django.plugin" not in sys.modules:
+            # pytest-django is not installed or not loaded: nothing to lift.
+            yield
+            return
+        from pytest_django.plugin import blocking_manager_key
+
+        if blocking_manager_key not in self.config.stash:
+            # Loaded but disabled for this session (``-p no:django``).
+            yield
+            return
+        with self.config.stash[blocking_manager_key].unblock():
+            yield
+
+    def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
+        if exitstatus != 0:
+            return
+
+        rootpath = session.config.rootpath
+        leela_config = load_config(rootpath)
+
+        # Resolve operator categories
+        enabled_categories = leela_config.operators
+        if "all" in enabled_categories:
+            enabled_categories = ALL_OPERATORS
+
+        diff_base = self.config.getoption("diff", default=None)
+
+        # Reuse target files resolved during pytest_sessionstart
+        target_files = self._resolve_target_files(session)
+        if not target_files:
+            return
+
+        # Retrieve coverage map collected during the normal test run
+        # (avoids re-running the entire test suite).
+        pre_coverage_map = None
+        if self._coverage_plugin is not None:
+            pre_coverage_map = self._coverage_plugin.coverage_map
+            pre_coverage_map.test_times = self._coverage_plugin.test_times
+
+        # Bind the next inner pytest invocation to the actual collected item
+        # path and preserve its method/parameter suffix.  The outer nodeid is
+        # relative to the outer config root and may select nothing from cwd.
+        # This also covers the no-coverage fallback selection.
+        test_node_ids = []
+        for item in session.items:
+            _, separator, suffix = item.nodeid.partition("::")
+            test_node_ids.append(str(item.path) + separator + suffix)
+
+        limits = ResourceLimits(
+            max_cores=self.config.getoption("max_cores", default=None),
+            max_memory_percent=self.config.getoption("max_memory", default=None),
+        )
+
+        tw = (
+            session.config.get_terminal_writer()
+            if hasattr(session.config, "get_terminal_writer")
+            else None
+        )
+
+        engine = Engine(enabled_categories=enabled_categories)
+        try:
+            with self._outer_django_db_unblocked():
+                result = engine.run(
+                    target_files,
+                    test_node_ids=test_node_ids,
+                    limits=limits,
+                    diff_base=diff_base,
+                    pre_coverage_map=pre_coverage_map,
+                )
+        except BaselineFailure as exc:
+            message = f"\nleela: aborted: {exc}\n"
+            if tw:
+                tw.write(message)
+            else:
+                print(message)
+            session.exitstatus = 1
+            return
+
+        report = format_terminal_report(result)
+
+        if tw:
+            tw.write(report)
+        else:
+            print(report)
+
+        html_path = self.config.getoption("leela_html", default=None)
+        if html_path is not None:
+            from pytest_leela.html_report import generate_html_report
+
+            generate_html_report(result, html_path)
+
+        if result.survived or (result.errors and leela_config.fail_on_error):
+            session.exitstatus = 1

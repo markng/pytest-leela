@@ -1,0 +1,6 @@
+cwd=/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z
+node=tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes
+basetemp=/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp
+trace_plugin=/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/trace_plugin.py
+
+retry_guard_wrapper=.pi/evidence/timeout-enforcement-fix/run_check.py (same SHA; its parents[2] resolves R)

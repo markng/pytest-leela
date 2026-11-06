@@ -1,0 +1,375 @@
+"""Import hook for in-memory AST mutation — zero file I/O."""
+
+# NOTE: Do NOT add ``from __future__ import annotations`` to this module.
+# Python inherits ``CO_FUTURE_ANNOTATIONS`` (0x1000000) into ``compile()``
+# calls made by flagged code, including ``MutatingLoader.exec_module``'s
+# ``compile(tree, ...)``. That would defer target annotations. Without the
+# flag, an invalid ``BitOr -> BitAnd`` mutation fails during definition on
+# Python <=3.13. Python 3.14 PEP 649 annotations remain lazy, so the
+# annotation-policy regression deliberately reads supported type hints there.
+
+import ast
+import importlib
+import importlib.abc
+import importlib.machinery
+import sys
+import types
+from typing import Any
+
+from pytest_leela.models import Mutant
+
+# AST operator classes by name
+_OP_CLASSES: dict[str, type] = {
+    "Add": ast.Add,
+    "Sub": ast.Sub,
+    "Mult": ast.Mult,
+    "Div": ast.Div,
+    "FloorDiv": ast.FloorDiv,
+    "Mod": ast.Mod,
+    "Pow": ast.Pow,
+    "Eq": ast.Eq,
+    "NotEq": ast.NotEq,
+    "Lt": ast.Lt,
+    "LtE": ast.LtE,
+    "Gt": ast.Gt,
+    "GtE": ast.GtE,
+    "Is": ast.Is,
+    "IsNot": ast.IsNot,
+    "In": ast.In,
+    "NotIn": ast.NotIn,
+    "And": ast.And,
+    "Or": ast.Or,
+    "UAdd": ast.UAdd,
+    "USub": ast.USub,
+    "Not": ast.Not,
+    "BitAnd": ast.BitAnd,
+    "BitOr": ast.BitOr,
+    "BitXor": ast.BitXor,
+    "LShift": ast.LShift,
+    "RShift": ast.RShift,
+}
+
+
+class MutantApplier(ast.NodeTransformer):
+    """Apply a single mutation to an AST."""
+
+    def __init__(self, mutant: Mutant) -> None:
+        self.mutant = mutant
+        self.applied = False
+
+    def _matches(self, node: ast.AST) -> bool:
+        return (
+            hasattr(node, "lineno")
+            and node.lineno == self.mutant.point.lineno
+            and hasattr(node, "col_offset")
+            and node.col_offset == self.mutant.point.col_offset
+        )
+
+    def visit_BinOp(self, node: ast.BinOp) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "BinOp":
+            op_class = _OP_CLASSES.get(self.mutant.replacement_op)
+            if op_class is not None:
+                node.op = op_class()
+                self.applied = True
+        return self.generic_visit(node)
+
+    def visit_Compare(self, node: ast.Compare) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "Compare":
+            op_class = _OP_CLASSES.get(self.mutant.replacement_op)
+            if op_class is not None:
+                # Replace all comparison ops (single comparison case)
+                node.ops = [op_class() for _ in node.ops]
+                self.applied = True
+        return self.generic_visit(node)
+
+    def visit_BoolOp(self, node: ast.BoolOp) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "BoolOp":
+            op_class = _OP_CLASSES.get(self.mutant.replacement_op)
+            if op_class is not None:
+                node.op = op_class()
+                self.applied = True
+        return self.generic_visit(node)
+
+    def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "AugAssign":
+            op_class = _OP_CLASSES.get(self.mutant.replacement_op)
+            if op_class is not None:
+                node.op = op_class()
+                self.applied = True
+        return self.generic_visit(node)
+
+    def visit_IfExp(self, node: ast.IfExp) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "IfExp":
+            replacement = self.mutant.replacement_op
+            if replacement == "swap_branches":
+                node.body, node.orelse = node.orelse, node.body
+                self.applied = True
+            elif replacement == "always_true":
+                self.applied = True
+                return ast.copy_location(node.body, node)
+            elif replacement == "always_false":
+                self.applied = True
+                return ast.copy_location(node.orelse, node)
+        return self.generic_visit(node)
+
+    def visit_Break(self, node: ast.Break) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "Break":
+            if self.mutant.replacement_op == "continue":
+                self.applied = True
+                return ast.copy_location(ast.Continue(), node)
+        return self.generic_visit(node)
+
+    def visit_Continue(self, node: ast.Continue) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "Continue":
+            if self.mutant.replacement_op == "break":
+                self.applied = True
+                return ast.copy_location(ast.Break(), node)
+        return self.generic_visit(node)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "ExceptHandler":
+            replacement = self.mutant.replacement_op
+            if replacement == "broaden" and node.type is not None:
+                original_type = node.type
+                node.type = ast.Name(id="Exception", ctx=ast.Load())
+                ast.copy_location(node.type, original_type)
+                self.applied = True
+            elif replacement == "body_to_raise":
+                raise_stmt = ast.Raise()
+                ast.copy_location(raise_stmt, node)
+                node.body = [raise_stmt]
+                self.applied = True
+        return self.generic_visit(node)
+
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "UnaryOp":
+            if self.mutant.replacement_op == "_remove":
+                self.applied = True
+                return node.operand
+            op_class = _OP_CLASSES.get(self.mutant.replacement_op)
+            if op_class is not None:
+                node.op = op_class()
+                self.applied = True
+        return self.generic_visit(node)
+
+    def visit_Return(self, node: ast.Return) -> ast.AST:
+        if self._matches(node) and self.mutant.point.node_type == "Return":
+            node = self._mutate_return(node)
+        return self.generic_visit(node)
+
+    def _mutate_return(self, node: ast.Return) -> ast.Return:
+        replacement = self.mutant.replacement_op
+
+        if replacement == "False":
+            node.value = ast.Constant(value=False)
+            self.applied = True
+        elif replacement == "True":
+            node.value = ast.Constant(value=True)
+            self.applied = True
+        elif replacement == "None":
+            node.value = ast.Constant(value=None)
+            self.applied = True
+        elif replacement == "negate" and node.value is not None:
+            node.value = ast.UnaryOp(op=ast.USub(), operand=node.value)
+            self.applied = True
+        elif replacement == "negate_expr" and node.value is not None:
+            node.value = ast.UnaryOp(op=ast.Not(), operand=node.value)
+            self.applied = True
+        elif replacement == "remove_negation" and isinstance(node.value, ast.UnaryOp):
+            node.value = node.value.operand
+            self.applied = True
+        elif replacement == "empty_str":
+            node.value = ast.Constant(value="")
+            self.applied = True
+        elif (
+            replacement == "expr"
+            and node.value is not None
+            and isinstance(node.value, ast.Constant)
+            and node.value.value is None
+        ):
+            node.value = ast.Constant(value=True)
+            self.applied = True
+
+        return node
+
+
+def apply_mutation(source: str, mutant: Mutant) -> tuple[str, bool]:
+    """Apply a mutation to source code, return (mutated_source_compiled, was_applied)."""
+    tree = ast.parse(source)
+    applier = MutantApplier(mutant)
+    tree = applier.visit(tree)
+    ast.fix_missing_locations(tree)
+    return tree, applier.applied
+
+
+def _exception_evidence(
+    exc: BaseException, seen: frozenset[int] = frozenset()
+) -> tuple[tuple[object, ...] | None, str]:
+    """Snapshot identity/message/visible causes, never traceback locations.
+
+    A cycle or unrenderable message leaves useful diagnostics but cannot
+    establish recurrence. No live exception/traceback is retained.
+    """
+    name = type(exc).__qualname__
+    identity = f"{type(exc).__module__}.{name}"
+    display = name if type(exc).__module__ == "builtins" else identity
+    if id(exc) in seen:
+        return None, f"{display}: <exception chain cycle>"
+    seen = seen.union({id(exc)})
+    reliable = True
+    try:
+        message = str(exc)
+    except Exception as formatting_error:
+        message = f"<message unavailable: {type(formatting_error).__qualname__}>"
+        reliable = False
+    diagnostic = f"{display}: {message}"
+    cause = exc.__cause__
+    chain_kind = "caused by"
+    if cause is None and not exc.__suppress_context__:
+        cause = exc.__context__
+        chain_kind = "during handling"
+    cause_key = None
+    if cause is not None:
+        nested_key, cause_text = _exception_evidence(cause, seen)
+        reliable = reliable and nested_key is not None
+        # Kind and cause contribute together, only when a visible cause exists.
+        cause_key = (chain_kind, nested_key)
+        diagnostic += f"; {chain_kind}: {cause_text}"
+    children: list[Any] = []
+    if isinstance(exc, BaseExceptionGroup):
+        for child in exc.exceptions:
+            child_key, child_text = _exception_evidence(child, seen)
+            children.append(child_key)
+            reliable = reliable and child_key is not None
+            diagnostic += f"; contained: {child_text}"
+    key = (
+        identity,
+        message,
+        cause_key,
+        tuple(children),
+    )
+    return key if reliable else None, diagnostic
+
+
+class MutatingLoader(importlib.abc.Loader):
+    """Loader that applies a mutation to source before executing."""
+
+    _import_failures: list[tuple[str, tuple[object, ...] | None, str]]
+
+    def __init__(
+        self,
+        source: str,
+        mutant: Mutant,
+        filename: str,
+        import_errors: list[str] | None = None,
+    ) -> None:
+        self.source = source
+        self.mutant = mutant
+        self.filename = filename
+        # Receives one entry per exception raised while executing the
+        # mutated source, so the runner can tell an import broken by the
+        # mutant from an unrelated collection error.
+        self.import_errors: list[str] = [] if import_errors is None else import_errors
+        self._import_failures = []
+
+    def create_module(self, spec: importlib.machinery.ModuleSpec) -> None:
+        return None
+
+    def exec_module(self, module: types.ModuleType) -> None:
+        # Mirror the attribute population that
+        # importlib._bootstrap_external.SourceFileLoader performs via
+        # _init_module_attrs before exec.  Without these, code that
+        # references __file__ at module scope raises NameError during
+        # the mutated import and the mutant is mis-reported as SURVIVED.
+        module.__file__ = self.filename
+        module.__loader__ = self
+        if getattr(module, "__spec__", None) is None:
+            module.__spec__ = importlib.machinery.ModuleSpec(
+                module.__name__, self, origin=self.filename
+            )
+        tree = ast.parse(self.source, filename=self.filename)
+        applier = MutantApplier(self.mutant)
+        tree = applier.visit(tree)
+        ast.fix_missing_locations(tree)
+        code = compile(tree, self.filename, "exec")
+        try:
+            exec(code, module.__dict__)
+        except Exception as exc:
+            fingerprint, diagnostic = _exception_evidence(exc)
+            self._import_failures.append((module.__name__, fingerprint, diagnostic))
+            self.import_errors.append(f"{module.__name__}: {diagnostic}")
+            raise
+
+
+class MutatingFinder(importlib.abc.MetaPathFinder):
+    """Meta path finder that intercepts imports of target modules."""
+
+    _import_failures: list[tuple[str, tuple[object, ...] | None, str]]
+
+    def __init__(
+        self,
+        target_modules: dict[str, str],
+        mutant: Mutant,
+    ) -> None:
+        # target_modules: {module_name: source_code}
+        self.target_modules = target_modules
+        self.mutant = mutant
+        # Exceptions raised while executing a mutated module (see
+        # MutatingLoader.import_errors).
+        self.import_errors: list[str] = []
+        self._import_failures = []
+        self._module_to_file: dict[str, str] = {}
+        for mod_name in target_modules:
+            self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
+
+    def set_file_paths(self, module_to_file: dict[str, str]) -> None:
+        self._module_to_file.update(module_to_file)
+
+    def find_spec(
+        self,
+        fullname: str,
+        path: Any = None,
+        target: Any = None,
+    ) -> importlib.machinery.ModuleSpec | None:
+        if fullname in self.target_modules:
+            filename = self._module_to_file.get(fullname, f"<mutated:{fullname}>")
+            loader = MutatingLoader(
+                self.target_modules[fullname],
+                self.mutant,
+                filename,
+                self.import_errors,
+            )
+            loader._import_failures = self._import_failures
+            return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
+        return None
+
+
+def install_hook(
+    target_modules: dict[str, str],
+    mutant: Mutant,
+    module_to_file: dict[str, str] | None = None,
+) -> MutatingFinder:
+    """Install a mutating import hook. Returns the finder for later removal."""
+    finder = MutatingFinder(target_modules, mutant)
+    if module_to_file:
+        finder.set_file_paths(module_to_file)
+    sys.meta_path.insert(0, finder)
+    return finder
+
+
+def remove_hook(finder: MutatingFinder) -> None:
+    """Remove a previously installed import hook."""
+    try:
+        sys.meta_path.remove(finder)
+    except ValueError:
+        pass
+
+
+def clear_target_modules(module_names: list[str]) -> None:
+    """Remove target modules from sys.modules to force re-import."""
+    for name in module_names:
+        sys.modules.pop(name, None)
+        # Also clear submodules
+        to_remove = [k for k in sys.modules if k.startswith(name + ".")]
+        for k in to_remove:
+            del sys.modules[k]

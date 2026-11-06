@@ -1,0 +1,80 @@
+"""Derive current changed-file line, AST-statement and branch denominators."""
+import ast
+import hashlib
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+def build_report(coverage, diff_text, names):
+    changed = {}
+    for line in diff_text.splitlines():
+        if line.startswith("+++ b/"):
+            name = line[6:]
+            changed[name] = set()
+        elif line.startswith("@@"):
+            match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+            start = int(match[1])
+            count = int(match[2] or "1")
+            changed[name].update(range(start, start + count))
+    report = {}
+    for name in names:
+        source = Path(name).read_text()
+        data = coverage["files"][name]
+        changed_lines = changed[name]
+        covered = set(data["executed_lines"])
+        executable = (covered | set(data["missing_lines"])) & changed_lines
+        branches = [
+            branch
+            for branch in data["executed_branches"] + data["missing_branches"]
+            if branch[0] in changed_lines
+        ]
+        statements = []
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.stmt) and node.lineno in changed_lines:
+                if (
+                    isinstance(node, ast.Expr)
+                    and isinstance(node.value, ast.Constant)
+                    and isinstance(node.value.value, str)
+                ):
+                    continue
+                statements.append(
+                    {
+                        "line": node.lineno,
+                        "kind": type(node).__name__,
+                        "covered": node.lineno in covered,
+                    }
+                )
+        report[name] = {
+            "sha256": hashlib.sha256(source.encode()).hexdigest(),
+            "changed_lines": sorted(changed_lines),
+            "executable_lines": sorted(executable),
+            "line_denominator": len(executable),
+            "missing_lines": sorted(executable - covered),
+            "branches": branches,
+            "branch_denominator": len(branches),
+            "missing_branches": [
+                branch for branch in data["missing_branches"] if branch[0] in changed_lines
+            ],
+            "ast_statements": statements,
+            "statement_denominator": len(statements),
+        }
+    return report
+
+
+def main(input_stream=sys.stdin):
+    coverage = json.load(input_stream)
+    diff_text = subprocess.check_output(["git", "diff", "-U0", "HEAD"], text=True)
+    names = [
+        "src/pytest_leela/daemon.py",
+        "src/pytest_leela/index.py",
+        "tests/leela/describe_daemon.py",
+        "tests/leela/describe_index.py",
+    ]
+    print(json.dumps(build_report(coverage, diff_text, names), indent=2))
+
+
+if __name__ == "__main__":
+    main()

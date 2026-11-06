@@ -1,0 +1,263 @@
+{
+  "src/calc.py": {
+    "sha256": "a2986a7365a0a03d25addccbc4ec67e3241f963fbf4502f9afc16f8864c5013c",
+    "changed_lines": [
+      1,
+      2
+    ],
+    "default_pruned": 1,
+    "all_pruned": 1,
+    "points": [
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/src/calc.py",
+          "module_name": "src.calc",
+          "lineno": 2,
+          "col_offset": 4,
+          "node_type": "Return",
+          "original_op": "expr",
+          "inferred_type": "int"
+        },
+        "default_mutations": [
+          "negate_expr"
+        ],
+        "all_mutations": [
+          "negate_expr"
+        ]
+      },
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/src/calc.py",
+          "module_name": "src.calc",
+          "lineno": 2,
+          "col_offset": 11,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "int"
+        },
+        "default_mutations": [
+          "Sub",
+          "Mult",
+          "FloorDiv"
+        ],
+        "all_mutations": [
+          "Sub",
+          "Mult",
+          "FloorDiv"
+        ]
+      }
+    ]
+  },
+  "tests/calc_fixture.py": {
+    "sha256": "6735d69b1453fb4949e454a235f5643be13d9cede05beb3a49076628a7d871b3",
+    "changed_lines": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "default_pruned": 0,
+    "all_pruned": 0,
+    "points": [
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/tests/calc_fixture.py",
+          "module_name": "tests.calc_fixture",
+          "lineno": 18,
+          "col_offset": 7,
+          "node_type": "Compare",
+          "original_op": "NotEq",
+          "inferred_type": null
+        },
+        "default_mutations": [
+          "Eq"
+        ],
+        "all_mutations": [
+          "Eq"
+        ]
+      },
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/tests/calc_fixture.py",
+          "module_name": "tests.calc_fixture",
+          "lineno": 20,
+          "col_offset": 11,
+          "node_type": "Compare",
+          "original_op": "Eq",
+          "inferred_type": null
+        },
+        "default_mutations": [
+          "NotEq"
+        ],
+        "all_mutations": [
+          "NotEq"
+        ]
+      },
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/tests/calc_fixture.py",
+          "module_name": "tests.calc_fixture",
+          "lineno": 24,
+          "col_offset": 11,
+          "node_type": "Compare",
+          "original_op": "Eq",
+          "inferred_type": null
+        },
+        "default_mutations": [
+          "NotEq"
+        ],
+        "all_mutations": [
+          "NotEq"
+        ]
+      },
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/tests/calc_fixture.py",
+          "module_name": "tests.calc_fixture",
+          "lineno": 28,
+          "col_offset": 59,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": "str"
+        },
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ]
+      },
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/tests/calc_fixture.py",
+          "module_name": "tests.calc_fixture",
+          "lineno": 29,
+          "col_offset": 66,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": null
+        },
+        "default_mutations": [
+          "Sub",
+          "Mult"
+        ],
+        "all_mutations": [
+          "Sub",
+          "Mult"
+        ]
+      },
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/tests/calc_fixture.py",
+          "module_name": "tests.calc_fixture",
+          "lineno": 34,
+          "col_offset": 59,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": "str"
+        },
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ]
+      },
+      {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/capture-live/attempt2/r2/project/tests/calc_fixture.py",
+          "module_name": "tests.calc_fixture",
+          "lineno": 41,
+          "col_offset": 11,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": "str"
+        },
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ]
+      }
+    ]
+  },
+  "tests/test_calc.py": {
+    "sha256": "92403be7387d4fdbec55687ece8fbdcc5b0227fed5bb8f8ee339753f6f1a3e11",
+    "changed_lines": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22
+    ],
+    "default_pruned": 0,
+    "all_pruned": 0,
+    "points": []
+  }
+}

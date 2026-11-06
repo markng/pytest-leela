@@ -1,0 +1,1 @@
+PASS: 35 source manifest entries match current files

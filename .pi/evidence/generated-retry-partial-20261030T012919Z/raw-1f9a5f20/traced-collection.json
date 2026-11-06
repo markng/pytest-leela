@@ -1,0 +1,1097 @@
+{
+  "python": "3.13.11 (main, Dec  5 2025, 16:06:33) [Clang 17.0.0 (clang-1700.4.4.1)]",
+  "target": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+  "sha256": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+  "pytestExit": 1,
+  "traceLines": [
+    1,
+    3,
+    4,
+    6,
+    7,
+    8,
+    12,
+    13,
+    14,
+    18,
+    19,
+    21,
+    22,
+    24,
+    30,
+    32,
+    36,
+    39,
+    40,
+    42,
+    53,
+    55,
+    59,
+    62,
+    63,
+    65,
+    75,
+    77,
+    78,
+    79,
+    80,
+    86,
+    89,
+    90,
+    92,
+    103,
+    105,
+    110,
+    111,
+    114,
+    116,
+    120,
+    127,
+    129,
+    130,
+    135,
+    138,
+    139,
+    141,
+    148,
+    154,
+    156,
+    157,
+    158,
+    159,
+    165,
+    168,
+    169,
+    171,
+    178,
+    184,
+    186,
+    187,
+    188,
+    189,
+    195,
+    199,
+    200,
+    202,
+    212,
+    214,
+    215,
+    216,
+    217,
+    224,
+    225,
+    228,
+    229,
+    231,
+    239,
+    240,
+    241,
+    242,
+    245,
+    246,
+    248,
+    250,
+    251,
+    252,
+    260,
+    261,
+    263,
+    265,
+    269,
+    270,
+    271,
+    272,
+    274,
+    282,
+    284,
+    285,
+    286,
+    288,
+    296,
+    297,
+    298,
+    300,
+    302,
+    306,
+    307,
+    313,
+    325,
+    326,
+    327,
+    328,
+    335,
+    336,
+    337,
+    356,
+    357,
+    358,
+    365,
+    366,
+    368,
+    369,
+    374,
+    375,
+    381,
+    382,
+    385,
+    386,
+    387,
+    391,
+    392,
+    393,
+    394,
+    396,
+    399,
+    400,
+    401,
+    405,
+    406,
+    412,
+    413,
+    414,
+    422,
+    424,
+    425,
+    426,
+    428,
+    434,
+    435,
+    436,
+    444,
+    446,
+    447,
+    449,
+    456,
+    457,
+    458,
+    475,
+    477,
+    478,
+    479,
+    480,
+    481,
+    483,
+    484,
+    485,
+    486,
+    493,
+    494
+  ],
+  "producerAstStatements": [
+    {
+      "type": "FunctionDef",
+      "line": 313
+    },
+    {
+      "type": "Expr",
+      "line": 314
+    },
+    {
+      "type": "Expr",
+      "line": 325
+    },
+    {
+      "type": "Expr",
+      "line": 326
+    },
+    {
+      "type": "Expr",
+      "line": 335
+    },
+    {
+      "type": "Assign",
+      "line": 356
+    },
+    {
+      "type": "Expr",
+      "line": 357
+    },
+    {
+      "type": "Expr",
+      "line": 365
+    },
+    {
+      "type": "Expr",
+      "line": 368
+    },
+    {
+      "type": "Expr",
+      "line": 374
+    },
+    {
+      "type": "Expr",
+      "line": 381
+    },
+    {
+      "type": "Assign",
+      "line": 385
+    },
+    {
+      "type": "Expr",
+      "line": 386
+    },
+    {
+      "type": "Expr",
+      "line": 391
+    },
+    {
+      "type": "Assign",
+      "line": 392
+    },
+    {
+      "type": "Expr",
+      "line": 393
+    },
+    {
+      "type": "Return",
+      "line": 396
+    }
+  ],
+  "compiled": {
+    "moduleCode": {
+      "co_lines": [
+        [
+          0,
+          2,
+          0
+        ],
+        [
+          2,
+          10,
+          313
+        ]
+      ],
+      "nestedCodeLine": 313
+    },
+    "functionCode": {
+      "co_firstlineno": 313,
+      "co_name": "_django_project",
+      "co_lines": [
+        [
+          0,
+          2,
+          313
+        ],
+        [
+          2,
+          44,
+          325
+        ],
+        [
+          44,
+          66,
+          326
+        ],
+        [
+          66,
+          96,
+          327
+        ],
+        [
+          96,
+          98,
+          328
+        ],
+        [
+          98,
+          106,
+          327
+        ],
+        [
+          106,
+          116,
+          326
+        ],
+        [
+          116,
+          138,
+          335
+        ],
+        [
+          138,
+          168,
+          336
+        ],
+        [
+          168,
+          170,
+          337
+        ],
+        [
+          170,
+          178,
+          336
+        ],
+        [
+          178,
+          184,
+          335
+        ],
+        [
+          184,
+          218,
+          356
+        ],
+        [
+          218,
+          246,
+          357
+        ],
+        [
+          246,
+          248,
+          358
+        ],
+        [
+          248,
+          258,
+          357
+        ],
+        [
+          258,
+          286,
+          365
+        ],
+        [
+          286,
+          302,
+          366
+        ],
+        [
+          302,
+          312,
+          365
+        ],
+        [
+          312,
+          340,
+          368
+        ],
+        [
+          340,
+          356,
+          369
+        ],
+        [
+          356,
+          366,
+          368
+        ],
+        [
+          366,
+          394,
+          374
+        ],
+        [
+          394,
+          410,
+          375
+        ],
+        [
+          410,
+          420,
+          374
+        ],
+        [
+          420,
+          448,
+          381
+        ],
+        [
+          448,
+          464,
+          382
+        ],
+        [
+          464,
+          474,
+          381
+        ],
+        [
+          474,
+          508,
+          385
+        ],
+        [
+          508,
+          536,
+          386
+        ],
+        [
+          536,
+          552,
+          387
+        ],
+        [
+          552,
+          562,
+          386
+        ],
+        [
+          562,
+          602,
+          391
+        ],
+        [
+          602,
+          636,
+          392
+        ],
+        [
+          636,
+          664,
+          393
+        ],
+        [
+          664,
+          672,
+          394
+        ],
+        [
+          672,
+          682,
+          393
+        ],
+        [
+          682,
+          686,
+          396
+        ]
+      ],
+      "instructions": [
+        {
+          "op": "RESUME",
+          "line_number": 313,
+          "positions_lineno": 313
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 325,
+          "positions_lineno": 325
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 325,
+          "positions_lineno": 325
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 325,
+          "positions_lineno": 325
+        },
+        {
+          "op": "CALL",
+          "line_number": 325,
+          "positions_lineno": 325
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 325,
+          "positions_lineno": 325
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 326,
+          "positions_lineno": 326
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 326,
+          "positions_lineno": 326
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 327,
+          "positions_lineno": 327
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 327,
+          "positions_lineno": 327
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 328,
+          "positions_lineno": 328
+        },
+        {
+          "op": "CALL",
+          "line_number": 327,
+          "positions_lineno": 327
+        },
+        {
+          "op": "CALL",
+          "line_number": 326,
+          "positions_lineno": 326
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 326,
+          "positions_lineno": 326
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 335,
+          "positions_lineno": 335
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 335,
+          "positions_lineno": 335
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 336,
+          "positions_lineno": 336
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 336,
+          "positions_lineno": 336
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 337,
+          "positions_lineno": 337
+        },
+        {
+          "op": "CALL",
+          "line_number": 336,
+          "positions_lineno": 336
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 335,
+          "positions_lineno": 335
+        },
+        {
+          "op": "CALL_KW",
+          "line_number": 335,
+          "positions_lineno": 335
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 335,
+          "positions_lineno": 335
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 356,
+          "positions_lineno": 356
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 356,
+          "positions_lineno": 356
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 356,
+          "positions_lineno": 356
+        },
+        {
+          "op": "CALL",
+          "line_number": 356,
+          "positions_lineno": 356
+        },
+        {
+          "op": "STORE_FAST",
+          "line_number": 356,
+          "positions_lineno": 356
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 357,
+          "positions_lineno": 357
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 357,
+          "positions_lineno": 357
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 357,
+          "positions_lineno": 357
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 357,
+          "positions_lineno": 357
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 358,
+          "positions_lineno": 358
+        },
+        {
+          "op": "CALL",
+          "line_number": 357,
+          "positions_lineno": 357
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 357,
+          "positions_lineno": 357
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 365,
+          "positions_lineno": 365
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 365,
+          "positions_lineno": 365
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 365,
+          "positions_lineno": 365
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 365,
+          "positions_lineno": 365
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 366,
+          "positions_lineno": 366
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 366,
+          "positions_lineno": 366
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 366,
+          "positions_lineno": 366
+        },
+        {
+          "op": "CALL",
+          "line_number": 365,
+          "positions_lineno": 365
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 365,
+          "positions_lineno": 365
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 368,
+          "positions_lineno": 368
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 368,
+          "positions_lineno": 368
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 368,
+          "positions_lineno": 368
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 368,
+          "positions_lineno": 368
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 369,
+          "positions_lineno": 369
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 369,
+          "positions_lineno": 369
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 369,
+          "positions_lineno": 369
+        },
+        {
+          "op": "CALL",
+          "line_number": 368,
+          "positions_lineno": 368
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 368,
+          "positions_lineno": 368
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 374,
+          "positions_lineno": 374
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 374,
+          "positions_lineno": 374
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 374,
+          "positions_lineno": 374
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 374,
+          "positions_lineno": 374
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 375,
+          "positions_lineno": 375
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 375,
+          "positions_lineno": 375
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 375,
+          "positions_lineno": 375
+        },
+        {
+          "op": "CALL",
+          "line_number": 374,
+          "positions_lineno": 374
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 374,
+          "positions_lineno": 374
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 381,
+          "positions_lineno": 381
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 381,
+          "positions_lineno": 381
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 381,
+          "positions_lineno": 381
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 381,
+          "positions_lineno": 381
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 382,
+          "positions_lineno": 382
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 382,
+          "positions_lineno": 382
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 382,
+          "positions_lineno": 382
+        },
+        {
+          "op": "CALL",
+          "line_number": 381,
+          "positions_lineno": 381
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 381,
+          "positions_lineno": 381
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 385,
+          "positions_lineno": 385
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 385,
+          "positions_lineno": 385
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 385,
+          "positions_lineno": 385
+        },
+        {
+          "op": "CALL",
+          "line_number": 385,
+          "positions_lineno": 385
+        },
+        {
+          "op": "STORE_FAST",
+          "line_number": 385,
+          "positions_lineno": 385
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 386,
+          "positions_lineno": 386
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 386,
+          "positions_lineno": 386
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 386,
+          "positions_lineno": 386
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 386,
+          "positions_lineno": 386
+        },
+        {
+          "op": "LOAD_GLOBAL",
+          "line_number": 387,
+          "positions_lineno": 387
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 387,
+          "positions_lineno": 387
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 387,
+          "positions_lineno": 387
+        },
+        {
+          "op": "CALL",
+          "line_number": 386,
+          "positions_lineno": 386
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 386,
+          "positions_lineno": 386
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 391,
+          "positions_lineno": 391
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 391,
+          "positions_lineno": 391
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 391,
+          "positions_lineno": 391
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 391,
+          "positions_lineno": 391
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 391,
+          "positions_lineno": 391
+        },
+        {
+          "op": "CALL",
+          "line_number": 391,
+          "positions_lineno": 391
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 391,
+          "positions_lineno": 391
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 392,
+          "positions_lineno": 392
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 392,
+          "positions_lineno": 392
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 392,
+          "positions_lineno": 392
+        },
+        {
+          "op": "CALL",
+          "line_number": 392,
+          "positions_lineno": 392
+        },
+        {
+          "op": "STORE_FAST",
+          "line_number": 392,
+          "positions_lineno": 392
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 393,
+          "positions_lineno": 393
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 393,
+          "positions_lineno": 393
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 393,
+          "positions_lineno": 393
+        },
+        {
+          "op": "LOAD_ATTR",
+          "line_number": 393,
+          "positions_lineno": 393
+        },
+        {
+          "op": "LOAD_CONST",
+          "line_number": 394,
+          "positions_lineno": 394
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 394,
+          "positions_lineno": 394
+        },
+        {
+          "op": "BINARY_OP",
+          "line_number": 394,
+          "positions_lineno": 394
+        },
+        {
+          "op": "CALL",
+          "line_number": 393,
+          "positions_lineno": 393
+        },
+        {
+          "op": "POP_TOP",
+          "line_number": 393,
+          "positions_lineno": 393
+        },
+        {
+          "op": "LOAD_FAST",
+          "line_number": 396,
+          "positions_lineno": 396
+        },
+        {
+          "op": "RETURN_VALUE",
+          "line_number": 396,
+          "positions_lineno": 396
+        }
+      ]
+    }
+  },
+  "moduleCodeLines": [
+    [
+      0,
+      2,
+      0
+    ],
+    [
+      2,
+      6,
+      1
+    ],
+    [
+      6,
+      14,
+      3
+    ],
+    [
+      14,
+      22,
+      4
+    ],
+    [
+      22,
+      26,
+      6
+    ],
+    [
+      26,
+      28,
+      8
+    ],
+    [
+      28,
+      30,
+      7
+    ],
+    [
+      30,
+      36,
+      12
+    ],
+    [
+      36,
+      42,
+      18
+    ],
+    [
+      42,
+      48,
+      110
+    ],
+    [
+      48,
+      54,
+      224
+    ],
+    [
+      54,
+      60,
+      269
+    ],
+    [
+      60,
+      66,
+      296
+    ],
+    [
+      66,
+      68,
+      307
+    ],
+    [
+      68,
+      70,
+      306
+    ],
+    [
+      70,
+      76,
+      313
+    ],
+    [
+      76,
+      82,
+      399
+    ],
+    [
+      82,
+      90,
+      405
+    ]
+  ]
+}

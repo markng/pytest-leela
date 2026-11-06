@@ -1,0 +1,45 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "None"
+      ],
+      "default_mutations": [
+        "None"
+      ],
+      "point": {
+        "col_offset": 4,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/fixture_identity_recreated.py",
+        "inferred_type": null,
+        "lineno": 2,
+        "module_name": "fixture_identity_recreated",
+        "node_type": "Return",
+        "original_op": "expr"
+      }
+    },
+    {
+      "all_mutations": [
+        "Sub",
+        "Mult",
+        "FloorDiv"
+      ],
+      "default_mutations": [
+        "Sub",
+        "Mult",
+        "FloorDiv"
+      ],
+      "point": {
+        "col_offset": 11,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/fixture_identity_recreated.py",
+        "inferred_type": "int",
+        "lineno": 2,
+        "module_name": "fixture_identity_recreated",
+        "node_type": "BinOp",
+        "original_op": "Add"
+      }
+    }
+  ],
+  "sha256": "d2d69fee3c0d7dafb3c44f2ac21d4a0f3197eeea6b36a81f2c2be8eab0538a78"
+}

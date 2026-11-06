@@ -1,0 +1,2 @@
+branch=fix/responsive-watch-generation-20261022
+HEAD=b1bb565883c75356be1a493c64084607d5769f3f

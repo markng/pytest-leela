@@ -1,0 +1,2765 @@
+{
+  "classification": "disposable full affected-producer diagnostic",
+  "scope": "all",
+  "source": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+  "sourceSha256": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+  "module": "tests.leela.describe_end_to_end",
+  "producer": {
+    "name": "_django_project",
+    "lines": [
+      313,
+      396
+    ]
+  },
+  "denominator": 17,
+  "enrichment": {
+    "from_annotations": 36,
+    "from_assignment_dataflow": 0
+  },
+  "testId": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+  "testTimes": {
+    "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process": 1.12
+  },
+  "observerSha256": "9facc5f24b9d55c495e954fadac8c4427eb8acdf53d3b205a7580e36e15d8f54",
+  "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python",
+  "ledger": [
+    {
+      "job": "5256697933714595a34a994a094765ca",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 357,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 0
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 27926,
+          "invocation": "5256697933714595a34a994a094765ca-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 357,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 0
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "f0715b3faf5457e7d1983c203e124f85aa1395155d883031a30ce5f61da9719e",
+          "executed_modules": [
+            {
+              "code_sha": "f0715b3faf5457e7d1983c203e124f85aa1395155d883031a30ce5f61da9719e",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "8abf11da0ab387e0f7add77f8c300e7d27815332a46d97316d227f84c0b6c720",
+              "expected_sha": "8abf11da0ab387e0f7add77f8c300e7d27815332a46d97316d227f84c0b6c720"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 27935,
+          "invocation": "5256697933714595a34a994a094765ca-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 27935,
+          "invocation": "5256697933714595a34a994a094765ca-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 357,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 0
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.2443640410019725,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/5256697933714595a34a994a094765ca.jsonl"
+    },
+    {
+      "job": "87e3c7a2045944439ce7e921f3a186e1",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 357,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 1
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 27937,
+          "invocation": "87e3c7a2045944439ce7e921f3a186e1-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 357,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 1
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "6dcaa35293e5486549d71332acec9f203ceeb51e9f9397e2823acdef239dd670",
+          "executed_modules": [
+            {
+              "code_sha": "6dcaa35293e5486549d71332acec9f203ceeb51e9f9397e2823acdef239dd670",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "3d3e751dfbf3af0a4bf3cc3f8a141ed474a0c12797eb34d1a2e15ff71459d1af",
+              "expected_sha": "3d3e751dfbf3af0a4bf3cc3f8a141ed474a0c12797eb34d1a2e15ff71459d1af"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 27949,
+          "invocation": "87e3c7a2045944439ce7e921f3a186e1-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 27949,
+          "invocation": "87e3c7a2045944439ce7e921f3a186e1-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 357,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 1
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.2432727920022444,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/87e3c7a2045944439ce7e921f3a186e1.jsonl"
+    },
+    {
+      "job": "6f243f323ad44a1483bd4e0fc71347ee",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 365,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 2
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 27955,
+          "invocation": "6f243f323ad44a1483bd4e0fc71347ee-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 365,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 2
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "d217ee76b19a4e7de013254a0c7179a6cc7b89fd75d10029cf96dea03f8e3f4b",
+          "executed_modules": [
+            {
+              "code_sha": "d217ee76b19a4e7de013254a0c7179a6cc7b89fd75d10029cf96dea03f8e3f4b",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "c714044da9faba9604d3a638611daeabee6068fb6f583c1022e363c8150b0fa7",
+              "expected_sha": "c714044da9faba9604d3a638611daeabee6068fb6f583c1022e363c8150b0fa7"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 27967,
+          "invocation": "6f243f323ad44a1483bd4e0fc71347ee-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 27967,
+          "invocation": "6f243f323ad44a1483bd4e0fc71347ee-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 365,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 2
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24134970899831387,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/6f243f323ad44a1483bd4e0fc71347ee.jsonl"
+    },
+    {
+      "job": "f631c04768fc48d681e4f35c6916d1aa",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 365,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 3
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 27969,
+          "invocation": "f631c04768fc48d681e4f35c6916d1aa-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 365,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 3
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "255fde822809d7842b15b57a954538e70dd7f8cbe6252951331c78e563584fb7",
+          "executed_modules": [
+            {
+              "code_sha": "255fde822809d7842b15b57a954538e70dd7f8cbe6252951331c78e563584fb7",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ce843c55ec733f832cc6ceb178ff5d891ffdbe196abb6c65abeb48931597ec4e",
+              "expected_sha": "ce843c55ec733f832cc6ceb178ff5d891ffdbe196abb6c65abeb48931597ec4e"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 27980,
+          "invocation": "f631c04768fc48d681e4f35c6916d1aa-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 27980,
+          "invocation": "f631c04768fc48d681e4f35c6916d1aa-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 365,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 3
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24118641599852708,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/f631c04768fc48d681e4f35c6916d1aa.jsonl"
+    },
+    {
+      "job": "813b3981b9494b4cbc2f48923f7ce1a4",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 368,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 4
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 27982,
+          "invocation": "813b3981b9494b4cbc2f48923f7ce1a4-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 368,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 4
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "35d2a83a2e979d62d6115da82e7a77f0cd455bba0d176286c77b690b2646e94b",
+          "executed_modules": [
+            {
+              "code_sha": "35d2a83a2e979d62d6115da82e7a77f0cd455bba0d176286c77b690b2646e94b",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "a7c9e84bdfc84581e5147037f5b18c67dbc224656fc505a3371edde253332b02",
+              "expected_sha": "a7c9e84bdfc84581e5147037f5b18c67dbc224656fc505a3371edde253332b02"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 27994,
+          "invocation": "813b3981b9494b4cbc2f48923f7ce1a4-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 27994,
+          "invocation": "813b3981b9494b4cbc2f48923f7ce1a4-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 368,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 4
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24043908299790928,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/813b3981b9494b4cbc2f48923f7ce1a4.jsonl"
+    },
+    {
+      "job": "f1c3cd35c59b4b7599cb250110370416",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 368,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 5
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 27996,
+          "invocation": "f1c3cd35c59b4b7599cb250110370416-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 368,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 5
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "875e2d93709f707e9580e5d4e51f071a54826d5c874b738d6c6c9adbf3f4f6ca",
+          "executed_modules": [
+            {
+              "code_sha": "875e2d93709f707e9580e5d4e51f071a54826d5c874b738d6c6c9adbf3f4f6ca",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "8b3b78afd3304e5f5f6465f96388d41e7ef28d3398342fb80abf264905e81607",
+              "expected_sha": "8b3b78afd3304e5f5f6465f96388d41e7ef28d3398342fb80abf264905e81607"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28007,
+          "invocation": "f1c3cd35c59b4b7599cb250110370416-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 28007,
+          "invocation": "f1c3cd35c59b4b7599cb250110370416-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 368,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 5
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.23818512499929057,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/f1c3cd35c59b4b7599cb250110370416.jsonl"
+    },
+    {
+      "job": "58630791aac54b569655e48b4f4a3aec",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 374,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 6
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28009,
+          "invocation": "58630791aac54b569655e48b4f4a3aec-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 374,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 6
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "27b29e96d42ee682bd451a61e54d3c0ef7dc676c4385d1c1bd8cb0f27d8e0a6e",
+          "executed_modules": [
+            {
+              "code_sha": "27b29e96d42ee682bd451a61e54d3c0ef7dc676c4385d1c1bd8cb0f27d8e0a6e",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "4ffb3af269d7c7f9550a710ddabe69a126447a7919028ed23a6b7d470f648677",
+              "expected_sha": "4ffb3af269d7c7f9550a710ddabe69a126447a7919028ed23a6b7d470f648677"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28020,
+          "invocation": "58630791aac54b569655e48b4f4a3aec-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 28020,
+          "invocation": "58630791aac54b569655e48b4f4a3aec-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 374,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 6
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24012054199920385,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/58630791aac54b569655e48b4f4a3aec.jsonl"
+    },
+    {
+      "job": "ee58caf0354e49b8b7f81cd592642e86",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 374,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 7
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28022,
+          "invocation": "ee58caf0354e49b8b7f81cd592642e86-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 374,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 7
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "6bef26b7a753d8e47f5b8a01ce825c4bb5f2086811136a9577fa983e98fc4348",
+          "executed_modules": [
+            {
+              "code_sha": "6bef26b7a753d8e47f5b8a01ce825c4bb5f2086811136a9577fa983e98fc4348",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "9513a51c5f28b0a270ab4fc443060a0d9eaf5bf8cd05eae6dbe7348909d4a645",
+              "expected_sha": "9513a51c5f28b0a270ab4fc443060a0d9eaf5bf8cd05eae6dbe7348909d4a645"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28034,
+          "invocation": "ee58caf0354e49b8b7f81cd592642e86-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 28034,
+          "invocation": "ee58caf0354e49b8b7f81cd592642e86-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 374,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 7
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24540633299693582,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/ee58caf0354e49b8b7f81cd592642e86.jsonl"
+    },
+    {
+      "job": "98a51ff3f9394880a0f7bb01c46a36ec",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 381,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 8
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28036,
+          "invocation": "98a51ff3f9394880a0f7bb01c46a36ec-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 381,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 8
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "072bd1956fc0102b042714861c90e2a9b3ee279625ec88d89879e55e202208f7",
+          "executed_modules": [
+            {
+              "code_sha": "072bd1956fc0102b042714861c90e2a9b3ee279625ec88d89879e55e202208f7",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "458b934fc1d835676e309b39797aa1b59aea64970a52ff12feb20f5b047f6f2b",
+              "expected_sha": "458b934fc1d835676e309b39797aa1b59aea64970a52ff12feb20f5b047f6f2b"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28047,
+          "invocation": "98a51ff3f9394880a0f7bb01c46a36ec-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 28047,
+          "invocation": "98a51ff3f9394880a0f7bb01c46a36ec-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 381,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 8
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.2398554170031275,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/98a51ff3f9394880a0f7bb01c46a36ec.jsonl"
+    },
+    {
+      "job": "e597638e77554a7e938e66604d33e1fd",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 381,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 9
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28049,
+          "invocation": "e597638e77554a7e938e66604d33e1fd-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 381,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 9
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "8606c00a1cd1595533d8261d80913728b8c2fb9aa5a62c50be7d8f07a86ca1a5",
+          "executed_modules": [
+            {
+              "code_sha": "8606c00a1cd1595533d8261d80913728b8c2fb9aa5a62c50be7d8f07a86ca1a5",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "23f1ba3a0ada18f0712b84e7209c7621eb8e6df3b6a6096e202b8f6eba47b0c1",
+              "expected_sha": "23f1ba3a0ada18f0712b84e7209c7621eb8e6df3b6a6096e202b8f6eba47b0c1"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28059,
+          "invocation": "e597638e77554a7e938e66604d33e1fd-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 28059,
+          "invocation": "e597638e77554a7e938e66604d33e1fd-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 381,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 9
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.23856933299975935,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/e597638e77554a7e938e66604d33e1fd.jsonl"
+    },
+    {
+      "job": "6f5507e2c1f044e0aa6f47102fc4bebd",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 386,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 10
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28064,
+          "invocation": "6f5507e2c1f044e0aa6f47102fc4bebd-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 386,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 10
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "e1a6117cbd70fda1960c0a47edc8adeb2327dab6464608760a314d35ed06657d",
+          "executed_modules": [
+            {
+              "code_sha": "e1a6117cbd70fda1960c0a47edc8adeb2327dab6464608760a314d35ed06657d",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea338a43f94d8f127987e99229de0b316130e70d0ab7bfe05ac0328b1df37561",
+              "expected_sha": "ea338a43f94d8f127987e99229de0b316130e70d0ab7bfe05ac0328b1df37561"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28073,
+          "invocation": "6f5507e2c1f044e0aa6f47102fc4bebd-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 28073,
+          "invocation": "6f5507e2c1f044e0aa6f47102fc4bebd-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 386,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 10
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.23941512500095996,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/6f5507e2c1f044e0aa6f47102fc4bebd.jsonl"
+    },
+    {
+      "job": "f2455cef25c84a8d9478932f4021aa7f",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 386,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 11
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28077,
+          "invocation": "f2455cef25c84a8d9478932f4021aa7f-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 386,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 11
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "17ff21d594e0a4ae19f19ce39139ff89cfd0bfc89a3d0e9c874397a9957780c4",
+          "executed_modules": [
+            {
+              "code_sha": "17ff21d594e0a4ae19f19ce39139ff89cfd0bfc89a3d0e9c874397a9957780c4",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "1df9efce19dd99ce04fe70dcafd871b240b3327df11de6aaf166bed70804d5f9",
+              "expected_sha": "1df9efce19dd99ce04fe70dcafd871b240b3327df11de6aaf166bed70804d5f9"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28086,
+          "invocation": "f2455cef25c84a8d9478932f4021aa7f-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 28086,
+          "invocation": "f2455cef25c84a8d9478932f4021aa7f-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 386,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 11
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24013945799742942,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/f2455cef25c84a8d9478932f4021aa7f.jsonl"
+    },
+    {
+      "job": "25e7a473e96a41998072c77be6f154eb",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 391,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 12
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28088,
+          "invocation": "25e7a473e96a41998072c77be6f154eb-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 391,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 12
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "b4a573529e22dce26738fa58e41f1b3f0cc8c4accce82f85e0a43a0105e90b4f",
+          "executed_modules": [
+            {
+              "code_sha": "b4a573529e22dce26738fa58e41f1b3f0cc8c4accce82f85e0a43a0105e90b4f",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "c4d7fc245c0c8a01a27a9903b162bf40e4126513131b993864edcc08ed289aac",
+              "expected_sha": "c4d7fc245c0c8a01a27a9903b162bf40e4126513131b993864edcc08ed289aac"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28104,
+          "invocation": "25e7a473e96a41998072c77be6f154eb-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 28104,
+          "invocation": "25e7a473e96a41998072c77be6f154eb-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 391,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 12
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24487412500093342,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/25e7a473e96a41998072c77be6f154eb.jsonl"
+    },
+    {
+      "job": "6db7fbd34ea64a43aae2b7fcf51f5605",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 391,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 13
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28109,
+          "invocation": "6db7fbd34ea64a43aae2b7fcf51f5605-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 391,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 13
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "2cb38e5048d2e6f6511eee624f860ef13e68cff34beabeefa1464b3d787e48a4",
+          "executed_modules": [
+            {
+              "code_sha": "2cb38e5048d2e6f6511eee624f860ef13e68cff34beabeefa1464b3d787e48a4",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fa08b676e467848499ff4b0afe1049908c6936e49c3a006e042ac4b77900cbe8",
+              "expected_sha": "fa08b676e467848499ff4b0afe1049908c6936e49c3a006e042ac4b77900cbe8"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28144,
+          "invocation": "6db7fbd34ea64a43aae2b7fcf51f5605-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 28144,
+          "invocation": "6db7fbd34ea64a43aae2b7fcf51f5605-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 391,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 13
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.2798023750001448,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/6db7fbd34ea64a43aae2b7fcf51f5605.jsonl"
+    },
+    {
+      "job": "cec5ed19bc9f4765b93de65d54e1c91d",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 393,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 14
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28146,
+          "invocation": "cec5ed19bc9f4765b93de65d54e1c91d-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 393,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "Mult",
+            "mutant_id": 14
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "b4085dd03eec39f3fde77162e8a62a42acf69cf8bd82191675304c492a1f2440",
+          "executed_modules": [
+            {
+              "code_sha": "b4085dd03eec39f3fde77162e8a62a42acf69cf8bd82191675304c492a1f2440",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "4b97203c76da3ddafac7550ec062253661748e1dab211c70655a46d2caa071cf",
+              "expected_sha": "4b97203c76da3ddafac7550ec062253661748e1dab211c70655a46d2caa071cf"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28167,
+          "invocation": "cec5ed19bc9f4765b93de65d54e1c91d-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: can't multiply sequence by non-int of type 'PosixPath'",
+          "pid": 28167,
+          "invocation": "cec5ed19bc9f4765b93de65d54e1c91d-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 393,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 14
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.2447192500003439,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/cec5ed19bc9f4765b93de65d54e1c91d.jsonl"
+    },
+    {
+      "job": "72ea67176f2b4227941aeafce120dd8c",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 393,
+          "col_offset": 5,
+          "node_type": "BinOp",
+          "original_op": "Div",
+          "inferred_type": null
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 15
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28169,
+          "invocation": "72ea67176f2b4227941aeafce120dd8c-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 393,
+              "col_offset": 5,
+              "node_type": "BinOp",
+              "original_op": "Div",
+              "inferred_type": null
+            },
+            "replacement_op": "FloorDiv",
+            "mutant_id": 15
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "08a5a00afc62bbeed3375a784cd39ec802002d51bd5962c003e95a517237541e",
+          "executed_modules": [
+            {
+              "code_sha": "08a5a00afc62bbeed3375a784cd39ec802002d51bd5962c003e95a517237541e",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "eac004e6ebded0a2dd94bfbca97762cb2dbeba4a3fe9a3e075d1186b9440822e",
+              "expected_sha": "eac004e6ebded0a2dd94bfbca97762cb2dbeba4a3fe9a3e075d1186b9440822e"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28183,
+          "invocation": "72ea67176f2b4227941aeafce120dd8c-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   TypeError: unsupported operand type(s) for //: 'PosixPath' and 'str'",
+          "pid": 28183,
+          "invocation": "72ea67176f2b4227941aeafce120dd8c-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 393,
+            "col_offset": 5,
+            "node_type": "BinOp",
+            "original_op": "Div",
+            "inferred_type": null
+          },
+          "replacement_op": "FloorDiv",
+          "mutant_id": 15
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.2509579580000718,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/72ea67176f2b4227941aeafce120dd8c.jsonl"
+    },
+    {
+      "job": "12ccc28bf6864fe081d6ee0624ec1ef2",
+      "mutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "module_name": "tests.leela.describe_end_to_end",
+          "lineno": 396,
+          "col_offset": 4,
+          "node_type": "Return",
+          "original_op": "expr",
+          "inferred_type": null
+        },
+        "replacement_op": "None",
+        "mutant_id": 16
+      },
+      "controlCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 28185,
+          "invocation": "12ccc28bf6864fe081d6ee0624ec1ef2-control"
+        }
+      ],
+      "bindings": [
+        {
+          "event": "loader-end",
+          "module": "tests.leela.describe_end_to_end",
+          "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+          "source_sha": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+          "mutant": {
+            "point": {
+              "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "module_name": "tests.leela.describe_end_to_end",
+              "lineno": 396,
+              "col_offset": 4,
+              "node_type": "Return",
+              "original_op": "expr",
+              "inferred_type": null
+            },
+            "replacement_op": "None",
+            "mutant_id": 16
+          },
+          "completed": true,
+          "applied": true,
+          "expected_module_sha": "54a677838fac5e5973b405554a0407a2dcfb50a60a6613d386745a6c78c6e632",
+          "executed_modules": [
+            {
+              "code_sha": "54a677838fac5e5973b405554a0407a2dcfb50a60a6613d386745a6c78c6e632",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py"
+            }
+          ],
+          "live_functions": [
+            {
+              "qualname": "_leela",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5",
+              "expected_sha": "fb5d0347681e7724dbcafefcb49ecb2f1c95a3aa99c66e4592c32ba2386b3ac5"
+            },
+            {
+              "qualname": "describe_import_breaking_mutant",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b",
+              "expected_sha": "976d7927de60822842d38dbac93f081f684cd200a87df9d554544131ab0fff5b"
+            },
+            {
+              "qualname": "describe_collection_failures",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c",
+              "expected_sha": "488bbd0f019d2ee8dd1f8a9ccffeb319f6bee5124a6213e08e43e28ba88f240c"
+            },
+            {
+              "qualname": "describe_error_mutants",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff",
+              "expected_sha": "b69e7424c582540b490810436700fb77358eb5d5d0295f84a13881af7f8f84ff"
+            },
+            {
+              "qualname": "describe_baseline_abort",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93",
+              "expected_sha": "ea32c035a64b31a90cb341db1cb1f3732f1201e1b1cf2697e5e15e18f1214a93"
+            },
+            {
+              "qualname": "describe_clean_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67",
+              "expected_sha": "b06c9c14587214273dae0d5a493737b9df86653db842427f605ac2aaca31be67"
+            },
+            {
+              "qualname": "_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "83e8ab8187c94b725ebba831d8e1d581bd2a4430ad223e900e96ba90753b7e74",
+              "expected_sha": "83e8ab8187c94b725ebba831d8e1d581bd2a4430ad223e900e96ba90753b7e74"
+            },
+            {
+              "qualname": "_leela_django",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3",
+              "expected_sha": "7b3bfc30b2277e36b4d82cac97d4809e3ab1d2768df8b3b26cb02e3c899f9ff3"
+            },
+            {
+              "qualname": "describe_django_project",
+              "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+              "sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22",
+              "expected_sha": "fc3c7c70ab23b75a90ea913bb8009255bcb03e1ac61e98a4f600b36ca3f4ee22"
+            }
+          ],
+          "ast_changed": true,
+          "pid": 28197,
+          "invocation": "12ccc28bf6864fe081d6ee0624ec1ef2-mutant"
+        }
+      ],
+      "failedCalls": [
+        {
+          "event": "report",
+          "nodeid": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+          "phase": "call",
+          "outcome": "failed",
+          "diagnostic": "E   AttributeError: 'NoneType' object has no attribute 'runpytest_subprocess'",
+          "pid": 28197,
+          "invocation": "12ccc28bf6864fe081d6ee0624ec1ef2-mutant"
+        }
+      ],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "module_name": "tests.leela.describe_end_to_end",
+            "lineno": 396,
+            "col_offset": 4,
+            "node_type": "Return",
+            "original_op": "expr",
+            "inferred_type": null
+          },
+          "replacement_op": "None",
+          "mutant_id": 16
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+        "time_seconds": 0.24992574999851058,
+        "test_ids_run": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "killing_tests": [
+          "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+        ],
+        "error": null
+      },
+      "status": "genuine-CALL",
+      "eventCounts": {
+        "configure": 1,
+        "loader-start": 1,
+        "loader-end": 1,
+        "report": 3
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-formatter-repair/fa7482b42293468fa57337ce21260e0f/12ccc28bf6864fe081d6ee0624ec1ef2.jsonl"
+    }
+  ],
+  "genuineCallCount": 17
+}

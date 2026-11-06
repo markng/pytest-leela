@@ -1,0 +1,523 @@
+[
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 24,
+        "col_offset": 7,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 0
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 24,
+          "col_offset": 7,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 0
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.33485741587355733,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 43,
+        "col_offset": 29,
+        "node_type": "IfExp",
+        "original_op": "ternary",
+        "inferred_type": null
+      },
+      "replacement_op": "swap_branches",
+      "mutant_id": 1
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 43,
+          "col_offset": 29,
+          "node_type": "IfExp",
+          "original_op": "ternary",
+          "inferred_type": null
+        },
+        "replacement_op": "swap_branches",
+        "mutant_id": 1
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.34410358406603336,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 43,
+        "col_offset": 29,
+        "node_type": "IfExp",
+        "original_op": "ternary",
+        "inferred_type": null
+      },
+      "replacement_op": "always_true",
+      "mutant_id": 2
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 43,
+          "col_offset": 29,
+          "node_type": "IfExp",
+          "original_op": "ternary",
+          "inferred_type": null
+        },
+        "replacement_op": "always_true",
+        "mutant_id": 2
+      },
+      "killed": true,
+      "tests_run": 3,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "time_seconds": 0.4073142921552062,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+        "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+        "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 43,
+        "col_offset": 29,
+        "node_type": "IfExp",
+        "original_op": "ternary",
+        "inferred_type": null
+      },
+      "replacement_op": "always_false",
+      "mutant_id": 3
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 43,
+          "col_offset": 29,
+          "node_type": "IfExp",
+          "original_op": "ternary",
+          "inferred_type": null
+        },
+        "replacement_op": "always_false",
+        "mutant_id": 3
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.3483222499489784,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 43,
+        "col_offset": 37,
+        "node_type": "Compare",
+        "original_op": "Is",
+        "inferred_type": null
+      },
+      "replacement_op": "IsNot",
+      "mutant_id": 4
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 43,
+          "col_offset": 37,
+          "node_type": "Compare",
+          "original_op": "Is",
+          "inferred_type": null
+        },
+        "replacement_op": "IsNot",
+        "mutant_id": 4
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.337033708114177,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 44,
+        "col_offset": 4,
+        "node_type": "Return",
+        "original_op": "expr",
+        "inferred_type": "dict"
+      },
+      "replacement_op": "None",
+      "mutant_id": 5
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 44,
+          "col_offset": 4,
+          "node_type": "Return",
+          "original_op": "expr",
+          "inferred_type": "dict"
+        },
+        "replacement_op": "None",
+        "mutant_id": 5
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.33943608263507485,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 49,
+        "col_offset": 27,
+        "node_type": "IfExp",
+        "original_op": "ternary",
+        "inferred_type": null
+      },
+      "replacement_op": "swap_branches",
+      "mutant_id": 6
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 49,
+          "col_offset": 27,
+          "node_type": "IfExp",
+          "original_op": "ternary",
+          "inferred_type": null
+        },
+        "replacement_op": "swap_branches",
+        "mutant_id": 6
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.34700816683471203,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 49,
+        "col_offset": 27,
+        "node_type": "IfExp",
+        "original_op": "ternary",
+        "inferred_type": null
+      },
+      "replacement_op": "always_true",
+      "mutant_id": 7
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 49,
+          "col_offset": 27,
+          "node_type": "IfExp",
+          "original_op": "ternary",
+          "inferred_type": null
+        },
+        "replacement_op": "always_true",
+        "mutant_id": 7
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.34023112524300814,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 49,
+        "col_offset": 27,
+        "node_type": "IfExp",
+        "original_op": "ternary",
+        "inferred_type": null
+      },
+      "replacement_op": "always_false",
+      "mutant_id": 8
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 49,
+          "col_offset": 27,
+          "node_type": "IfExp",
+          "original_op": "ternary",
+          "inferred_type": null
+        },
+        "replacement_op": "always_false",
+        "mutant_id": 8
+      },
+      "killed": true,
+      "tests_run": 3,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "time_seconds": 0.40885966597124934,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+        "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+        "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 49,
+        "col_offset": 33,
+        "node_type": "Compare",
+        "original_op": "Is",
+        "inferred_type": null
+      },
+      "replacement_op": "IsNot",
+      "mutant_id": 9
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 49,
+          "col_offset": 33,
+          "node_type": "Compare",
+          "original_op": "Is",
+          "inferred_type": null
+        },
+        "replacement_op": "IsNot",
+        "mutant_id": 9
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "time_seconds": 0.34251145785674453,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_worker_execute_preserves_pre_session_import_evidence",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_actual_call_fingerprint",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+        "module_name": "pytest_leela._timeout_worker",
+        "lineno": 65,
+        "col_offset": 3,
+        "node_type": "Compare",
+        "original_op": "Eq",
+        "inferred_type": null
+      },
+      "replacement_op": "NotEq",
+      "mutant_id": 10
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_worker.py",
+          "module_name": "pytest_leela._timeout_worker",
+          "lineno": 65,
+          "col_offset": 3,
+          "node_type": "Compare",
+          "original_op": "Eq",
+          "inferred_type": null
+        },
+        "replacement_op": "NotEq",
+        "mutant_id": 10
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_worker_import_does_not_execute_main",
+      "time_seconds": 0.6219026669859886,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_worker_import_does_not_execute_main"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_worker_import_does_not_execute_main"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_worker_import_does_not_execute_main",
+      "tests/leela/describe_timeout_process.py::test_worker_execute_returns_native_collector_without_a_mutant",
+      "tests/leela/describe_timeout_process.py::test_worker_import_contract_positive_wait_control",
+      "tests/leela/describe_timeout_process.py::test_worker_script_entry_dispatches_main"
+    ]
+  }
+]

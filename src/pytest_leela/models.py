@@ -1,6 +1,13 @@
 """Data models for mutation testing."""
 
-from __future__ import annotations
+# NOTE: Do NOT add from __future__ import annotations here.
+# Without that flag, every annotation is evaluated at function
+# def time, so a BitOr->BitAnd mutation on a type annotation
+# (e.g. "int | None" -> "int & None") raises TypeError at
+# import — which is exactly the test-killing signal mutation
+# testing depends on. See the top-of-file note in
+# pytest_leela.import_hook for the full reasoning.
+#
 
 from dataclasses import dataclass, field
 
@@ -24,7 +31,7 @@ class EnrichmentStats:
     from_annotations: int = 0
     from_assignment_dataflow: int = 0
 
-    def __add__(self, other: EnrichmentStats) -> EnrichmentStats:
+    def __add__(self, other: "EnrichmentStats") -> "EnrichmentStats":
         return EnrichmentStats(
             from_annotations=self.from_annotations + other.from_annotations,
             from_assignment_dataflow=self.from_assignment_dataflow
@@ -112,3 +119,18 @@ class RunResult:
         if self.mutants_tested == 0:
             return 0.0
         return self.killed / self.mutants_tested * 100.0
+
+
+@dataclass(frozen=True)
+class EngineProgress:
+    """A single progress event emitted by the engine."""
+
+    kind: str  # "symbol-start", "mutant", "done", etc.
+    file_path: str = ""
+    lineno: int = 0
+    op: str = ""
+    status: str = ""
+    symbol_id: str | None = None
+    symbol_short: str = ""
+    n_mutants_in_symbol: int = 0
+    killing_test: str | None = None

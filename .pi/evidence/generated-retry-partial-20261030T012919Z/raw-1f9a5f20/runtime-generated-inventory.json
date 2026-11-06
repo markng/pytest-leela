@@ -1,0 +1,70 @@
+{
+  "project": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/trace-pytester/it_imports_models_admin_and_references_once_per_process0",
+  "files": [
+    {
+      "path": "settings.py",
+      "sha256": "117d08c32b30f30bcee0ded53e7ecff959dfc444faec107e62951101068654a8",
+      "bytes": 394
+    },
+    {
+      "path": "shop/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "shop/admin.py",
+      "sha256": "160c3d7837f48a1b7e6b37e4054339654d7f32325cbe0dd49d6aa8d53b9d986f",
+      "bytes": 197
+    },
+    {
+      "path": "shop/apps.py",
+      "sha256": "cdf45b9f47714d31cde4ff52115f547ff8303f34f52c9a06308cfd115b2ce551",
+      "bytes": 174
+    },
+    {
+      "path": "shop/backoffice.py",
+      "sha256": "d17e3d522974b9a2605743187c3f72ee8e1cd40cb93adf47b25dff891d904a44",
+      "bytes": 276
+    },
+    {
+      "path": "shop/mixins.py",
+      "sha256": "784b0f33ec7ed757e38af4944148e5d03f780cf58c7782665e832e239681f95c",
+      "bytes": 165
+    },
+    {
+      "path": "shop/models.py",
+      "sha256": "5a1d5f570fadddff33bbb4edc9d3836975704dea882f2a3d7334e284bd036b3c",
+      "bytes": 275
+    },
+    {
+      "path": "shop/pricing.py",
+      "sha256": "9344fe33a09be455d18787e4d4b0a09b1965cb22758f1562704835a0a1410e16",
+      "bytes": 34
+    },
+    {
+      "path": "stock/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "stock/models.py",
+      "sha256": "648714a21a6d6566d6516f2ac16f24e02c087ada5c7ae6599d5134a7fa1b5df2",
+      "bytes": 225
+    },
+    {
+      "path": "tests/test_shop.py",
+      "sha256": "b81342270786435f7a5a37d003a5213c8f77d90c9b0972849fdd8fcd7100fc5d",
+      "bytes": 604
+    }
+  ],
+  "importsLog": {
+    "sha256": "beb975b9e191c8f53491209a104230089158a5204ec82306c8d381116d3c5a87",
+    "rows": 20,
+    "pids": [
+      "43583",
+      "43585",
+      "43588",
+      "43590"
+    ]
+  }
+}

@@ -1,0 +1,467 @@
+{
+  "source": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+  "sha256": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+  "selectedNode": "tests/leela/describe_django_project::it_imports_models_admin_and_references_once_per_process",
+  "tracedLines": [
+    1,
+    3,
+    4,
+    6,
+    7,
+    8,
+    12,
+    18,
+    110,
+    224,
+    269,
+    296,
+    306,
+    307,
+    313,
+    325,
+    326,
+    327,
+    328,
+    335,
+    336,
+    337,
+    356,
+    357,
+    358,
+    365,
+    366,
+    368,
+    369,
+    374,
+    375,
+    381,
+    382,
+    385,
+    386,
+    387,
+    391,
+    392,
+    393,
+    394,
+    396,
+    399,
+    400,
+    401,
+    405,
+    406,
+    428,
+    449,
+    456,
+    457,
+    458,
+    475,
+    477,
+    478,
+    479,
+    480,
+    481,
+    483,
+    484,
+    485,
+    486,
+    493,
+    494
+  ],
+  "ASTStatementCount": 143,
+  "ASTStatementStartsObserved": 47,
+  "ASTBranches": 3,
+  "BranchStartsObserved": 2,
+  "unobservedStatementStarts": [
+    {
+      "type": "Return",
+      "line": 13
+    },
+    {
+      "type": "FunctionDef",
+      "line": 19
+    },
+    {
+      "type": "FunctionDef",
+      "line": 36
+    },
+    {
+      "type": "FunctionDef",
+      "line": 59
+    },
+    {
+      "type": "FunctionDef",
+      "line": 86
+    },
+    {
+      "type": "FunctionDef",
+      "line": 111
+    },
+    {
+      "type": "FunctionDef",
+      "line": 135
+    },
+    {
+      "type": "FunctionDef",
+      "line": 165
+    },
+    {
+      "type": "FunctionDef",
+      "line": 195
+    },
+    {
+      "type": "FunctionDef",
+      "line": 225
+    },
+    {
+      "type": "FunctionDef",
+      "line": 245
+    },
+    {
+      "type": "FunctionDef",
+      "line": 260
+    },
+    {
+      "type": "FunctionDef",
+      "line": 270
+    },
+    {
+      "type": "FunctionDef",
+      "line": 297
+    },
+    {
+      "type": "Expr",
+      "line": 314
+    },
+    {
+      "type": "Expr",
+      "line": 20
+    },
+    {
+      "type": "Expr",
+      "line": 21
+    },
+    {
+      "type": "Assign",
+      "line": 30
+    },
+    {
+      "type": "Assert",
+      "line": 32
+    },
+    {
+      "type": "Expr",
+      "line": 33
+    },
+    {
+      "type": "Assert",
+      "line": 34
+    },
+    {
+      "type": "Expr",
+      "line": 37
+    },
+    {
+      "type": "Expr",
+      "line": 39
+    },
+    {
+      "type": "Assign",
+      "line": 53
+    },
+    {
+      "type": "Expr",
+      "line": 55
+    },
+    {
+      "type": "Assert",
+      "line": 56
+    },
+    {
+      "type": "Assert",
+      "line": 57
+    },
+    {
+      "type": "Expr",
+      "line": 60
+    },
+    {
+      "type": "Expr",
+      "line": 62
+    },
+    {
+      "type": "Assign",
+      "line": 75
+    },
+    {
+      "type": "Expr",
+      "line": 77
+    },
+    {
+      "type": "Assert",
+      "line": 83
+    },
+    {
+      "type": "Assert",
+      "line": 84
+    },
+    {
+      "type": "Expr",
+      "line": 87
+    },
+    {
+      "type": "Expr",
+      "line": 89
+    },
+    {
+      "type": "Assign",
+      "line": 103
+    },
+    {
+      "type": "Expr",
+      "line": 105
+    },
+    {
+      "type": "Assert",
+      "line": 106
+    },
+    {
+      "type": "Assert",
+      "line": 107
+    },
+    {
+      "type": "Expr",
+      "line": 112
+    },
+    {
+      "type": "Expr",
+      "line": 114
+    },
+    {
+      "type": "Assign",
+      "line": 127
+    },
+    {
+      "type": "Expr",
+      "line": 129
+    },
+    {
+      "type": "Assert",
+      "line": 132
+    },
+    {
+      "type": "Assert",
+      "line": 133
+    },
+    {
+      "type": "Expr",
+      "line": 136
+    },
+    {
+      "type": "Expr",
+      "line": 138
+    },
+    {
+      "type": "Assign",
+      "line": 154
+    },
+    {
+      "type": "Expr",
+      "line": 156
+    },
+    {
+      "type": "Assert",
+      "line": 162
+    },
+    {
+      "type": "Assert",
+      "line": 163
+    },
+    {
+      "type": "Expr",
+      "line": 166
+    },
+    {
+      "type": "Expr",
+      "line": 168
+    },
+    {
+      "type": "Assign",
+      "line": 184
+    },
+    {
+      "type": "Expr",
+      "line": 186
+    },
+    {
+      "type": "Assert",
+      "line": 192
+    },
+    {
+      "type": "Assert",
+      "line": 193
+    },
+    {
+      "type": "Expr",
+      "line": 198
+    },
+    {
+      "type": "Expr",
+      "line": 199
+    },
+    {
+      "type": "Assign",
+      "line": 212
+    },
+    {
+      "type": "Expr",
+      "line": 214
+    },
+    {
+      "type": "Assert",
+      "line": 220
+    },
+    {
+      "type": "Assert",
+      "line": 221
+    },
+    {
+      "type": "Expr",
+      "line": 228
+    },
+    {
+      "type": "If",
+      "line": 239
+    },
+    {
+      "type": "Expr",
+      "line": 246
+    },
+    {
+      "type": "Assign",
+      "line": 248
+    },
+    {
+      "type": "Assert",
+      "line": 250
+    },
+    {
+      "type": "Expr",
+      "line": 251
+    },
+    {
+      "type": "Assert",
+      "line": 258
+    },
+    {
+      "type": "Expr",
+      "line": 261
+    },
+    {
+      "type": "Assign",
+      "line": 263
+    },
+    {
+      "type": "Assert",
+      "line": 265
+    },
+    {
+      "type": "Expr",
+      "line": 266
+    },
+    {
+      "type": "Expr",
+      "line": 271
+    },
+    {
+      "type": "Assign",
+      "line": 282
+    },
+    {
+      "type": "Assert",
+      "line": 284
+    },
+    {
+      "type": "Expr",
+      "line": 285
+    },
+    {
+      "type": "Assert",
+      "line": 293
+    },
+    {
+      "type": "Expr",
+      "line": 298
+    },
+    {
+      "type": "Assign",
+      "line": 300
+    },
+    {
+      "type": "Assert",
+      "line": 302
+    },
+    {
+      "type": "Expr",
+      "line": 303
+    },
+    {
+      "type": "Expr",
+      "line": 407
+    },
+    {
+      "type": "Assign",
+      "line": 412
+    },
+    {
+      "type": "Assign",
+      "line": 422
+    },
+    {
+      "type": "Assert",
+      "line": 424
+    },
+    {
+      "type": "Expr",
+      "line": 425
+    },
+    {
+      "type": "Assert",
+      "line": 426
+    },
+    {
+      "type": "Expr",
+      "line": 429
+    },
+    {
+      "type": "Assign",
+      "line": 434
+    },
+    {
+      "type": "Assign",
+      "line": 444
+    },
+    {
+      "type": "Assert",
+      "line": 446
+    },
+    {
+      "type": "Expr",
+      "line": 447
+    },
+    {
+      "type": "Expr",
+      "line": 450
+    },
+    {
+      "type": "Expr",
+      "line": 240
+    }
+  ],
+  "unobservedBranchStarts": [
+    {
+      "type": "If",
+      "line": 239
+    }
+  ],
+  "metricLimit": "line observation only; branches do not establish both destinations and expanded statement denominator is separate"
+}

@@ -1,0 +1,181 @@
+{
+  "runId": "8be00f19-2763-4dd3-94e8-5ef0e77db1ef",
+  "parentSessionId": "01a112c2-c2f9-7351-8ff3-43842350a1bb",
+  "agent": "mutation-gap-closer",
+  "task": "[prompt redacted]",
+  "exitCode": 1,
+  "model": "router/auto:high",
+  "requestedModel": "router/auto",
+  "usage": {
+    "input": 169295,
+    "output": 13896,
+    "cacheRead": 1347456,
+    "cacheWrite": 0,
+    "cost": 0,
+    "turns": 48
+  },
+  "error": "Required file-only output was not produced: /Users/mng/.pi/agent/sessions/--Users-mng-Projects-pytest-leela--/subagent-artifacts/outputs/43e3e20d-a37d-4123-b930-e2cbef5454f8/responsive-watch/fresh-owned-quality.md",
+  "acceptance": {
+    "status": "rejected",
+    "evidenceStatus": "rejected",
+    "explicit": true,
+    "effectiveAcceptance": {
+      "level": "checked",
+      "explicit": true,
+      "inferredReason": [
+        "async declared writer"
+      ],
+      "criteria": [
+        {
+          "id": "F1-baseline-causal-isolation",
+          "must": "Causally isolate one actual nested USAGE_ERROR failure through bounded same-input external-TMP/instrumentation controls and exact roots/cwd/nodeid/API evidence; repair diagnostic placement if cause or present concrete product defect/next repair without weakening tests.",
+          "evidence": [
+            "commands-run",
+            "validation-output",
+            "manual-notes",
+            "residual-risks"
+          ],
+          "severity": "required"
+        },
+        {
+          "id": "F2-owned-scope-qualification-progress",
+          "must": "Derive exact original-task owned changed/generated/containing scopes (not all legacy54), actual emitted source hashes and full native DEFAULT/ALL domains; materially advance previously unqualified complete in-scope domains/executable proof with genuine clean/native/CALL evidence or documented minimal unavoidable blocker after faithful repair, never static counts as completion.",
+          "evidence": [
+            "changed-files",
+            "commands-run",
+            "validation-output",
+            "manual-notes",
+            "residual-risks"
+          ],
+          "severity": "required"
+        },
+        {
+          "id": "F3-preserved-recovery-and-original-boundary",
+          "must": "Preserve accepted formatter/native traces/source/raw and protected index/CI/config/lock, source-bound substrate/proof/input status and executable inventories, fresh current records/manifest/status; original remaining metrics/gates/review/T4 remain honestly incomplete.",
+          "evidence": [
+            "changed-files",
+            "manual-notes",
+            "residual-risks",
+            "validation-output"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "changed-files",
+        "tests-added",
+        "commands-run",
+        "residual-risks",
+        "no-staged-files",
+        "validation-output",
+        "manual-notes"
+      ],
+      "verify": [
+        {
+          "id": "head-index-current-source",
+          "command": "test \"$(git rev-parse HEAD)\" = b1bb565883c75356be1a493c64084607d5769f3f && test -z \"$(git diff --cached --name-only)\" && git diff --check && shasum -a256 -c .pi/fresh-owned-source.sha256",
+          "timeoutMs": 10000,
+          "allowFailure": false
+        },
+        {
+          "id": "fresh-owned-records",
+          "command": "test -s .pi/fresh-owned-quality.md && test -s .pi/fresh-owned-quality.json",
+          "timeoutMs": 5000,
+          "allowFailure": false
+        },
+        {
+          "id": "status-md-fresh",
+          "command": "test -f .pi/STATUS.md && test -n \"$(find .pi/STATUS.md -mmin -5)\"",
+          "timeoutMs": 5000,
+          "allowFailure": false
+        }
+      ],
+      "review": {
+        "required": false
+      },
+      "stopRules": []
+    },
+    "inferredReason": [
+      "async declared writer"
+    ],
+    "criteria": [
+      {
+        "id": "F1-baseline-causal-isolation",
+        "must": "Causally isolate one actual nested USAGE_ERROR failure through bounded same-input external-TMP/instrumentation controls and exact roots/cwd/nodeid/API evidence; repair diagnostic placement if cause or present concrete product defect/next repair without weakening tests.",
+        "evidence": [
+          "commands-run",
+          "validation-output",
+          "manual-notes",
+          "residual-risks"
+        ],
+        "severity": "required"
+      },
+      {
+        "id": "F2-owned-scope-qualification-progress",
+        "must": "Derive exact original-task owned changed/generated/containing scopes (not all legacy54), actual emitted source hashes and full native DEFAULT/ALL domains; materially advance previously unqualified complete in-scope domains/executable proof with genuine clean/native/CALL evidence or documented minimal unavoidable blocker after faithful repair, never static counts as completion.",
+        "evidence": [
+          "changed-files",
+          "commands-run",
+          "validation-output",
+          "manual-notes",
+          "residual-risks"
+        ],
+        "severity": "required"
+      },
+      {
+        "id": "F3-preserved-recovery-and-original-boundary",
+        "must": "Preserve accepted formatter/native traces/source/raw and protected index/CI/config/lock, source-bound substrate/proof/input status and executable inventories, fresh current records/manifest/status; original remaining metrics/gates/review/T4 remain honestly incomplete.",
+        "evidence": [
+          "changed-files",
+          "manual-notes",
+          "residual-risks",
+          "validation-output"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "id": "attestation",
+        "status": "failed",
+        "message": "Structured acceptance report not found."
+      }
+    ],
+    "verifyRuns": [],
+    "childReportParseError": "Structured acceptance report not found."
+  },
+  "launchContractDigest": "4f27513b2f9e94eaab780d50711b6a57ff0fef9a9daf2db6525f93a9b4f2966f",
+  "launchResolvedExtensions": {
+    "version": 1,
+    "source": "launch-resolved",
+    "disableAmbientExtensions": false,
+    "runtime": [
+      "sha256:6ace0054d46e298f"
+    ],
+    "configured": [
+      "sha256:6c03838b80de4bf5"
+    ],
+    "required": [
+      "polycratic-router"
+    ],
+    "effective": [
+      "sha256:6ace0054d46e298f",
+      "sha256:6c03838b80de4bf5",
+      "sha256:cf90ceb465cee229"
+    ],
+    "omitted": {
+      "runtime": 0,
+      "configured": 0,
+      "required": 0,
+      "effective": 0
+    }
+  },
+  "transcriptPath": "/Users/mng/.pi/agent/sessions/--Users-mng-Projects-pytest-leela--/subagent-artifacts/8be00f19-2763-4dd3-94e8-5ef0e77db1ef_mutation-gap-closer_transcript.jsonl",
+  "skills": [
+    "policy-workflow",
+    "quality-evidence",
+    "compaction-resilience",
+    "mutation-gap-closure"
+  ],
+  "timestamp": 1793391073833
+}

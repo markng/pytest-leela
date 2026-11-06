@@ -1,0 +1,45 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "None"
+      ],
+      "default_mutations": [
+        "None"
+      ],
+      "point": {
+        "col_offset": 4,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/fixture_value_replaced.py",
+        "inferred_type": null,
+        "lineno": 2,
+        "module_name": "fixture_value_replaced",
+        "node_type": "Return",
+        "original_op": "expr"
+      }
+    },
+    {
+      "all_mutations": [
+        "Sub",
+        "Mult",
+        "FloorDiv"
+      ],
+      "default_mutations": [
+        "Sub",
+        "Mult",
+        "FloorDiv"
+      ],
+      "point": {
+        "col_offset": 11,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/fixture_value_replaced.py",
+        "inferred_type": "int",
+        "lineno": 2,
+        "module_name": "fixture_value_replaced",
+        "node_type": "BinOp",
+        "original_op": "Add"
+      }
+    }
+  ],
+  "sha256": "a82200cda190923b34b6c6e838455e85f963ac0e19fe0640791f0bcfa4a97be7"
+}

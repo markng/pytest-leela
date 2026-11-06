@@ -1,0 +1,1 @@
+import json;d=json.load(open(".pi/evidence/final-call-evidence.json"));print([(n,[(p,[(m["lineno"],m["node_type"],m["status"],m["tests_run"],m["killing_test"]["id"]) for m in v["mutants"]]) for p,v in r["files"].items()]) for n,r in d.items()])

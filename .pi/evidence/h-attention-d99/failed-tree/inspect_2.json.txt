@@ -1,0 +1,100 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "default_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "point": {
+        "col_offset": 379,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_2.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_2",
+        "node_type": "Compare",
+        "original_op": "LtE"
+      }
+    },
+    {
+      "all_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "default_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "point": {
+        "col_offset": 379,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_2.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_2",
+        "node_type": "Compare",
+        "original_op": "LtE"
+      }
+    },
+    {
+      "all_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "default_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "point": {
+        "col_offset": 432,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_2.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_2",
+        "node_type": "Compare",
+        "original_op": "LtE"
+      }
+    },
+    {
+      "all_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "default_mutations": [
+        "Lt",
+        "Gt"
+      ],
+      "point": {
+        "col_offset": 432,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_2.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_2",
+        "node_type": "Compare",
+        "original_op": "LtE"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 513,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_2.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_2",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    }
+  ],
+  "sha256": "7253e0b601065e9d276b70b3f8f5b6d93983d3c8c9d967ed8ab684798246efc7"
+}

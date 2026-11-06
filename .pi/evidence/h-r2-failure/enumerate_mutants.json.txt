@@ -1,0 +1,1837 @@
+{
+  "src/pytest_leela/daemon.py": {
+    "all_pruned": 0,
+    "changed_lines": [
+      23,
+      24,
+      264,
+      265,
+      268,
+      495,
+      519,
+      520,
+      521,
+      522,
+      523,
+      524,
+      525,
+      526,
+      527,
+      528,
+      529,
+      531,
+      532,
+      533,
+      534,
+      652,
+      653,
+      654,
+      655,
+      686,
+      687,
+      688,
+      689,
+      845
+    ],
+    "default_pruned": 0,
+    "points": [
+      {
+        "all_mutations": [
+          "None"
+        ],
+        "default_mutations": [
+          "None"
+        ],
+        "point": {
+          "col_offset": 12,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py",
+          "inferred_type": "list",
+          "lineno": 534,
+          "module_name": "src.pytest_leela.daemon",
+          "node_type": "Return",
+          "original_op": "expr"
+        }
+      },
+      {
+        "all_mutations": [
+          "Or"
+        ],
+        "default_mutations": [
+          "Or"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py",
+          "inferred_type": "bool",
+          "lineno": 686,
+          "module_name": "src.pytest_leela.daemon",
+          "node_type": "BoolOp",
+          "original_op": "And"
+        }
+      },
+      {
+        "all_mutations": [
+          "BitOr",
+          "BitXor"
+        ],
+        "default_mutations": [],
+        "point": {
+          "col_offset": 40,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py",
+          "inferred_type": null,
+          "lineno": 686,
+          "module_name": "src.pytest_leela.daemon",
+          "node_type": "BinOp",
+          "original_op": "BitAnd"
+        }
+      },
+      {
+        "all_mutations": [
+          "Sub",
+          "Mult"
+        ],
+        "default_mutations": [
+          "Sub",
+          "Mult"
+        ],
+        "point": {
+          "col_offset": 44,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py",
+          "inferred_type": "list",
+          "lineno": 686,
+          "module_name": "src.pytest_leela.daemon",
+          "node_type": "BinOp",
+          "original_op": "Add"
+        }
+      }
+    ],
+    "sha256": "954aa65ebc2a9811c2821b875c680fbbcbf15c7a43ed952c95d3d76aafd602bf"
+  },
+  "src/pytest_leela/index.py": {
+    "all_pruned": 2,
+    "changed_lines": [
+      265,
+      266,
+      394,
+      395,
+      396,
+      397,
+      398,
+      399,
+      400,
+      401,
+      402,
+      403,
+      404,
+      405,
+      406,
+      407,
+      408,
+      409,
+      410,
+      411,
+      412,
+      472,
+      473,
+      474,
+      475,
+      655,
+      656,
+      657,
+      658,
+      659,
+      660,
+      671,
+      672,
+      673,
+      674,
+      675,
+      676,
+      677,
+      678,
+      679,
+      680,
+      681,
+      682,
+      812,
+      813
+    ],
+    "default_pruned": 2,
+    "points": [
+      {
+        "all_mutations": [
+          "negate_expr"
+        ],
+        "default_mutations": [
+          "negate_expr"
+        ],
+        "point": {
+          "col_offset": 8,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": "bool",
+          "lineno": 411,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "Return",
+          "original_op": "expr"
+        }
+      },
+      {
+        "all_mutations": [
+          "IsNot"
+        ],
+        "default_mutations": [
+          "IsNot"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": null,
+          "lineno": 411,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "Compare",
+          "original_op": "Is"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": null,
+          "lineno": 472,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [
+          "None"
+        ],
+        "default_mutations": [
+          "None"
+        ],
+        "point": {
+          "col_offset": 16,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": "ReconcileResult",
+          "lineno": 473,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "Return",
+          "original_op": "expr"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": null,
+          "lineno": 474,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": "set[str] | list[str]",
+          "lineno": 673,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [],
+        "default_mutations": [],
+        "point": {
+          "col_offset": 16,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": "int",
+          "lineno": 674,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "Return",
+          "original_op": "zero_int_literal"
+        }
+      },
+      {
+        "all_mutations": [
+          "negate_expr"
+        ],
+        "default_mutations": [
+          "negate_expr"
+        ],
+        "point": {
+          "col_offset": 12,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": "int",
+          "lineno": 682,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "Return",
+          "original_op": "expr"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/index.py",
+          "inferred_type": null,
+          "lineno": 812,
+          "module_name": "src.pytest_leela.index",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      }
+    ],
+    "sha256": "41dff732ab5e2f1918f65286bcb9640372c4422d71717fdd24c0c904e5e14b96"
+  },
+  "tests/leela/describe_daemon.py": {
+    "all_pruned": 2,
+    "changed_lines": [
+      4042,
+      4043,
+      4044,
+      4045,
+      4056,
+      4057,
+      4149,
+      4151,
+      4152,
+      4153,
+      4154,
+      4155,
+      4156,
+      4157,
+      4158,
+      4159,
+      4164,
+      4165,
+      4166,
+      4167,
+      4168,
+      4169,
+      4170,
+      4171,
+      4179,
+      4180,
+      4181,
+      4187,
+      4189,
+      4190,
+      4191,
+      4192,
+      4193,
+      4206,
+      4215,
+      4216,
+      4217,
+      4218,
+      4219,
+      4220,
+      4221,
+      4222,
+      4223,
+      4224,
+      4225,
+      4226,
+      4227,
+      4228,
+      4229,
+      4230,
+      4231,
+      4232,
+      4233,
+      4234,
+      4235,
+      4236,
+      4237,
+      4238,
+      4239,
+      4240,
+      4241,
+      4242,
+      4243,
+      4244,
+      4245,
+      4246,
+      4247,
+      4248,
+      4249,
+      4250,
+      4251,
+      4252,
+      4253,
+      4254,
+      4255,
+      4256,
+      4257,
+      4258,
+      4259,
+      4260,
+      4261,
+      4262,
+      4263,
+      4264,
+      4265,
+      4266,
+      4267,
+      4268,
+      4269,
+      4270,
+      4271,
+      4272,
+      4273,
+      4274,
+      4275,
+      4276,
+      4277,
+      4278,
+      4279,
+      4280,
+      4281,
+      4282,
+      4283,
+      4284,
+      4285,
+      4286,
+      4287,
+      4288,
+      4289,
+      4290,
+      4291,
+      4292,
+      4293,
+      4294,
+      4295,
+      4296,
+      4297,
+      4298,
+      4299,
+      4300,
+      4301,
+      4302,
+      4303,
+      4304,
+      4305,
+      4306,
+      4307,
+      4308,
+      4309,
+      4310,
+      4311,
+      4312,
+      4313,
+      4314,
+      4315,
+      4316,
+      4317,
+      4318,
+      4319,
+      4320,
+      4321,
+      4322,
+      4323,
+      4324,
+      4325,
+      4326,
+      4327,
+      4328,
+      4329,
+      4330,
+      4331,
+      4332,
+      4333,
+      4334,
+      4335,
+      4336,
+      4337,
+      4338,
+      4339,
+      4340,
+      4341,
+      4342,
+      4343,
+      4344,
+      4345,
+      4346,
+      4347,
+      4348,
+      4349,
+      4350,
+      4351,
+      4352,
+      4353,
+      4354,
+      4355,
+      4356,
+      4357,
+      4358,
+      4359,
+      4360,
+      4361,
+      4362,
+      4363,
+      4364,
+      4365,
+      4366,
+      4367,
+      4368,
+      4369,
+      4370,
+      4371,
+      4372,
+      4373,
+      4374,
+      4375,
+      4376,
+      4377,
+      4378,
+      4379,
+      4380,
+      4381,
+      4382,
+      4383,
+      4384,
+      4385,
+      4386,
+      4387,
+      4388,
+      4389,
+      4390,
+      4391,
+      4392,
+      4393,
+      4394,
+      4395,
+      4396,
+      4491,
+      4492,
+      4589,
+      4597,
+      4598,
+      4601,
+      4602
+    ],
+    "default_pruned": 2,
+    "points": [
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 9,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4042,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 18,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4043,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 22,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4154,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [],
+        "default_mutations": [],
+        "point": {
+          "col_offset": 31,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4155,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Add"
+        }
+      },
+      {
+        "all_mutations": [
+          "Eq"
+        ],
+        "default_mutations": [
+          "Eq"
+        ],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4157,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotEq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Sub",
+          "Mult"
+        ],
+        "default_mutations": [
+          "Sub",
+          "Mult"
+        ],
+        "point": {
+          "col_offset": 65,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4167,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Add"
+        }
+      },
+      {
+        "all_mutations": [
+          "Add",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Add",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 65,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4167,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Mult"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4169,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Sub",
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Sub",
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 61,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "int",
+          "lineno": 4169,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Add"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4170,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4179,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "In"
+        ],
+        "default_mutations": [
+          "In"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4187,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotIn"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4189,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Eq"
+        ],
+        "default_mutations": [
+          "Eq"
+        ],
+        "point": {
+          "col_offset": 23,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4190,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotEq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotIn"
+        ],
+        "default_mutations": [
+          "NotIn"
+        ],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4193,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "In"
+        }
+      },
+      {
+        "all_mutations": [
+          "In"
+        ],
+        "default_mutations": [
+          "In"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4206,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotIn"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 13,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4222,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4224,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4232,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [
+          "None"
+        ],
+        "default_mutations": [
+          "None"
+        ],
+        "point": {
+          "col_offset": 8,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4236,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Return",
+          "original_op": "expr"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 17,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4239,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4241,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [
+          "swap_branches",
+          "always_true",
+          "always_false"
+        ],
+        "default_mutations": [],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4254,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "IfExp",
+          "original_op": "ternary"
+        }
+      },
+      {
+        "all_mutations": [
+          "In"
+        ],
+        "default_mutations": [
+          "In"
+        ],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4254,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotIn"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 75,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4254,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4261,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [
+          "Eq"
+        ],
+        "default_mutations": [
+          "Eq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4263,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotEq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotIn"
+        ],
+        "default_mutations": [
+          "NotIn"
+        ],
+        "point": {
+          "col_offset": 23,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4271,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "In"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 13,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4276,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4278,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 17,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4280,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4288,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4289,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 13,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4296,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4298,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 17,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4300,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4303,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4311,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Eq"
+        ],
+        "default_mutations": [
+          "Eq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4312,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotEq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 13,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4319,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4321,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 17,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4323,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4326,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4334,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4335,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 13,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4340,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4342,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 17,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4345,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4352,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4353,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 13,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4358,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4360,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 17,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4363,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4370,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4371,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 13,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4378,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 11,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4380,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "default_mutations": [
+          "Mult",
+          "FloorDiv"
+        ],
+        "point": {
+          "col_offset": 17,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": "str",
+          "lineno": 4383,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "BinOp",
+          "original_op": "Div"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4386,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4393,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Eq"
+        ],
+        "default_mutations": [
+          "Eq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4394,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotEq"
+        }
+      },
+      {
+        "all_mutations": [
+          "Eq"
+        ],
+        "default_mutations": [
+          "Eq"
+        ],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4492,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "NotEq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4597,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4598,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      },
+      {
+        "all_mutations": [
+          "_remove"
+        ],
+        "default_mutations": [
+          "_remove"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_daemon.py",
+          "inferred_type": null,
+          "lineno": 4602,
+          "module_name": "tests.leela.describe_daemon",
+          "node_type": "UnaryOp",
+          "original_op": "Not"
+        }
+      }
+    ],
+    "sha256": "f945e6cd69d164da43262d96bf715256b784b447a2a4deb21ab004e285e68dfa"
+  },
+  "tests/leela/describe_index.py": {
+    "all_pruned": 0,
+    "changed_lines": [
+      1785,
+      1786,
+      1787,
+      1788,
+      1789,
+      1790,
+      1791,
+      1792,
+      1793,
+      1794,
+      1795,
+      1796,
+      1797,
+      1798,
+      1799,
+      1800,
+      1801,
+      1802,
+      1803,
+      1804,
+      1805,
+      1806,
+      1807,
+      1808,
+      1809,
+      1810,
+      1811,
+      1812,
+      1813,
+      1814,
+      1815,
+      1816,
+      1817,
+      1818,
+      1819,
+      1820,
+      1821,
+      1822,
+      1823,
+      1824,
+      1825,
+      1826,
+      1827
+    ],
+    "default_pruned": 0,
+    "points": [
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 23,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_index.py",
+          "inferred_type": null,
+          "lineno": 1807,
+          "module_name": "tests.leela.describe_index",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 19,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_index.py",
+          "inferred_type": null,
+          "lineno": 1819,
+          "module_name": "tests.leela.describe_index",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_index.py",
+          "inferred_type": null,
+          "lineno": 1825,
+          "module_name": "tests.leela.describe_index",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_index.py",
+          "inferred_type": null,
+          "lineno": 1826,
+          "module_name": "tests.leela.describe_index",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      },
+      {
+        "all_mutations": [
+          "NotEq"
+        ],
+        "default_mutations": [
+          "NotEq"
+        ],
+        "point": {
+          "col_offset": 15,
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/tests/leela/describe_index.py",
+          "inferred_type": null,
+          "lineno": 1827,
+          "module_name": "tests.leela.describe_index",
+          "node_type": "Compare",
+          "original_op": "Eq"
+        }
+      }
+    ],
+    "sha256": "52154a871c9f154e06a26e748ae26e04d7b082cde4c4ecdbeca534ca6f86b6d1"
+  }
+}

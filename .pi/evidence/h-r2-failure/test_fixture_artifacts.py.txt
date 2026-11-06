@@ -1,0 +1,26 @@
+"""Execute the exact superseded task-authored fixture strings as native targets."""
+import fixture_identity
+import fixture_identity_recreated
+import fixture_value
+import fixture_value_replaced
+from unittest.mock import MagicMock, sentinel
+
+
+def test_fixture_identity():
+    assert fixture_identity.identity(7) == 7
+
+
+def test_fixture_identity_recreated():
+    assert fixture_identity_recreated.identity(7) == 7
+    value = MagicMock()
+    value.__add__.return_value = sentinel.added
+    value.__sub__.return_value = sentinel.subtracted
+    assert fixture_identity_recreated.identity(value) is sentinel.added
+
+
+def test_fixture_value():
+    assert fixture_value.value() == 3
+
+
+def test_fixture_value_replaced():
+    assert fixture_value_replaced.value() == 7

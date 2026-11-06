@@ -1,0 +1,1 @@
+[('src/pytest_leela/daemon.py', 15, 14, 2, [], [], []), ('src/pytest_leela/index.py', 27, 26, 10, [], [], []), ('tests/leela/describe_daemon.py', 37, 36, 8, [], [], []), ('tests/leela/describe_index.py', 36, 36, 0, [], [], [])]

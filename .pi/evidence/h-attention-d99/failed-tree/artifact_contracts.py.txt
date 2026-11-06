@@ -1,0 +1,113 @@
+"""Reusable native contracts for current helper artifacts."""
+import ast
+import dataclasses
+import hashlib
+import importlib
+import json
+import sys
+from pathlib import Path
+
+from pytest_leela.ast_analysis import find_mutation_points
+from pytest_leela.operators import mutations_for, build_allowed_keys, DEFAULT_OPERATORS, count_pruned
+from pytest_leela.type_extractor import enrich_mutation_points
+
+DIRECTORY = Path(__file__).parent
+PRODUCER_INPUTS = {
+    "enumerate_mutants.py": "core-enumeration-input.json",
+    "coverage_denominators.py": "core-coverage-input.json",
+    "call_evidence.py": "core-ledger-names.json",
+    "raw_diff_probe.py": "core-coverage-input.json",
+}
+EXPECTED_HASH_ARTIFACTS = set(PRODUCER_INPUTS)
+
+
+def expected_json_names(name: str) -> str:
+    return Path(name).stem + ".json"
+
+
+def expanded_statements(source: str, covered_lines: set[int]) -> dict:
+    statements = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.stmt):
+            executable = not (
+                isinstance(node, ast.Expr)
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+            )
+            statements.append({
+                "line": node.lineno,
+                "end_line": node.end_lineno,
+                "kind": type(node).__name__,
+                "executable": executable,
+                "covered": node.lineno in covered_lines if executable else True,
+            })
+    return {"statements": statements, "statement_denominator": len(statements)}
+
+
+def native_point_report(name: str) -> dict:
+    source = (DIRECTORY / name).read_text()
+    source_path = str(DIRECTORY / name)
+    module_name = Path(name).stem
+    points, _stats = enrich_mutation_points(
+        source,
+        find_mutation_points(source, source_path, module_name),
+    )
+    default = build_allowed_keys(DEFAULT_OPERATORS)
+    return {
+        "sha256": hashlib.sha256(source.encode()).hexdigest(),
+        "points": [
+            {
+                "point": dataclasses.asdict(point),
+                "default_mutations": mutations_for(point, True, default),
+                "all_mutations": mutations_for(point, True),
+            }
+            for point in points
+        ],
+        "default_pruned": count_pruned(points, True, default),
+        "all_pruned": count_pruned(points, True),
+    }
+
+
+def load_expected(name: str) -> dict:
+    return json.loads((DIRECTORY / expected_json_names(name)).read_text())
+
+
+def compare_point_reports(actual: dict, expected: dict) -> None:
+    actual_rows = [
+        (p["point"]["lineno"], p["point"]["col_offset"], p["default_mutations"], p["all_mutations"])
+        for p in actual["points"]
+    ]
+    expected_rows = [
+        (p["point"]["lineno"], p["point"]["col_offset"], p["default_mutations"], p["all_mutations"])
+        for p in expected["points"]
+    ]
+    assert actual["sha256"] == expected["sha256"]
+    assert actual_rows == expected_rows
+    assert actual["default_pruned"] == expected["default_pruned"]
+    assert actual["all_pruned"] == expected["all_pruned"]
+
+
+def execute_and_expand(name: str) -> dict:
+    source = (DIRECTORY / name).read_text()
+    module_name = Path(name).stem
+    importlib.import_module(module_name)
+    module = importlib.reload(sys.modules[module_name])
+    stream = __import__("io").StringIO()
+    input_name = PRODUCER_INPUTS.get(name)
+    if input_name is not None:
+        old_stdout = sys.stdout
+        sys.stdout = stream
+        try:
+            with (DIRECTORY / input_name).open() as input_stream:
+                module.main(input_stream)
+        finally:
+            sys.stdout = old_stdout
+        stream_value = stream.getvalue()
+    else:
+        stream_value = ""
+    line_count = len(source.splitlines())
+    return {
+        "expanded": expanded_statements(source, set(range(1, line_count + 1))),
+        "main_output": stream_value,
+        "module": module,
+    }

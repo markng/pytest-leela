@@ -1,0 +1,1 @@
+import json; d=json.load(open(".pi/evidence/coverage-focused.json")); print([(k,v["missing_lines"],v["missing_branches"]) for k,v in d["files"].items() if k in ("src/pytest_leela/index.py", "src/pytest_leela/daemon.py")])

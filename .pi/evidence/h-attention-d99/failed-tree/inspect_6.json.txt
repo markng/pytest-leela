@@ -1,0 +1,162 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "None"
+      ],
+      "default_mutations": [
+        "None"
+      ],
+      "point": {
+        "col_offset": 4,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 16,
+        "module_name": "inspect_6",
+        "node_type": "Return",
+        "original_op": "expr"
+      }
+    },
+    {
+      "all_mutations": [
+        "BitOr",
+        "BitXor"
+      ],
+      "default_mutations": [],
+      "point": {
+        "col_offset": 16,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 19,
+        "module_name": "inspect_6",
+        "node_type": "BinOp",
+        "original_op": "BitAnd"
+      }
+    },
+    {
+      "all_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "default_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "point": {
+        "col_offset": 20,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 19,
+        "module_name": "inspect_6",
+        "node_type": "BinOp",
+        "original_op": "Add"
+      }
+    },
+    {
+      "all_mutations": [
+        "BitOr",
+        "BitXor"
+      ],
+      "default_mutations": [],
+      "point": {
+        "col_offset": 16,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 23,
+        "module_name": "inspect_6",
+        "node_type": "BinOp",
+        "original_op": "BitAnd"
+      }
+    },
+    {
+      "all_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "default_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "point": {
+        "col_offset": 37,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 27,
+        "module_name": "inspect_6",
+        "node_type": "BinOp",
+        "original_op": "Add"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 19,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 28,
+        "module_name": "inspect_6",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 19,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 32,
+        "module_name": "inspect_6",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 11,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 36,
+        "module_name": "inspect_6",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotEq"
+      ],
+      "default_mutations": [
+        "NotEq"
+      ],
+      "point": {
+        "col_offset": 3,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_6.py",
+        "inferred_type": null,
+        "lineno": 45,
+        "module_name": "inspect_6",
+        "node_type": "Compare",
+        "original_op": "Eq"
+      }
+    }
+  ],
+  "sha256": "3e0fdb79393a42efb1bd0ca5cc306c534bbbc6310d1500d0e061cc12b13efbcd"
+}

@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.11, pytest-9.1.1, pluggy-1.6.0
+django: version: 6.1.2, settings: settings (from ini)
+rootdir: /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/pytester-run/it_imports_models_admin_and_references_once_per_process0
+configfile: tox.ini
+plugins: Faker-40.8.0, describe-3.1.0, django-4.14.0, leela-0.9.0
+collected 1 item
+
+tests/test_shop.py .                                                     [100%]leela: mutation preparation started
+leela: mutation preparation complete
+leela: baseline started
+leela: baseline complete
+leela: mutation run started (3 mutants)
+leela: mutant 1/3 mutant /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/pytester-run/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py:2 Return:None tests=1 timeout=5.0s
+leela: mutant 1/3 /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/pytester-run/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py:2 Return:None tests=1 killed timeout=no elapsed=0.29s
+leela: mutant 2/3 mutant /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/pytester-run/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py:2 BinOp:Sub tests=1 timeout=5.0s
+leela: mutant 2/3 /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/pytester-run/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py:2 BinOp:Sub tests=1 killed timeout=no elapsed=0.29s
+leela: mutant 3/3 mutant /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/pytester-run/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py:2 BinOp:Mult tests=1 timeout=5.0s
+leela: mutant 3/3 /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/current-generated-quality/1f9a5f20554548f785eaf048394d36e2/pytester-run/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py:2 BinOp:Mult tests=1 killed timeout=no elapsed=0.29s
+leela: mutation run complete
+
+======================================================================
+leela mutation testing
+======================================================================
+Target: 1 file
+Mutants: 3 candidates, 0 pruned by type analysis
+
+  pricing.py                     3/3 killed (100.0%)
+
+Overall: 3/3 killed (100.0%) in 0.9s
+
+
+============================== 1 passed in 1.07s ===============================

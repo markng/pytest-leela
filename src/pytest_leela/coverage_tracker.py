@@ -1,11 +1,21 @@
 """Per-test line coverage via sys.settrace."""
 
-from __future__ import annotations
+# NOTE: Do NOT add from __future__ import annotations here.
+# Without that flag, every annotation is evaluated at function
+# def time, so a BitOr->BitAnd mutation on a type annotation
+# (e.g. "int | None" -> "int & None") raises TypeError at
+# import — which is exactly the test-killing signal mutation
+# testing depends on. See the top-of-file note in
+# pytest_leela.import_hook for the full reasoning.
+#
 
 import contextlib
 import io
+import json
 import os
+import subprocess
 import sys
+import tempfile
 import threading
 import time
 from typing import Any
@@ -115,3 +125,70 @@ def collect_coverage(
 
     plugin.coverage_map.test_times = plugin.test_times
     return plugin.coverage_map
+
+
+def collect_coverage_subprocess(
+    target_files: list[str],
+    test_node_ids: list[str] | None = None,
+    cwd: str | None = None,
+) -> CoverageMap:
+    """Run the coverage collector in a fresh subprocess.
+
+    A standalone entry point invoked by
+    ``coverage_tracker.collect_coverage_subprocess`` from a
+    fresh Python interpreter (not the one hosting the daemon)
+    so pytest discovers its rootdir from ``cwd`` and finds the
+    project's ``pyproject.toml``. The in-process variant
+    (``collect_coverage``) inherits the outer pytest's state,
+    which is wrong when called from inside another test run.
+
+    Returns an empty ``CoverageMap`` if ``target_files`` is empty
+    or the subprocess fails to launch — callers should treat
+    empty coverage as "no tests ran" rather than a hard error.
+    """
+    if not target_files:
+        return CoverageMap()
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as out:
+        output_path: str = out.name
+    try:
+        cmd = [
+            sys.executable,
+            "-m",
+            "pytest_leela.coverage_collector",
+            "--output",
+            output_path,
+        ]
+        for target_file in target_files:
+            cmd.extend(["--target", target_file])
+        for tid in test_node_ids or []:
+            cmd.extend(["--test", tid])
+        subprocess.run(
+            cmd,
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+        )
+        with open(output_path) as f:
+            payload = json.load(f)
+    except (OSError, subprocess.CalledProcessError):
+        return CoverageMap()
+    finally:
+        try:
+            os.unlink(output_path)
+        except OSError:
+            pass
+
+    cov = CoverageMap()
+    line_to_tests: dict[tuple[str, int], set[str]] = {}
+    for key, tests in payload.get("line_to_tests", {}).items():
+        # key is "file_path:lineno"
+        if ":" in key:
+            file_part, _, line_part = key.rpartition(":")
+            try:
+                line_no = int(line_part)
+            except ValueError:
+                continue
+            line_to_tests[(file_part, line_no)] = set(tests)
+    cov.line_to_tests = line_to_tests
+    cov.test_times = dict(payload.get("test_times", {}))
+    return cov

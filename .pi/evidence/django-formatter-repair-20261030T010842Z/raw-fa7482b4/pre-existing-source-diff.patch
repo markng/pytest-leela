@@ -1,0 +1,60 @@
+diff --git a/tests/leela/describe_end_to_end.py b/tests/leela/describe_end_to_end.py
+index ce42ff4..8117031 100644
+--- a/tests/leela/describe_end_to_end.py
++++ b/tests/leela/describe_end_to_end.py
+@@ -304,9 +304,9 @@ def describe_clean_project():
+ 
+ 
+ _LOGGED = (
+-    "from pathlib import Path\n\n"
++    "from pathlib import Path\nimport os\n\n"
+     "with Path('imports.log').open('a') as log:\n"
+-    "    log.write(__name__ + '\\n')\n\n"
++    "    log.write(str(os.getpid()) + ':' + __name__ + '\\n')\n\n"
+ )
+ 
+ 
+@@ -446,12 +446,12 @@ def describe_django_project():
+         assert "leela: aborted" not in result.stdout.str()
+         result.stdout.fnmatch_lines(["*line 2: + * SURVIVED"])
+ 
+-    def it_never_re_executes_models_admin_or_what_they_reference(pytester):
++    def it_imports_models_admin_and_references_once_per_process(pytester):
+         """Each pinning mechanism keeps one module loaded: shop.models and
+         stock.models as model modules, shop.admin as an ``<app>.admin``,
+         shop.backoffice through the admin registry walk, shop.mixins through
+-        the reference closure.  Each must execute exactly once across the
+-        outer and inner sessions.
++        the reference closure. Each executes once per interpreter: the
++        outer/baseline interpreter and one isolated interpreter per mutant.
+         """
+         project = _django_project(
+             pytester,
+@@ -475,12 +475,20 @@ def describe_django_project():
+         result = _leela_django(project)
+ 
+         executions = (project.path / "imports.log").read_text().split()
+-        assert sorted(executions) == [
+-            "shop.admin",
+-            "shop.backoffice",
+-            "shop.mixins",
+-            "shop.models",
+-            "stock.models",
+-        ]
++        by_process = {}
++        for execution in executions:
++            pid, module = execution.split(":", 1)
++            by_process.setdefault(pid, []).append(module)
++        # One outer/baseline process and three actual budgeted mutant workers.
++        assert len(by_process) == 4
++        assert len(executions) == 20
++        for modules in by_process.values():
++            assert sorted(modules) == [
++                "shop.admin",
++                "shop.backoffice",
++                "shop.mixins",
++                "shop.models",
++                "stock.models",
++            ]
+         result.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
+         assert result.ret == 0

@@ -1,0 +1,24 @@
+{
+  "target": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+  "sha256": "72141f53244cb7db8c970b5ee411c91e0a4b3af07cd6ab9e3080ddb5fdb60e8e",
+  "exitstatus": 4,
+  "lineHits": [
+    1,
+    3,
+    4,
+    6,
+    7,
+    8,
+    12,
+    18,
+    110,
+    224,
+    269,
+    296,
+    306,
+    307,
+    313,
+    399,
+    405
+  ]
+}

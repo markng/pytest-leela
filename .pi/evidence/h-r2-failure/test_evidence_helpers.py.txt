@@ -1,0 +1,36 @@
+"""Replay exact activated evidence producers against retained native inputs."""
+import importlib
+import io
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+
+@pytest.mark.parametrize("module", ["enumerate_mutants", "coverage_denominators", "call_evidence", "raw_diff_probe"])
+def test_evidence_helpers_match_reviewed_native_receipts(module, monkeypatch, capsys):
+    directory = Path(__file__).parent
+    monkeypatch.syspath_prepend(str(directory))
+    imported = importlib.import_module(module)
+    stream = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = stream
+    try:
+        input_name = {
+            "enumerate_mutants": "core-enumeration-input.json",
+            "coverage_denominators": "core-coverage-input.json",
+            "call_evidence": "core-ledger-names.json",
+            "raw_diff_probe": "core-coverage-input.json",
+        }[module]
+        imported.main(io.StringIO(directory.joinpath(input_name).read_text()))
+    finally:
+        sys.stdout = old_stdout
+    actual_text = stream.getvalue()
+    if not actual_text.strip():
+        actual_text = capsys.readouterr().out
+    if module == "coverage_denominators":
+        assert actual_text.strip()
+    actual = json.loads(actual_text)
+    expected = json.loads(directory.joinpath(module + ".json").read_text())
+    assert actual == expected

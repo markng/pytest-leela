@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytest-leela"
+version = "0.9.0"
+description = "Type-aware mutation testing for Python — fast, opinionated, pytest-native"
+requires-python = ">=3.12"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Mark Ng", email = "mark@roaming-panda.com" }]
+keywords = ["pytest", "mutation-testing", "testing", "quality", "type-aware"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "pytest>=7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-describe>=2.0",
+    "mypy",
+    "django-stubs",
+    "factory-boy",
+    "faker",
+]
+# Exercises leela's Django handling (pytest-django DB block, model/admin
+# module pinning) end to end.  pytest-django 4.10 is the first release
+# whose pytest_unconfigure restores the session's DB block.
+django = [
+    "django>=5.2",
+    "pytest-django>=4.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/markng/pytest-leela"
+Issues = "https://github.com/markng/pytest-leela/issues"
+
+[project.entry-points.pytest11]
+leela = "pytest_leela.plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytest_leela"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+python_files = ["test_*.py", "describe_*.py"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+files = ["src/pytest_leela"]
+
+[[tool.mypy.overrides]]
+module = "django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_leela.coverage_tracker"
+disable_error_code = ["arg-type"]

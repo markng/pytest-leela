@@ -1,0 +1,390 @@
+{
+  "src/calc.py": {
+    "sha256": "a2986a7365a0a03d25addccbc4ec67e3241f963fbf4502f9afc16f8864c5013c",
+    "changed_lines": [
+      1,
+      2
+    ],
+    "executable_lines": [
+      1,
+      2
+    ],
+    "line_denominator": 2,
+    "missing_lines": [],
+    "branches": [],
+    "branch_denominator": 0,
+    "missing_branches": [],
+    "ast_statements": [
+      {
+        "line": 1,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 2,
+        "kind": "Return",
+        "covered": true
+      }
+    ],
+    "statement_denominator": 2
+  },
+  "tests/calc_fixture.py": {
+    "sha256": "6735d69b1453fb4949e454a235f5643be13d9cede05beb3a49076628a7d871b3",
+    "changed_lines": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "executable_lines": [
+      2,
+      3,
+      4,
+      6,
+      7,
+      10,
+      12,
+      13,
+      16,
+      17,
+      18,
+      19,
+      20,
+      23,
+      24,
+      27,
+      28,
+      29,
+      30,
+      33,
+      34,
+      35,
+      36,
+      37,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "line_denominator": 31,
+    "missing_lines": [],
+    "branches": [
+      [
+        18,
+        19
+      ],
+      [
+        18,
+        20
+      ]
+    ],
+    "branch_denominator": 2,
+    "missing_branches": [],
+    "ast_statements": [
+      {
+        "line": 2,
+        "kind": "ImportFrom",
+        "covered": true
+      },
+      {
+        "line": 3,
+        "kind": "Import",
+        "covered": true
+      },
+      {
+        "line": 4,
+        "kind": "ImportFrom",
+        "covered": true
+      },
+      {
+        "line": 6,
+        "kind": "Assign",
+        "covered": true
+      },
+      {
+        "line": 7,
+        "kind": "Assign",
+        "covered": true
+      },
+      {
+        "line": 10,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 16,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 23,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 27,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 33,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 40,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 12,
+        "kind": "With",
+        "covered": true
+      },
+      {
+        "line": 17,
+        "kind": "Assign",
+        "covered": true
+      },
+      {
+        "line": 18,
+        "kind": "If",
+        "covered": true
+      },
+      {
+        "line": 20,
+        "kind": "Assert",
+        "covered": true
+      },
+      {
+        "line": 24,
+        "kind": "Assert",
+        "covered": true
+      },
+      {
+        "line": 28,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 29,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 30,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 34,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 35,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 36,
+        "kind": "With",
+        "covered": true
+      },
+      {
+        "line": 41,
+        "kind": "Assign",
+        "covered": true
+      },
+      {
+        "line": 42,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 43,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 44,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 45,
+        "kind": "With",
+        "covered": true
+      },
+      {
+        "line": 13,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 19,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 37,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 46,
+        "kind": "Expr",
+        "covered": true
+      }
+    ],
+    "statement_denominator": 31
+  },
+  "tests/test_calc.py": {
+    "sha256": "92403be7387d4fdbec55687ece8fbdcc5b0227fed5bb8f8ee339753f6f1a3e11",
+    "changed_lines": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22
+    ],
+    "executable_lines": [
+      2,
+      5,
+      6,
+      9,
+      10,
+      13,
+      14,
+      17,
+      18,
+      21,
+      22
+    ],
+    "line_denominator": 11,
+    "missing_lines": [],
+    "branches": [],
+    "branch_denominator": 0,
+    "missing_branches": [],
+    "ast_statements": [
+      {
+        "line": 2,
+        "kind": "Import",
+        "covered": true
+      },
+      {
+        "line": 5,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 9,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 13,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 17,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 21,
+        "kind": "FunctionDef",
+        "covered": true
+      },
+      {
+        "line": 6,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 10,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 14,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 18,
+        "kind": "Expr",
+        "covered": true
+      },
+      {
+        "line": 22,
+        "kind": "Expr",
+        "covered": true
+      }
+    ],
+    "statement_denominator": 11
+  }
+}

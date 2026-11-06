@@ -1,0 +1,1 @@
+import json; d=json.load(open(".pi/evidence/coverage314-sysmon.json")); print(d["files"]["tests/leela/describe_daemon.py"]["missing_lines"][-100:]); print(d["files"]["tests/leela/describe_index.py"]["missing_branches"][-15:])

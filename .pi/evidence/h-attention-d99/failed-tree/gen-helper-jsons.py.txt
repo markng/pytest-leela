@@ -1,0 +1,34 @@
+"""Generate source/input-bound golden JSON for current helper artifacts."""
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+import artifact_contracts
+
+DIRECTORY = Path(__file__).parent
+
+
+def main():
+    reports = {}
+    for name in sorted(artifact_contracts.EXPECTED_HASH_ARTIFACTS):
+        source = (DIRECTORY / name).read_text()
+        if name == "call_evidence.py":
+            reports[name] = json.loads(
+                artifact_contracts.execute_and_expand(name)["main_output"]
+            )
+        elif name in {"enumerate_mutants.py", "coverage_denominators.py", "raw_diff_probe.py"}:
+            result = artifact_contracts.execute_and_expand(name)
+            payload = json.loads(result["main_output"])
+            payload["sha256"] = hashlib.sha256(source.encode()).hexdigest()
+            reports[name] = payload
+        else:
+            reports[name] = artifact_contracts.native_point_report(name)
+    output = {name: report for name, report in reports.items()}
+    for name, report in output.items():
+        path = DIRECTORY / (Path(name).stem + ".json")
+        path.write_text(json.dumps(report, indent=2) + "\n")
+
+
+if __name__ == "__main__":
+    main()

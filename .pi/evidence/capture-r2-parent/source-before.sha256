@@ -1,0 +1,3 @@
+a2986a7365a0a03d25addccbc4ec67e3241f963fbf4502f9afc16f8864c5013c  src/calc.py
+6735d69b1453fb4949e454a235f5643be13d9cede05beb3a49076628a7d871b3  tests/calc_fixture.py
+92403be7387d4fdbec55687ece8fbdcc5b0227fed5bb8f8ee339753f6f1a3e11  tests/test_calc.py

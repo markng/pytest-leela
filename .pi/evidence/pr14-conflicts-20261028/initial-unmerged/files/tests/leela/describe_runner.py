@@ -1,0 +1,3659 @@
+"""Tests for pytest_leela.runner — test execution against mutants."""
+
+import importlib
+import re
+import os
+import py_compile
+import sys
+import threading
+import types
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from pytest_leela.ast_analysis import find_mutation_points
+from pytest_leela.import_hook import MutatingFinder
+from pytest_leela.models import Mutant, MutantResult
+from pytest_leela.runner import (
+    _KEEP_PREFIXES,
+    ProjectModuleScope,
+    _ResultCollector,
+    _clear_framework_caches,
+    _prepare_source_bytecode,
+    _django_registry_module_names,
+    _inner_run_error,
+    _exception_summary,
+    InnerSession,
+    install_hook,
+    _referenced_closure,
+    _clear_user_modules,
+    _clear_user_modules_fast,
+    precompute_user_modules,
+    run_tests_for_mutant,
+)
+
+
+class _FakeReport:
+    """Minimal stand-in for pytest report objects."""
+
+    def __init__(self, nodeid: str, when: str, passed: bool, failed: bool) -> None:
+        self.nodeid = nodeid
+        self.when = when
+        self.passed = passed
+        self.failed = failed
+
+
+class _FakeCollectReport:
+    """Minimal stand-in for a pytest CollectReport."""
+
+    def __init__(self, nodeid: str, failed: bool, longreprtext: str = "") -> None:
+        self.nodeid = nodeid
+        self.failed = failed
+        self.longreprtext = longreprtext
+
+
+def describe_ResultCollector():
+    def it_counts_passed_tests():
+        collector = _ResultCollector()
+        report = _FakeReport("test_a", when="call", passed=True, failed=False)
+        collector.pytest_runtest_logreport(report)
+        assert collector.total == 1
+        assert collector.passed == ["test_a"]
+        assert collector.failed == []
+
+    def it_counts_failed_tests():
+        collector = _ResultCollector()
+        report = _FakeReport("test_b", when="call", passed=False, failed=True)
+        collector.pytest_runtest_logreport(report)
+        assert collector.total == 1
+        assert collector.failed == ["test_b"]
+        assert collector.passed == []
+
+    def it_tracks_setup_errors():
+        collector = _ResultCollector()
+        report = _FakeReport("test_c", when="setup", passed=False, failed=True)
+        collector.pytest_runtest_logreport(report)
+        assert collector.errors == ["test_c"]
+        assert collector.total == 0  # setup errors don't increment total
+
+    def it_ignores_non_call_passing():
+        collector = _ResultCollector()
+        report = _FakeReport("test_d", when="setup", passed=True, failed=False)
+        collector.pytest_runtest_logreport(report)
+        assert collector.total == 0
+        assert collector.passed == []
+
+    def it_accumulates_multiple_results():
+        collector = _ResultCollector()
+        collector.pytest_runtest_logreport(
+            _FakeReport("test_1", when="call", passed=True, failed=False)
+        )
+        collector.pytest_runtest_logreport(
+            _FakeReport("test_2", when="call", passed=False, failed=True)
+        )
+        collector.pytest_runtest_logreport(
+            _FakeReport("test_3", when="call", passed=True, failed=False)
+        )
+        assert collector.total == 3
+        assert collector.passed == ["test_1", "test_3"]
+        assert collector.failed == ["test_2"]
+
+
+def describe_prepare_source_bytecode():
+    def it_preserves_installed_packages_and_unrelated_cache_files(tmp_path):
+        source = tmp_path / "local.py"
+        source.write_text("value = 1\n")
+        installed = tmp_path / "site-packages" / "vendor.py"
+        installed.parent.mkdir()
+        installed.write_text("value = 2\n")
+        local_cache = Path(py_compile.compile(str(source), doraise=True))
+        installed_cache = Path(py_compile.compile(str(installed), doraise=True))
+        unrelated = local_cache.parent / "unrelated.txt"
+        unrelated.write_text("keep")
+        _prepare_source_bytecode(ProjectModuleScope(str(tmp_path)))
+        assert not local_cache.exists()
+        assert installed_cache.exists()
+        assert unrelated.read_text() == "keep"
+
+    def it_propagates_a_real_cache_permission_error(tmp_path):
+        source = tmp_path / "denied.py"
+        source.write_text("value = 1\n")
+        cache = Path(py_compile.compile(str(source), doraise=True))
+        cache.parent.chmod(0o500)
+        try:
+            with pytest.raises(PermissionError):
+                _prepare_source_bytecode(ProjectModuleScope(str(tmp_path)))
+        finally:
+            cache.parent.chmod(0o700)
+        assert cache.exists()
+
+    def it_propagates_an_unreadable_source_directory(tmp_path):
+        denied = tmp_path / "denied"
+        denied.mkdir()
+        denied.chmod(0)
+        try:
+            with pytest.raises(PermissionError):
+                _prepare_source_bytecode(ProjectModuleScope(str(tmp_path)))
+        finally:
+            denied.chmod(0o700)
+
+
+def describe_clear_framework_caches():
+    def it_does_not_raise_when_django_is_not_installed():
+        with patch("pytest_leela.runner._django_clear_url_caches", None):
+            # Should silently pass when Django is unavailable
+            _clear_framework_caches()
+
+    def it_calls_clear_url_caches_when_django_is_available():
+        mock_clear = MagicMock()
+
+        with patch("pytest_leela.runner._django_clear_url_caches", mock_clear):
+            _clear_framework_caches()
+
+        mock_clear.assert_called_once()
+
+    def it_is_idempotent_when_called_multiple_times():
+        mock_clear = MagicMock()
+
+        with patch("pytest_leela.runner._django_clear_url_caches", mock_clear):
+            _clear_framework_caches()
+            _clear_framework_caches()
+            _clear_framework_caches()
+
+        assert mock_clear.call_count == 3
+
+
+def describe_run_tests_for_mutant():
+    def it_calls_clear_framework_caches_at_both_call_sites(tmp_path, monkeypatch):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "runner_caches.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_caches_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_caches.py").write_text(
+            "from runner_caches import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_caches")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        with patch("pytest_leela.runner._clear_framework_caches") as mock_clear:
+            run_tests_for_mutant(
+                mutant,
+                {"runner_caches": source},
+                {"runner_caches": str(target)},
+                test_dir=str(test_dir),
+            )
+
+        # Called at both sites: pre-test setup (line 108) and finally cleanup (line 188)
+        assert mock_clear.call_count == 2
+
+    def it_removes_the_finder_when_freshness_preparation_fails(
+        tmp_path, monkeypatch
+    ):
+        """Propagate cache-removal errors without leaking the mutation finder."""
+        import importlib
+        import py_compile
+        from pathlib import Path
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "fresh_failure_target.py"
+        target.write_text(source)
+        cache = Path(py_compile.compile(str(target), doraise=True))
+
+        points = find_mutation_points(source, str(target), "fresh_failure_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+        with patch.object(
+            Path, "unlink", side_effect=PermissionError("cache is not removable")
+        ):
+            with pytest.raises(PermissionError, match="cache is not removable"):
+                run_tests_for_mutant(
+                    mutant,
+                    {"fresh_failure_target": source},
+                    {"fresh_failure_target": str(target)},
+                    test_dir=str(tmp_path),
+                    dependency_files={target},
+                )
+
+        assert not any(isinstance(finder, MutatingFinder) for finder in sys.meta_path)
+        imported = importlib.import_module("fresh_failure_target")
+        assert imported.add(5, 2) == 7
+
+    def it_kills_a_detectable_mutant(tmp_path, monkeypatch):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "runner_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_target.py").write_text(
+            "from runner_target import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"runner_target": source},
+            {"runner_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert isinstance(result, MutantResult)
+        assert result.killed is True
+        assert result.tests_run >= 1
+        assert result.killing_test is not None
+
+    def it_reports_surviving_mutant_when_test_is_weak(tmp_path, monkeypatch):
+        source = "def is_positive(n):\n    return n > 0\n"
+        target = tmp_path / "runner_survive.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_survive_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_survive.py").write_text(
+            "from runner_survive import is_positive\n\n"
+            "def test_positive():\n"
+            "    assert is_positive(5) is True\n\n"
+            "def test_negative():\n"
+            "    assert is_positive(-5) is False\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_survive")
+        cmp_point = next(
+            p for p in points if p.node_type == "Compare" and p.original_op == "Gt"
+        )
+        # Mutate > to >= (n >= 0 still passes for n=5 and n=-5)
+        mutant = Mutant(point=cmp_point, replacement_op="GtE", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"runner_survive": source},
+            {"runner_survive": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert isinstance(result, MutantResult)
+        assert result.killed is False
+        assert result.tests_run >= 1
+        assert result.killing_test is None
+
+    def it_returns_error_result_when_pytest_main_crashes(tmp_path, monkeypatch):
+        """A crashed runner is an ERROR, never a kill: no test caught anything.
+
+        Also kills ``- → +/*`` on the crash handler's elapsed time and
+        ``return expr → None`` on its return.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "crash_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "crash_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=RuntimeError("boom")):
+            result = run_tests_for_mutant(
+                mutant,
+                {"crash_target": source},
+                {"crash_target": str(target)},
+                test_dir=str(tmp_path),
+            )
+
+        assert isinstance(result, MutantResult)
+        assert result.killed is False
+        assert result.status == "error"
+        assert result.error == "pytest crashed: RuntimeError: boom"
+        assert result.killing_test is None
+        # - → + would produce a value >> 60
+        assert 0 <= result.time_seconds < 60
+
+    def it_preserves_modules_in_saved_snapshot_during_cleanup(tmp_path, monkeypatch):
+        """Kills line 186: ``not in → in`` in cleanup loop.
+
+        The cleanup loop (lines 185-190) should only examine modules NOT in
+        saved_modules (new ones from inner run).  With the mutation it examines
+        modules that ARE in saved_modules, incorrectly removing KEEP_PREFIXES
+        modules with CWD __file__.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "saved_mod_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "saved_mod_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        # A pytest_leela.* module survives _clear_user_modules (KEEP_PREFIXES)
+        # and enters saved_modules.  With the mutation, the cleanup loop
+        # examines it and removes it (CWD __file__).
+        kept_mod = types.ModuleType("pytest_leela._test_saved_mod")
+        kept_mod.__file__ = str(tmp_path / "saved.py")
+        monkeypatch.setitem(sys.modules, "pytest_leela._test_saved_mod", kept_mod)
+
+        with patch("pytest_leela.runner.pytest.main", return_value=0):
+            run_tests_for_mutant(
+                mutant,
+                {"saved_mod_target": source},
+                {"saved_mod_target": str(target)},
+                test_dir=str(tmp_path),
+            )
+
+        assert "pytest_leela._test_saved_mod" in sys.modules
+
+    def it_cleans_up_cwd_modules_added_during_inner_run(tmp_path, monkeypatch):
+        """Kills line 188: ``is not → is`` in cleanup mod_file check.
+
+        With the mutation, non-None modules get mod_file=None (from else
+        branch), so CWD-local modules added during inner run are never removed.
+        Uses KEEP_PREFIXES name so only the cleanup loop (not _clear_user_modules
+        in outer finally) is responsible for removal.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "inner_cleanup_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "inner_cleanup_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        inner_mod_name = "pytest_leela._test_inner_artifact"
+        inner_mod_file = str(tmp_path / "inner_artifact.py")
+
+        def mock_pytest_main(args, plugins=None):
+            """Simulate inner run adding a CWD-local module."""
+            fake = types.ModuleType(inner_mod_name)
+            fake.__file__ = inner_mod_file
+            sys.modules[inner_mod_name] = fake
+            return 0
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            run_tests_for_mutant(
+                mutant,
+                {"inner_cleanup_target": source},
+                {"inner_cleanup_target": str(target)},
+                test_dir=str(tmp_path),
+            )
+
+        # With correct code: new CWD-local module is removed by cleanup loop.
+        # With mutation: mod_file is None for non-None modules → not removed.
+        assert inner_mod_name not in sys.modules
+
+    def it_preserves_non_cwd_modules_added_during_inner_run(tmp_path, monkeypatch):
+        """Kills the ``and → or`` mutation on the inline cleanup mod_file
+        check (the ``mod_file is not None and mod_file.startswith(cwd_prefix)``
+        guard).  With the mutation, the inline cleanup pops every non-None
+        module added during the inner run, regardless of whether its
+        __file__ is under CWD — clobbering modules that legitimately live
+        outside the project tree.
+
+        Uses a KEEP_PREFIXES name so the outer ``_clear_user_modules`` is
+        not responsible for removal — only the inline cleanup loop.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "outside_cwd_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "outside_cwd_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        inner_mod_name = "pytest_leela._test_outside_cwd_artifact"
+        # __file__ deliberately outside the temporary CWD.
+        outside_mod_file = "/non/existent/elsewhere/outside.py"
+
+        def mock_pytest_main(args, plugins=None):
+            fake = types.ModuleType(inner_mod_name)
+            fake.__file__ = outside_mod_file
+            sys.modules[inner_mod_name] = fake
+            return 0
+
+        try:
+            with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+                run_tests_for_mutant(
+                    mutant,
+                    {"outside_cwd_target": source},
+                    {"outside_cwd_target": str(target)},
+                    test_dir=str(tmp_path),
+                )
+
+            # Original: non-CWD module is preserved (False AND ... or True AND False).
+            # Mutated (and → or): True OR ... → popped, even though __file__
+            # is not under cwd_prefix.
+            assert inner_mod_name in sys.modules
+            assert sys.modules[inner_mod_name].__file__ == outside_mod_file
+        finally:
+            sys.modules.pop(inner_mod_name, None)
+
+    def it_calculates_elapsed_time_by_subtraction(tmp_path, monkeypatch):
+        """Kills line 199: ``- → +/*`` in final elapsed calculation.
+
+        Mocks time.monotonic to return controlled values; asserts the result
+        is the difference (5.0), not the sum (205.0) or product (10500.0).
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "time_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "time_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        with (
+            patch("pytest_leela.runner.time.monotonic", side_effect=[100.0, 105.0]),
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"time_target": source},
+                {"time_target": str(target)},
+                test_dir=str(tmp_path),
+            )
+
+        assert result.time_seconds == pytest.approx(5.0)
+
+    def it_populates_test_ids_run_and_killing_tests_on_kill(tmp_path, monkeypatch):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "runner_ids_kill.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_ids_kill_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_ids_kill.py").write_text(
+            "from runner_ids_kill import add\n\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_ids_kill")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"runner_ids_kill": source},
+            {"runner_ids_kill": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.killed is True
+        assert len(result.test_ids_run) >= 1
+        assert len(result.killing_tests) >= 1
+        # killing_tests should be a subset of test_ids_run
+        assert set(result.killing_tests).issubset(set(result.test_ids_run))
+
+    def it_populates_test_ids_run_with_empty_killing_tests_on_survive(
+        tmp_path, monkeypatch
+    ):
+        source = "def is_positive(n):\n    return n > 0\n"
+        target = tmp_path / "runner_ids_surv.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "runner_ids_surv_tests"
+        test_dir.mkdir()
+        (test_dir / "test_runner_ids_surv.py").write_text(
+            "from runner_ids_surv import is_positive\n\n"
+            "def test_positive():\n"
+            "    assert is_positive(5) is True\n\n"
+            "def test_negative():\n"
+            "    assert is_positive(-5) is False\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "runner_ids_surv")
+        cmp_point = next(
+            p for p in points if p.node_type == "Compare" and p.original_op == "Gt"
+        )
+        mutant = Mutant(point=cmp_point, replacement_op="GtE", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"runner_ids_surv": source},
+            {"runner_ids_surv": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.killed is False
+        assert len(result.test_ids_run) >= 1
+        assert result.killing_tests == []
+
+    def it_populates_crash_fields_when_pytest_main_crashes(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "crash_ids_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "crash_ids_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=RuntimeError("boom")):
+            result = run_tests_for_mutant(
+                mutant,
+                {"crash_ids_target": source},
+                {"crash_ids_target": str(target)},
+                test_dir=str(tmp_path),
+            )
+
+        assert result.killed is False
+        assert result.test_ids_run == []
+        assert result.killing_tests == []
+
+    def it_removes_stale_mutating_finders_from_meta_path(tmp_path, monkeypatch):
+        """Kills line 219: ``not isinstance → isinstance``.
+
+        With the mutation, the safety-net filter keeps ONLY MutatingFinders
+        and removes all other finders — the opposite of intended behavior.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "stale_finder_target.py"
+        target.write_text(source)
+
+        points = find_mutation_points(source, str(target), "stale_finder_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        stale = MutatingFinder({"stale": "x = 1"}, mutant)
+        saved_meta_path = sys.meta_path[:]
+        sys.meta_path.insert(0, stale)
+
+        try:
+            with patch("pytest_leela.runner.pytest.main", return_value=0):
+                run_tests_for_mutant(
+                    mutant,
+                    {"stale_finder_target": source},
+                    {"stale_finder_target": str(target)},
+                    test_dir=str(tmp_path),
+                )
+
+            remaining = [f for f in sys.meta_path if isinstance(f, MutatingFinder)]
+            assert remaining == []
+        finally:
+            # Restore sys.meta_path if the mutation clobbered it
+            sys.meta_path[:] = saved_meta_path
+
+    def it_kills_when_collection_fails_with_import_error(tmp_path, monkeypatch):
+        """Collection failure (import error) must register as a kill, not a survive.
+
+        Without the ``pytest_collectreport`` hook in ``_ResultCollector``, a
+        test module that fails to import (e.g. the mutation broke the import)
+        would be misreported as SURVIVED with ``tests_run=0``. The hook
+        increments ``total`` and appends to ``errors``, so the post-loop
+        kill check flips to True.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "collerr_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "collerr_tests"
+        test_dir.mkdir()
+        (test_dir / "test_collerr.py").write_text(
+            "import nonexistent_module_zzz\n\n"
+            "def test_add():\n"
+            "    assert True\n"
+        )
+
+        points = find_mutation_points(source, str(target), "collerr_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"collerr_target": source},
+            {"collerr_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.killed is True
+        assert result.tests_run >= 1
+        assert result.killing_test is not None
+        assert len(result.killing_tests) >= 1
+
+
+def describe_TimeoutPlugin():
+    def it_raises_system_exit_when_event_is_set():
+        """_TimeoutPlugin.pytest_runtest_protocol raises when the event fires."""
+        from pytest_leela.runner import _TimeoutPlugin
+
+        event = threading.Event()
+        event.set()
+        plugin = _TimeoutPlugin(event)
+        with pytest.raises(SystemExit, match="leela: mutant timeout"):
+            plugin.pytest_runtest_protocol(item=None, nextitem=None)
+
+    def it_does_not_raise_when_event_is_not_set():
+        """_TimeoutPlugin.pytest_runtest_protocol returns None when no timeout."""
+        from pytest_leela.runner import _TimeoutPlugin
+
+        event = threading.Event()
+        plugin = _TimeoutPlugin(event)
+        result = plugin.pytest_runtest_protocol(item=None, nextitem=None)
+        assert result is None
+
+
+def describe_run_tests_for_mutant_timeout():
+    """Tests for the timeout computation and timeout-related code paths."""
+
+    def _make_mutant_fixture(tmp_path):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "timeout_target.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), "timeout_target")
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+        return source, mutant
+
+    def it_computes_timeout_correctly_from_test_times(tmp_path, monkeypatch):
+        """Kills line 218: ``+ → -``, ``* → +``, ``* → /``, ``+ → *``.
+
+        timeout_seconds = max(2 * total_expected + 1.0, 5.0)
+        total_expected = sum(test_times.get(t, 1.0) for t in test_ids)
+
+        With test_times = {"t1": 2.0, "t2": 3.0}, total_expected = 5.0
+        Correct: max(2 * 5.0 + 1.0, 5.0) = max(11.0, 5.0) = 11.0
+
+        Mutant ``2 * total_expected - 1.0``: max(10.0 - 1.0, 5.0) = max(9.0, 5.0) = 9.0
+        Mutant ``2 + total_expected + 1.0``: max(2 + 5.0 + 1.0, 5.0) = max(8.0, 5.0) = 8.0
+        Mutant ``2 * total_expected * 1.0``: max(10.0, 5.0) = 10.0
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        test_times = {"test_a": 2.0, "test_b": 3.0}
+        test_ids = ["test_a", "test_b"]
+
+        created_timer = []
+
+        original_timer_init = threading.Timer.__init__
+
+        def capture_timer(self, interval, function, *args, **kwargs):
+            created_timer.append(interval)
+            original_timer_init(self, interval, function, *args, **kwargs)
+
+        with (
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+            patch.object(threading.Timer, "__init__", capture_timer),
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=test_ids,
+                test_times=test_times,
+            )
+
+        assert len(created_timer) == 1
+        # Correct: max(2 * 5.0 + 1.0, 5.0) = 11.0
+        assert created_timer[0] == pytest.approx(11.0)
+
+    def it_uses_default_time_for_unknown_tests(tmp_path, monkeypatch):
+        """Tests that test_times.get(t, 1.0) uses 1.0 default for unknown tests."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        test_times = {"test_a": 2.0}  # test_b is unknown
+        test_ids = ["test_a", "test_b"]
+
+        created_timer = []
+        original_timer_init = threading.Timer.__init__
+
+        def capture_timer(self, interval, function, *args, **kwargs):
+            created_timer.append(interval)
+            original_timer_init(self, interval, function, *args, **kwargs)
+
+        with (
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+            patch.object(threading.Timer, "__init__", capture_timer),
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=test_ids,
+                test_times=test_times,
+            )
+
+        assert len(created_timer) == 1
+        # total_expected = 2.0 + 1.0 = 3.0
+        # timeout = max(2 * 3.0 + 1.0, 5.0) = max(7.0, 5.0) = 7.0
+        assert created_timer[0] == pytest.approx(7.0)
+
+    def it_does_not_create_timer_without_test_times(tmp_path, monkeypatch):
+        """Kills line 224: ``is not → is`` on timer guard.
+
+        When test_times is None, no timer should be created and
+        _TimeoutPlugin should NOT be in the plugins list.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        captured_plugins = []
+
+        def mock_pytest_main(args, plugins=None):
+            captured_plugins.extend(plugins or [])
+            return 0
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times=None,  # No test_times
+            )
+
+        from pytest_leela.runner import _TimeoutPlugin
+
+        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
+        assert timeout_plugins == [], (
+            "TimeoutPlugin should not be added without test_times"
+        )
+
+    def it_includes_timeout_plugin_when_timer_is_created(tmp_path, monkeypatch):
+        """Positive case: when test_times is provided, TimeoutPlugin IS added."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        captured_plugins = []
+
+        def mock_pytest_main(args, plugins=None):
+            captured_plugins.extend(plugins or [])
+            return 0
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        from pytest_leela.runner import _TimeoutPlugin
+
+        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
+        assert len(timeout_plugins) == 1
+
+    def it_returns_timeout_result_when_timed_out_flag_is_set(tmp_path, monkeypatch):
+        """Kills lines 274-283: timed_out.is_set() post-run check.
+
+        When the timeout fires but pytest catches the SystemExit internally,
+        the post-run check at line 274 should detect it and return a killed result.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        def mock_pytest_main(args, plugins=None):
+            # Simulate: one test passes, then the timeout fires and pytest
+            # swallows the SystemExit
+            plugins[0].pytest_runtest_logreport(
+                _FakeReport("test_a", "call", passed=True, failed=False)
+            )
+            for p in plugins or []:
+                if hasattr(p, "event"):
+                    p.event.set()  # Set the timed_out event
+            return 0  # pytest returns normally
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        assert result.killed is True
+        assert result.killing_test == "<timeout>"
+        assert "<timeout>" in result.killing_tests
+        # The run did not crash, so the tests it ran are still reported.
+        assert result.test_ids_run == ["test_a"]
+        # Elapsed should be reasonable (not a huge value from wrong arithmetic)
+        assert 0 <= result.time_seconds < 60
+
+    def it_reports_no_tests_run_when_the_timeout_escapes_as_a_crash(
+        tmp_path, monkeypatch
+    ):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        def mock_pytest_main(args, plugins=None):
+            plugins[0].pytest_runtest_logreport(
+                _FakeReport("test_a", "call", passed=True, failed=False)
+            )
+            plugins[1].event.set()
+            raise SystemExit("leela: mutant timeout")
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        assert result.killing_test == "<timeout>"
+        assert result.test_ids_run == []
+
+    def it_returns_timeout_result_when_system_exit_is_raised(tmp_path, monkeypatch):
+        """When timeout causes SystemExit to propagate, result should be killed."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        def mock_pytest_main(args, plugins=None):
+            for p in plugins or []:
+                if hasattr(p, "event"):
+                    p.event.set()
+            raise SystemExit("leela: mutant timeout")
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            result = run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=["test_a"],
+                test_times={"test_a": 1.0},
+            )
+
+        assert result.killed is True
+        assert result.killing_test == "<timeout>"
+
+    def it_enforces_minimum_timeout_of_5_seconds(tmp_path, monkeypatch):
+        """Timeout should be at least 5.0 seconds even for very fast tests."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        test_times = {"test_a": 0.001}
+        test_ids = ["test_a"]
+
+        created_timer = []
+        original_timer_init = threading.Timer.__init__
+
+        def capture_timer(self, interval, function, *args, **kwargs):
+            created_timer.append(interval)
+            original_timer_init(self, interval, function, *args, **kwargs)
+
+        with (
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+            patch.object(threading.Timer, "__init__", capture_timer),
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_ids=test_ids,
+                test_times=test_times,
+            )
+
+        assert len(created_timer) == 1
+        # max(2 * 0.001 + 1.0, 5.0) = max(1.002, 5.0) = 5.0
+        assert created_timer[0] == pytest.approx(5.0)
+
+    def it_does_not_create_timer_without_test_ids(tmp_path, monkeypatch):
+        """When test_ids is None/empty, no timer should be created."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant_fixture(tmp_path)
+
+        captured_plugins = []
+
+        def mock_pytest_main(args, plugins=None):
+            captured_plugins.extend(plugins or [])
+            return 0
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            run_tests_for_mutant(
+                mutant,
+                {"timeout_target": source},
+                {"timeout_target": str(tmp_path / "timeout_target.py")},
+                test_dir=str(tmp_path),
+                test_times={"test_a": 1.0},
+                # test_ids is None by default
+            )
+
+        from pytest_leela.runner import _TimeoutPlugin
+
+        timeout_plugins = [p for p in captured_plugins if isinstance(p, _TimeoutPlugin)]
+        assert timeout_plugins == []
+
+
+def describe_clear_user_modules():
+    def it_removes_cwd_local_modules(monkeypatch, tmp_path):
+        """Kills line 77: ``mod is not None → mod is None``.
+
+        With the mutation, only None modules pass the first filter,
+        so real CWD-local modules are never removed.
+        """
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_cwd_local_mod")
+        fake_mod.__file__ = str(tmp_path / "fake_local.py")
+        monkeypatch.setitem(sys.modules, "_test_cwd_local_mod", fake_mod)
+
+        _clear_user_modules()
+
+        assert "_test_cwd_local_mod" not in sys.modules
+
+    def it_preserves_modules_with_none_file(monkeypatch, tmp_path):
+        """Kills line 78: ``is not None → is None`` on __file__ check."""
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_none_file_mod")
+        fake_mod.__file__ = None
+        monkeypatch.setitem(sys.modules, "_test_none_file_mod", fake_mod)
+
+        _clear_user_modules()
+
+        assert "_test_none_file_mod" in sys.modules
+
+    def it_preserves_pytest_leela_prefixed_modules(monkeypatch, tmp_path):
+        """Kills line 80: ``not name.startswith → name.startswith``.
+
+        With the mutation, KEEP_PREFIXES modules are the ones removed
+        (inverted logic), so pytest_leela.* modules under CWD disappear.
+        """
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("pytest_leela._test_keep_me")
+        fake_mod.__file__ = str(tmp_path / "keep_me.py")
+        monkeypatch.setitem(sys.modules, "pytest_leela._test_keep_me", fake_mod)
+
+        _clear_user_modules()
+
+        assert "pytest_leela._test_keep_me" in sys.modules
+
+
+def describe_precompute_user_modules():
+    def it_identifies_cwd_local_modules(monkeypatch, tmp_path):
+        """Modules with __file__ under CWD should be in the returned set."""
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_precompute_local")
+        fake_mod.__file__ = str(tmp_path / "local_mod.py")
+        monkeypatch.setitem(sys.modules, "_test_precompute_local", fake_mod)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_local" in result
+
+    def it_excludes_keep_prefixes_modules(monkeypatch, tmp_path):
+        """Modules matching _KEEP_PREFIXES should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        for prefix in _KEEP_PREFIXES:
+            mod_name = f"{prefix}_test_keep_prefix"
+            fake_mod = types.ModuleType(mod_name)
+            fake_mod.__file__ = str(tmp_path / "kept.py")
+            monkeypatch.setitem(sys.modules, mod_name, fake_mod)
+
+        result = precompute_user_modules()
+
+        for prefix in _KEEP_PREFIXES:
+            assert f"{prefix}_test_keep_prefix" not in result
+
+    def it_excludes_modules_outside_cwd(monkeypatch, tmp_path):
+        """Modules with __file__ outside CWD should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_precompute_outside")
+        fake_mod.__file__ = "/some/other/path/outside.py"
+        monkeypatch.setitem(sys.modules, "_test_precompute_outside", fake_mod)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_outside" not in result
+
+    def it_excludes_modules_with_no_file(monkeypatch, tmp_path):
+        """Modules with __file__=None should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        fake_mod = types.ModuleType("_test_precompute_no_file")
+        fake_mod.__file__ = None
+        monkeypatch.setitem(sys.modules, "_test_precompute_no_file", fake_mod)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_no_file" not in result
+
+    def it_excludes_none_modules(monkeypatch, tmp_path):
+        """None entries in sys.modules should not be in the set."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setitem(sys.modules, "_test_precompute_none", None)
+
+        result = precompute_user_modules()
+
+        assert "_test_precompute_none" not in result
+
+    def it_returns_a_frozenset(monkeypatch, tmp_path):
+        monkeypatch.chdir(tmp_path)
+        result = precompute_user_modules()
+        assert isinstance(result, frozenset)
+
+
+def describe_clear_user_modules_fast():
+    def it_removes_only_known_modules(monkeypatch, tmp_path):
+        """Should pop only the modules in the known set."""
+        monkeypatch.chdir(tmp_path)
+
+        known_mod = types.ModuleType("_test_fast_known")
+        known_mod.__file__ = str(tmp_path / "known.py")
+        monkeypatch.setitem(sys.modules, "_test_fast_known", known_mod)
+
+        unknown_mod = types.ModuleType("_test_fast_unknown")
+        unknown_mod.__file__ = str(tmp_path / "unknown.py")
+        monkeypatch.setitem(sys.modules, "_test_fast_unknown", unknown_mod)
+
+        known_set = frozenset(["_test_fast_known"])
+        _clear_user_modules_fast(known_set)
+
+        assert "_test_fast_known" not in sys.modules
+        assert "_test_fast_unknown" in sys.modules
+
+    def it_handles_modules_already_removed(monkeypatch):
+        """Should not raise when a module in the known set is already gone."""
+        known_set = frozenset(["_test_fast_already_gone"])
+        # Should not raise
+        _clear_user_modules_fast(known_set)
+
+    def it_does_not_remove_modules_outside_known_set(monkeypatch, tmp_path):
+        """Modules not in the known set should be untouched."""
+        monkeypatch.chdir(tmp_path)
+
+        other_mod = types.ModuleType("_test_fast_other")
+        other_mod.__file__ = str(tmp_path / "other.py")
+        monkeypatch.setitem(sys.modules, "_test_fast_other", other_mod)
+
+        _clear_user_modules_fast(frozenset(["_test_nonexistent"]))
+
+        assert "_test_fast_other" in sys.modules
+
+
+def describe_run_tests_for_mutant_with_known_user_modules():
+    """Tests for the optimized path using known_user_modules parameter."""
+
+    def _make_mutant(tmp_path, module_name="opt_target"):
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / f"{module_name}.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), module_name)
+        binop_point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=binop_point, replacement_op="Sub", mutant_id=0)
+        return source, mutant
+
+    def it_updates_the_shared_prepared_dependency_set(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source, mutant = _make_mutant(tmp_path)
+        test_file = tmp_path / "test_shared_preparation.py"
+        test_file.write_text(
+            "from opt_target import add\n\n"
+            "def test_add():\n    assert add(1, 2) == 3\n"
+        )
+        prepared = set()
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"opt_target": source},
+            {"opt_target": str(tmp_path / "opt_target.py")},
+            test_ids=[f"{test_file}::test_add"],
+            dependency_files={test_file},
+            prepared_dependencies=prepared,
+        )
+
+        assert result.killed is True
+        assert result.killing_test == "test_shared_preparation.py::test_add"
+        assert prepared == {test_file}
+
+    def it_works_with_known_user_modules_parameter(tmp_path, monkeypatch):
+        """The optimized path should produce the same result as the fallback."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path)
+
+        test_dir = tmp_path / "opt_tests"
+        test_dir.mkdir()
+        (test_dir / "test_opt_target.py").write_text(
+            "from opt_target import add\n\ndef test_add():\n    assert add(1, 2) == 3\n"
+        )
+
+        known = precompute_user_modules()
+        result = run_tests_for_mutant(
+            mutant,
+            {"opt_target": source},
+            {"opt_target": str(tmp_path / "opt_target.py")},
+            test_dir=str(test_dir),
+            known_user_modules=known,
+        )
+
+        assert isinstance(result, MutantResult)
+        assert result.killed is True
+
+    def it_cleans_up_new_cwd_modules_from_inner_run(tmp_path, monkeypatch):
+        """Optimized path should remove NEW CWD-local modules added by inner run."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_inner_target")
+
+        inner_mod_name = "pytest_leela._test_opt_inner_artifact"
+        inner_mod_file = str(tmp_path / "inner_artifact.py")
+
+        def mock_pytest_main(args, plugins=None):
+            fake = types.ModuleType(inner_mod_name)
+            fake.__file__ = inner_mod_file
+            sys.modules[inner_mod_name] = fake
+            return 0
+
+        known = precompute_user_modules()
+        with patch("pytest_leela.runner.pytest.main", side_effect=mock_pytest_main):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_inner_target": source},
+                {"opt_inner_target": str(tmp_path / "opt_inner_target.py")},
+                test_dir=str(tmp_path),
+                known_user_modules=known,
+            )
+
+        assert inner_mod_name not in sys.modules
+
+    def it_preserves_saved_modules_during_optimized_cleanup(tmp_path, monkeypatch):
+        """Optimized path should not evict modules that existed at snapshot time."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_preserve_target")
+
+        kept_mod = types.ModuleType("pytest_leela._test_opt_preserved")
+        kept_mod.__file__ = str(tmp_path / "preserved.py")
+        monkeypatch.setitem(sys.modules, "pytest_leela._test_opt_preserved", kept_mod)
+
+        known = precompute_user_modules()
+        with patch("pytest_leela.runner.pytest.main", return_value=0):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_preserve_target": source},
+                {"opt_preserve_target": str(tmp_path / "opt_preserve_target.py")},
+                test_dir=str(tmp_path),
+                known_user_modules=known,
+            )
+
+        assert "pytest_leela._test_opt_preserved" in sys.modules
+
+    def it_uses_fast_clear_instead_of_full_scan(tmp_path, monkeypatch):
+        """When known_user_modules is provided, _clear_user_modules_fast is used."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_fast_target")
+        known = frozenset(["some_module"])
+
+        with (
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+            patch("pytest_leela.runner._clear_user_modules_fast") as mock_fast,
+            patch("pytest_leela.runner._clear_user_modules") as mock_full,
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_fast_target": source},
+                {"opt_fast_target": str(tmp_path / "opt_fast_target.py")},
+                test_dir=str(tmp_path),
+                known_user_modules=known,
+            )
+
+        # Fast path called at both pre-test and finally cleanup sites
+        assert mock_fast.call_count == 2
+        mock_full.assert_not_called()
+
+    def it_falls_back_to_full_scan_without_known_user_modules(tmp_path, monkeypatch):
+        """Without known_user_modules, the original _clear_user_modules is used."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source, mutant = _make_mutant(tmp_path, "opt_fallback_target")
+
+        with (
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+            patch("pytest_leela.runner._clear_user_modules_fast") as mock_fast,
+            patch("pytest_leela.runner._clear_user_modules") as mock_full,
+        ):
+            run_tests_for_mutant(
+                mutant,
+                {"opt_fallback_target": source},
+                {"opt_fallback_target": str(tmp_path / "opt_fallback_target.py")},
+                test_dir=str(tmp_path),
+            )
+
+        mock_fast.assert_not_called()
+        assert mock_full.call_count == 2
+
+
+<<<<<<< HEAD
+def describe_bytecode_artifacts():
+    def it_uses_the_installed_pytest_rewrite_tag():
+        from _pytest.assertion.rewrite import PYTEST_TAG
+        from pytest_leela.runner import _pytest_rewrite_tag
+
+        assert _pytest_rewrite_tag() == PYTEST_TAG
+
+    def it_returns_both_exact_cache_paths_without_sibling_artifacts(tmp_path):
+        import importlib.util
+        import py_compile
+        import subprocess
+        from pathlib import Path
+
+        from _pytest.assertion.rewrite import PYTEST_TAG
+        from pytest_leela.runner import _bytecode_artifacts
+
+        source = tmp_path / "test_cached.py"
+        source.write_text("def test_cached():\n    assert 1 + 1 == 2\n")
+        cpython_cache = Path(py_compile.compile(str(source), doraise=True))
+        rewrite_cache = cpython_cache.parent / f"test_cached.{PYTEST_TAG}.pyc"
+        # The rewriter's cache is generated by an ordinary pytest run.
+        subprocess.run(
+            [sys.executable, "-m", "pytest", str(source), "-q", "-p", "no:leela"],
+            check=True,
+            capture_output=True,
+        )
+        assert rewrite_cache.is_file()
+        sibling = source.with_name("sibling.py")
+        sibling.write_text("value = 1\n")
+        sibling_cache = Path(py_compile.compile(str(sibling), doraise=True))
+
+        assert cpython_cache == Path(importlib.util.cache_from_source(str(source)))
+        assert _bytecode_artifacts(source) == [cpython_cache, rewrite_cache]
+        assert sibling_cache.is_file()
+
+    def it_returns_no_artifacts_for_uncached_source(tmp_path):
+        from pytest_leela.runner import _bytecode_artifacts
+
+        source = tmp_path / "uncached.py"
+        source.write_text("value = 1\n")
+        assert _bytecode_artifacts(source) == []
+
+
+def describe_prepare_fresh_dependencies():
+    def it_removes_stale_bytecode_only_once_per_source(tmp_path):
+        import py_compile
+        from pathlib import Path
+
+        from pytest_leela.runner import _prepare_fresh_dependencies
+
+        source = tmp_path / "dependency.py"
+        source.write_text("value = 1\n")
+        cache = Path(py_compile.compile(str(source), doraise=True))
+        prepared = set()
+
+        _prepare_fresh_dependencies({source}, prepared)
+
+        assert prepared == {source}
+        assert not cache.exists()
+        # A later import rebuilds bytecode; the same run must preserve it.
+        rebuilt = Path(py_compile.compile(str(source), doraise=True))
+        _prepare_fresh_dependencies({source}, prepared)
+        assert rebuilt.is_file()
+        assert prepared == {source}
+
+
+def describe_selection_source_files():
+    def it_includes_python_node_ids_and_ancestor_configuration(tmp_path):
+        from pytest_leela.runner import _selection_source_files
+
+        package = tmp_path / "checks"
+        package.mkdir()
+        source = package / "test_selected.py"
+        source.write_text("def test_selected():\n    assert True\n")
+        conftest = tmp_path / "conftest.py"
+        conftest.write_text("")
+        init = package / "__init__.py"
+        init.write_text("")
+        unselected = package / "test_other.py"
+        unselected.write_text("def test_other():\n    assert True\n")
+
+        files = _selection_source_files([f"{source}::test_selected"])
+
+        assert {source.resolve(), conftest.resolve(), init.resolve()} <= files
+        assert unselected.resolve() not in files
+
+    def it_ignores_missing_python_files_and_non_python_selections(tmp_path):
+        from pytest_leela.runner import _selection_source_files
+
+        text = tmp_path / "cases.txt"
+        text.write_text("case\n")
+        missing = tmp_path / "test_missing.py"
+
+        assert _selection_source_files([str(text), f"{missing}::test_missing"]) == set()
+=======
+_ONCE_ONLY_EXT = (
+    "import builtins\n"
+    "\n"
+    "# Stand-in for a C extension (numpy's _multiarray_umath and friends):\n"
+    "# executing it a second time in one process raises, exactly as CPython\n"
+    "# does for single-phase-init extension modules.\n"
+    "_FLAG = '_leela_once_only_ext_loaded'\n"
+    "if getattr(builtins, _FLAG, False):\n"
+    "    raise ImportError('cannot load module more than once per process')\n"
+    "setattr(builtins, _FLAG, True)\n"
+)
+
+
+def describe_run_tests_for_mutant_with_venv_inside_project():
+    """Regression: a virtualenv under the project cwd (uv's ``.venv``) must
+    not have its packages evicted between mutants.  Evicting them makes a
+    once-only extension fail to re-import, and that crash used to be scored
+    as a kill."""
+
+    def _make_project(tmp_path, monkeypatch):
+        import builtins
+
+        site_packages = tmp_path / ".venv" / "lib" / "python3.13" / "site-packages"
+        site_packages.mkdir(parents=True)
+        (site_packages / "once_only_ext.py").write_text(_ONCE_ONLY_EXT)
+
+        source = "import once_only_ext\n\n\ndef add(a, b):\n    return a + b\n"
+        target = tmp_path / "venv_calc.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "venv_calc_tests"
+        test_dir.mkdir()
+        # Deliberately weak: add(0, 0) == 0 also holds for a - b, so the
+        # Add -> Sub mutant must SURVIVE.  The import is inside the test so
+        # a broken re-import surfaces as a test failure, not a collection
+        # error.
+        (test_dir / "test_venv_calc.py").write_text(
+            "def test_add_zeros():\n"
+            "    from venv_calc import add\n"
+            "    assert add(0, 0) == 0\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(site_packages))
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setattr(
+            builtins, "_leela_once_only_ext_loaded", False, raising=False
+        )
+        for name in ("once_only_ext", "venv_calc"):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+
+        # Prime the extension as the outer pytest session would have.
+        ext = importlib.import_module("once_only_ext")
+
+        points = find_mutation_points(source, str(target), "venv_calc")
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        return source, target, test_dir, mutant, ext
+
+    def it_reports_a_weakly_tested_mutant_as_survived(tmp_path, monkeypatch):
+        source, target, test_dir, mutant, _ = _make_project(tmp_path, monkeypatch)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"venv_calc": source},
+            {"venv_calc": str(target)},
+            test_dir=str(test_dir),
+            known_user_modules=precompute_user_modules(),
+        )
+
+        assert result.status == "survived"
+        assert result.killed is False
+        assert result.tests_run == 1
+        assert result.killing_tests == []
+
+    def it_reports_survived_on_the_full_scan_path_too(tmp_path, monkeypatch):
+        source, target, test_dir, mutant, _ = _make_project(tmp_path, monkeypatch)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"venv_calc": source},
+            {"venv_calc": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "survived"
+        assert result.killed is False
+
+    def it_keeps_the_extension_loaded_across_mutants(tmp_path, monkeypatch):
+        source, target, test_dir, mutant, ext = _make_project(tmp_path, monkeypatch)
+
+        run_tests_for_mutant(
+            mutant,
+            {"venv_calc": source},
+            {"venv_calc": str(target)},
+            test_dir=str(test_dir),
+            known_user_modules=precompute_user_modules(),
+        )
+
+        assert sys.modules["once_only_ext"] is ext
+
+
+def describe_run_tests_for_mutant_inner_run_errors():
+    """A mutant whose inner run never exercised a test is an ERROR — neither
+    a kill (nothing caught it) nor a survival (nothing ran)."""
+
+    def it_kills_a_mutant_that_makes_the_target_raise_on_import(tmp_path, monkeypatch):
+        """The suite went red: every test importing the target errored.
+
+        Add -> Sub makes DIVISOR zero, so executing the mutated module raises
+        and the test file errors during collection.
+        """
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        target = tmp_path / "collect_err_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "collect_err_tests"
+        test_dir.mkdir()
+        (test_dir / "test_collect_err_target.py").write_text(
+            "from collect_err_target import RATIO\n\n"
+            "def test_ratio():\n"
+            "    assert RATIO > 0\n"
+        )
+
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        points = find_mutation_points(source, str(target), "collect_err_target")
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"collect_err_target": source},
+            {"collect_err_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 0
+        assert result.killing_test == "collect_err_tests/test_collect_err_target.py"
+        assert result.killing_tests == ["collect_err_tests/test_collect_err_target.py"]
+
+    def it_kills_when_a_test_module_fails_to_collect_under_the_mutant(
+        tmp_path, monkeypatch
+    ):
+        """The target imports fine; the *test* module raises at import, which
+        the green baseline rules out without the mutant: a detection."""
+        source = "LIMIT = 1 + 1\n"
+        target = tmp_path / "coll_outside_target.py"
+        target.write_text(source)
+        test_dir = tmp_path / "coll_outside_tests"
+        test_dir.mkdir()
+        (test_dir / "test_coll_outside.py").write_text(
+            "from coll_outside_target import LIMIT\n\n"
+            "if LIMIT != 2:\n"
+            "    raise RuntimeError('limit changed')\n\n"
+            "def test_limit():\n"
+            "    assert True\n"
+        )
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        points = find_mutation_points(source, str(target), "coll_outside_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"coll_outside_target": source},
+            {"coll_outside_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        assert result.killing_tests == ["coll_outside_tests/test_coll_outside.py"]
+        assert result.tests_run == 0
+
+    def it_names_the_failed_import_when_no_collection_report_exists(
+        tmp_path, monkeypatch
+    ):
+        """A conftest importing the broken target yields no collect report."""
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        target = tmp_path / "conftest_target.py"
+        target.write_text(source)
+        test_dir = tmp_path / "conftest_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text("import conftest_target\n")
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        points = find_mutation_points(source, str(target), "conftest_target")
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"conftest_target": source},
+            {"conftest_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        [killing_test] = result.killing_tests
+        # The exception message differs between Python versions.
+        assert killing_test.startswith("<import of conftest_target: ZeroDivisionError:")
+
+
+def _isolated_scope_env(monkeypatch, prefix, site_packages=(), user_site="/nowhere"):
+    """Pin every environment root ProjectModuleScope reads."""
+    for attr in ("prefix", "base_prefix", "exec_prefix", "base_exec_prefix"):
+        monkeypatch.setattr(sys, attr, str(prefix))
+    monkeypatch.setattr(
+        "pytest_leela.runner.site.getsitepackages", lambda: list(site_packages)
+    )
+    monkeypatch.setattr(
+        "pytest_leela.runner.site.getusersitepackages", lambda: str(user_site)
+    )
+
+
+def describe_ProjectModuleScope():
+    def it_defaults_cwd_to_the_working_directory(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        assert ProjectModuleScope().cwd == str(tmp_path) + os.sep
+
+    def it_uses_an_explicit_cwd_over_the_working_directory(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        other = tmp_path / "other"
+        assert ProjectModuleScope(str(other)).cwd == str(other) + os.sep
+
+    def it_contains_project_source_under_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(tmp_path / "app" / "models.py")) is True
+
+    def it_excludes_files_outside_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path / "proj"))
+        assert scope.contains(str(tmp_path / "elsewhere.py")) is False
+
+    def it_excludes_a_sibling_directory_sharing_the_cwd_prefix(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path / "proj"))
+        assert scope.contains(str(tmp_path / "proj2" / "x.py")) is False
+
+    def it_excludes_the_active_venv_inside_cwd(tmp_path, monkeypatch):
+        """sys.prefix under the project (uv's .venv) is not project source,
+        even for a file outside any site-packages directory."""
+        venv = tmp_path / ".venv"
+        _isolated_scope_env(monkeypatch, venv)
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(venv / "lib" / "python3.13" / "x.py")) is False
+
+    def it_excludes_reported_site_packages_dirs(tmp_path, monkeypatch):
+        pkgs = tmp_path / "env" / "pkgs"
+        _isolated_scope_env(monkeypatch, "/opt/py", site_packages=[pkgs])
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(pkgs / "numpy" / "__init__.py")) is False
+
+    def it_excludes_the_user_site_dir(tmp_path, monkeypatch):
+        user = tmp_path / "user-site"
+        _isolated_scope_env(monkeypatch, "/opt/py", user_site=user)
+        scope = ProjectModuleScope(str(tmp_path))
+        assert scope.contains(str(user / "requests.py")) is False
+
+    def it_excludes_any_site_packages_segment_below_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path))
+        path = tmp_path / "other-venv" / "lib" / "site-packages" / "np.py"
+        assert scope.contains(str(path)) is False
+
+    def it_excludes_any_dist_packages_segment_below_cwd(tmp_path, monkeypatch):
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        scope = ProjectModuleScope(str(tmp_path))
+        path = tmp_path / "usr" / "lib" / "dist-packages" / "np.py"
+        assert scope.contains(str(path)) is False
+
+    def it_ignores_package_segments_above_cwd(tmp_path, monkeypatch):
+        """Only the part of the path below cwd is checked for segments."""
+        _isolated_scope_env(monkeypatch, "/opt/py")
+        cwd = tmp_path / "site-packages" / "proj"
+        scope = ProjectModuleScope(str(cwd))
+        assert scope.contains(str(cwd / "app.py")) is True
+
+    def it_ignores_an_environment_root_that_contains_cwd(tmp_path, monkeypatch):
+        """A system Python at /usr with the project in /usr/src/app (or
+        ``python -m venv .``) must not exclude every project file."""
+        _isolated_scope_env(
+            monkeypatch, tmp_path, site_packages=[tmp_path], user_site=tmp_path
+        )
+        scope = ProjectModuleScope(str(tmp_path / "src" / "app"))
+        assert scope.environment_roots == ()
+        assert scope.contains(str(tmp_path / "src" / "app" / "views.py")) is True
+
+    def it_keeps_environment_roots_that_do_not_contain_cwd(tmp_path, monkeypatch):
+        venv = tmp_path / ".venv"
+        _isolated_scope_env(monkeypatch, venv, site_packages=[venv / "sp"])
+        scope = ProjectModuleScope(str(tmp_path))
+        # Sorted, so the order depends on where tmp_path lives.
+        assert scope.environment_roots == tuple(
+            sorted(["/nowhere" + os.sep, str(venv) + os.sep, str(venv / "sp") + os.sep])
+        )
+
+    def describe_module_names():
+        def it_lists_loaded_project_modules(tmp_path, monkeypatch):
+            mod = types.ModuleType("_scope_project_mod")
+            mod.__file__ = str(tmp_path / "proj_mod.py")
+            monkeypatch.setitem(sys.modules, "_scope_project_mod", mod)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "_scope_project_mod" in names
+            assert isinstance(names, frozenset)
+
+        def it_skips_installed_packages_under_cwd(tmp_path, monkeypatch):
+            mod = types.ModuleType("_scope_venv_mod")
+            mod.__file__ = str(tmp_path / ".venv" / "site-packages" / "m.py")
+            monkeypatch.setitem(sys.modules, "_scope_venv_mod", mod)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "_scope_venv_mod" not in names
+
+        def it_skips_keep_prefix_modules(tmp_path, monkeypatch):
+            mod = types.ModuleType("pytest_leela._scope_kept")
+            mod.__file__ = str(tmp_path / "kept.py")
+            monkeypatch.setitem(sys.modules, "pytest_leela._scope_kept", mod)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "pytest_leela._scope_kept" not in names
+
+        def it_skips_none_and_fileless_modules(tmp_path, monkeypatch):
+            fileless = types.ModuleType("_scope_fileless")
+            fileless.__file__ = None
+            monkeypatch.setitem(sys.modules, "_scope_fileless", fileless)
+            monkeypatch.setitem(sys.modules, "_scope_none", None)
+            names = ProjectModuleScope(str(tmp_path)).module_names()
+            assert "_scope_fileless" not in names
+            assert "_scope_none" not in names
+
+
+def describe_clear_user_modules_with_venv_inside_cwd():
+    def it_keeps_installed_packages_under_cwd(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        mod = types.ModuleType("_venv_pkg_mod")
+        mod.__file__ = str(tmp_path / ".venv" / "lib" / "site-packages" / "p.py")
+        monkeypatch.setitem(sys.modules, "_venv_pkg_mod", mod)
+
+        _clear_user_modules()
+
+        assert "_venv_pkg_mod" in sys.modules
+
+    def it_keeps_installed_packages_out_of_the_precomputed_set(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        mod = types.ModuleType("_venv_pkg_pre")
+        mod.__file__ = str(tmp_path / ".venv" / "lib" / "site-packages" / "p.py")
+        monkeypatch.setitem(sys.modules, "_venv_pkg_pre", mod)
+
+        assert "_venv_pkg_pre" not in precompute_user_modules()
+
+
+def describe_ResultCollector_collection_errors():
+    def it_records_failed_collection_reports_with_their_summary():
+        collector = _ResultCollector()
+        collector.pytest_collectreport(
+            _FakeCollectReport(
+                "tests/test_x.py",
+                failed=True,
+                longreprtext="trace\nE   ImportError: nope\n",
+            )
+        )
+        assert collector.collection_errors == ["tests/test_x.py: ImportError: nope"]
+        assert collector.collection_error_ids == ["tests/test_x.py"]
+
+    def it_records_just_the_nodeid_when_the_report_has_no_text():
+        collector = _ResultCollector()
+        collector.pytest_collectreport(
+            _FakeCollectReport("tests/test_y.py", failed=True, longreprtext="")
+        )
+        assert collector.collection_errors == ["tests/test_y.py"]
+
+    def it_ignores_successful_collection_reports():
+        collector = _ResultCollector()
+        collector.pytest_collectreport(_FakeCollectReport("tests/test_x.py", False))
+        assert collector.collection_errors == []
+
+
+def describe_exception_summary():
+    def it_returns_the_last_non_blank_line_stripped():
+        assert _exception_summary("first\n  second  \n\n   \n") == "second"
+
+    def it_drops_pytests_error_marker():
+        assert _exception_summary("trace\nE   ValueError: x\n") == "ValueError: x"
+
+    def it_keeps_a_summary_that_only_starts_with_e():
+        assert _exception_summary("Exit: done") == "Exit: done"
+
+    def it_returns_none_for_empty_text():
+        assert _exception_summary("") is None
+
+    def it_returns_none_for_whitespace_only_text():
+        assert _exception_summary("  \n \n") is None
+
+
+def describe_inner_run_error():
+    def _collector(total=0, collection_errors=()):
+        collector = _ResultCollector()
+        collector.total = total
+        collector.collection_errors = list(collection_errors)
+        return collector
+
+    def it_is_none_when_tests_ran_and_passed():
+        assert _inner_run_error(pytest.ExitCode.OK, _collector(total=2)) is None
+
+    def it_is_none_for_tests_failed_exit_code_with_tests_run():
+        assert _inner_run_error(pytest.ExitCode.TESTS_FAILED, _collector(1)) is None
+
+    def it_names_an_abnormal_exit_code():
+        reason = _inner_run_error(pytest.ExitCode.INTERRUPTED, _collector(total=1))
+        assert reason == "pytest exited with INTERRUPTED"
+
+    def it_accepts_a_plain_int_exit_code():
+        reason = _inner_run_error(4, _collector(total=1))
+        assert reason == "pytest exited with USAGE_ERROR"
+
+    def it_labels_an_exit_code_pytest_does_not_define():
+        """A plugin can set any int as the session exit status."""
+        reason = _inner_run_error(42, _collector(total=1))
+        assert reason == "pytest exited with exit code 42"
+
+    def it_appends_every_collection_error():
+        reason = _inner_run_error(
+            pytest.ExitCode.INTERRUPTED,
+            _collector(collection_errors=["a.py: E1", "b.py: E2"]),
+        )
+        assert reason == "pytest exited with INTERRUPTED (a.py: E1; b.py: E2)"
+
+    def it_reports_zero_tests_run_on_a_clean_exit():
+        assert _inner_run_error(pytest.ExitCode.OK, _collector(total=0)) == (
+            "no tests ran"
+        )
+
+
+def describe_run_tests_for_mutant_classification():
+    """Each branch of the kill / survive / error decision, driven by a fake
+    inner ``pytest.main`` that feeds the result collector directly."""
+
+    def _mutant(tmp_path, monkeypatch, name):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / f"{name}.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), name)
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        return mutant, {name: source}, {name: str(target)}
+
+    def _fake_main(reports, exit_code):
+        def fake(args, plugins=None):
+            for report in reports:
+                plugins[0].pytest_runtest_logreport(report)
+            return exit_code
+
+        return fake
+
+    def _run(tmp_path, monkeypatch, name, reports, exit_code):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, name)
+        with patch(
+            "pytest_leela.runner.pytest.main",
+            side_effect=_fake_main(reports, exit_code),
+        ):
+            return run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+
+    def it_survives_when_tests_ran_and_passed(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_survive",
+            [_FakeReport("t::a", "call", passed=True, failed=False)],
+            pytest.ExitCode.OK,
+        )
+        assert result.status == "survived"
+        assert result.error is None
+        assert result.tests_run == 1
+        assert result.test_ids_run == ["t::a"]
+
+    def it_kills_on_a_failing_test(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_fail",
+            [
+                _FakeReport("t::a", "call", passed=True, failed=False),
+                _FakeReport("t::b", "call", passed=False, failed=True),
+            ],
+            pytest.ExitCode.TESTS_FAILED,
+        )
+        assert result.status == "killed"
+        assert result.killing_test == "t::b"
+        assert result.killing_tests == ["t::b"]
+        assert result.test_ids_run == ["t::a", "t::b"]
+
+    def it_classifies_a_setup_error_as_inconclusive_without_causal_proof(
+        tmp_path, monkeypatch
+    ):
+        """With a mocked inner run the clean control also 'fails', so the
+        setup error cannot be proven causal: report inconclusive error."""
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_setup",
+            [_FakeReport("t::c", "setup", passed=False, failed=True)],
+            pytest.ExitCode.TESTS_FAILED,
+        )
+        assert result.status == "error"
+        assert result.tests_run == 0
+        assert "inconclusive" in result.error
+        assert "setup: t::c" in result.error
+
+    def it_lists_only_call_failures_when_call_and_setup_both_fail(
+        tmp_path, monkeypatch
+    ):
+        """Call-phase assertion failures are definite kills; setup errors
+        alongside them are incidental and excluded from killing_tests."""
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_order",
+            [
+                _FakeReport("t::e", "setup", passed=False, failed=True),
+                _FakeReport("t::f", "call", passed=False, failed=True),
+            ],
+            pytest.ExitCode.TESTS_FAILED,
+        )
+        assert result.status == "killed"
+        assert result.killing_test == "t::f"
+        assert result.killing_tests == ["t::f"]
+
+    def it_errors_when_no_tests_ran(tmp_path, monkeypatch):
+        result = _run(tmp_path, monkeypatch, "cls_none", [], pytest.ExitCode.OK)
+        assert result.status == "error"
+        assert result.killed is False
+        assert result.error == "no tests ran"
+
+    def it_errors_on_no_tests_collected(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path, monkeypatch, "cls_nocoll", [], pytest.ExitCode.NO_TESTS_COLLECTED
+        )
+        assert result.status == "error"
+        assert result.error == "pytest exited with NO_TESTS_COLLECTED"
+
+    def it_errors_on_an_interrupted_run_even_after_passes(tmp_path, monkeypatch):
+        result = _run(
+            tmp_path,
+            monkeypatch,
+            "cls_intr",
+            [_FakeReport("t::a", "call", passed=True, failed=False)],
+            pytest.ExitCode.INTERRUPTED,
+        )
+        assert result.status == "error"
+        assert result.error == "pytest exited with INTERRUPTED"
+
+    def it_errors_when_the_runner_raises_system_exit_without_timeout(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "cls_sysexit")
+        with patch("pytest_leela.runner.pytest.main", side_effect=SystemExit(3)):
+            result = run_tests_for_mutant(
+                mutant, sources, files, test_dir=str(tmp_path)
+            )
+        assert result.status == "error"
+        assert result.error == "pytest crashed: SystemExit: 3"
+        assert result.killing_tests == []
+
+    def it_keeps_packages_the_inner_run_imported_from_a_venv_in_cwd(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "cls_venv_new")
+        pkg_file = str(tmp_path / ".venv" / "lib" / "site-packages" / "fresh.py")
+
+        def fake(args, plugins=None):
+            mod = types.ModuleType("_fresh_venv_pkg")
+            mod.__file__ = pkg_file
+            sys.modules["_fresh_venv_pkg"] = mod
+            return 0
+
+        try:
+            with patch("pytest_leela.runner.pytest.main", side_effect=fake):
+                run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+            assert "_fresh_venv_pkg" in sys.modules
+        finally:
+            sys.modules.pop("_fresh_venv_pkg", None)
+
+
+class _FakeAppConfig:
+    def __init__(self, name, models_module):
+        self.name = name
+        self.models_module = models_module
+
+
+class _FakeApps:
+    """Stand-in for ``django.apps.apps`` (the app registry)."""
+
+    def __init__(self, ready, app_models):
+        # app_models: {app name: models module name, or None}
+        self.ready = ready
+        self._configs = [
+            _FakeAppConfig(app, types.ModuleType(models) if models else None)
+            for app, models in app_models.items()
+        ]
+
+    def get_app_configs(self):
+        return self._configs
+
+
+def describe_django_registry_module_names():
+    def it_is_empty_without_django(monkeypatch):
+        monkeypatch.setattr("pytest_leela.runner._django_apps", None)
+        assert _django_registry_module_names() == frozenset()
+
+    def it_is_empty_before_django_is_set_up(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(False, {"shop": "shop.models"}),
+        )
+        monkeypatch.setitem(sys.modules, "shop.models", types.ModuleType("x"))
+        assert _django_registry_module_names() == frozenset()
+
+    def it_lists_loaded_model_and_admin_modules_with_submodules(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(
+                True,
+                {"shop": "shop.models", "pages": None, "blog": "blog.models"},
+            ),
+        )
+        for name in (
+            "shop.models",
+            "shop.models.order",
+            "shop.models_extra",
+            "shop.admin",
+            "shop.admin.inlines",
+            "shop.admin_utils",
+            "shop.views",
+            "pages.admin",
+            "blog.models",
+        ):
+            monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+
+        names = _django_registry_module_names()
+
+        assert {
+            "shop.models",
+            "shop.models.order",
+            "shop.admin",
+            "shop.admin.inlines",
+            "pages.admin",
+            "blog.models",
+        } <= names
+        assert names.isdisjoint({"shop.models_extra", "shop.admin_utils", "shop.views"})
+
+    def it_lists_only_modules_that_are_loaded(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(True, {"_unloaded_app": "_unloaded_app.models"}),
+        )
+        assert _django_registry_module_names() == frozenset()
+
+    def it_keeps_registry_modules_out_of_the_eviction_set(tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(True, {"_shop": "_shop.models"}),
+        )
+        for name in ("_shop.models", "_shop.admin", "_shop.views"):
+            mod = types.ModuleType(name)
+            mod.__file__ = str(tmp_path / f"{name}.py")
+            monkeypatch.setitem(sys.modules, name, mod)
+
+        names = ProjectModuleScope(str(tmp_path)).module_names()
+
+        assert "_shop.models" not in names
+        assert "_shop.admin" not in names
+        assert "_shop.views" in names
+
+
+def describe_referenced_closure():
+    def _install(monkeypatch, name, **attrs):
+        mod = types.ModuleType(name)
+        for key, value in attrs.items():
+            setattr(mod, key, value)
+        monkeypatch.setitem(sys.modules, name, mod)
+        return mod
+
+    def it_pins_modules_referenced_through_classes_and_module_objects(monkeypatch):
+        """models -> (class from) mixins -> (module object) helpers."""
+        helpers = _install(monkeypatch, "_rc_helpers")
+        mixin = type("Mixin", (), {"__module__": "_rc_mixins"})
+        _install(monkeypatch, "_rc_mixins", helpers=helpers)
+        _install(monkeypatch, "_rc_models", Mixin=mixin)
+        _install(monkeypatch, "_rc_views")
+
+        pinned = _referenced_closure(
+            frozenset({"_rc_models"}),
+            {"_rc_mixins", "_rc_helpers", "_rc_views"},
+        )
+
+        assert pinned == {"_rc_models", "_rc_mixins", "_rc_helpers"}
+
+    def it_ignores_references_outside_the_candidates(monkeypatch):
+        _install(monkeypatch, "_rc_only_root", path=os.path, ref=os.path.join)
+
+        pinned = _referenced_closure(frozenset({"_rc_only_root"}), {"_rc_other"})
+
+        assert pinned == {"_rc_only_root"}
+
+    def it_terminates_on_reference_cycles(monkeypatch):
+        a = _install(monkeypatch, "_rc_cycle_a")
+        b = _install(monkeypatch, "_rc_cycle_b", a=a)
+        a.b = b
+
+        pinned = _referenced_closure(frozenset({"_rc_cycle_a"}), {"_rc_cycle_b"})
+
+        assert pinned == {"_rc_cycle_a", "_rc_cycle_b"}
+
+    def it_keeps_a_registry_modules_dependency_out_of_the_eviction_set(
+        tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps",
+            _FakeApps(True, {"_dep": "_dep.models"}),
+        )
+        mixin = type("Mixin", (), {"__module__": "_dep.mixins"})
+        for name, attrs in (
+            ("_dep.models", {"Mixin": mixin}),
+            ("_dep.mixins", {}),
+            ("_dep.views", {}),
+        ):
+            mod = _install(monkeypatch, name, **attrs)
+            mod.__file__ = str(tmp_path / f"{name}.py")
+
+        names = ProjectModuleScope(str(tmp_path)).module_names()
+
+        assert "_dep.mixins" not in names
+        assert "_dep.views" in names
+
+
+def describe_run_tests_for_mutant_real_inner_outcomes():
+    """The kill / error branches, each driven by a real inner pytest run."""
+
+    def _mutant(tmp_path, monkeypatch, name):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / f"{name}.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), name)
+        point = next(p for p in points if p.node_type == "BinOp")
+        return (
+            Mutant(point=point, replacement_op="Sub", mutant_id=0),
+            {name: source},
+            {name: str(target)},
+        )
+
+    def it_errors_when_every_test_is_skipped(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_skip")
+        test_dir = tmp_path / "real_skip_tests"
+        test_dir.mkdir()
+        (test_dir / "test_skip.py").write_text(
+            "import pytest\n\n"
+            "@pytest.mark.skip(reason='off')\n"
+            "def test_off():\n"
+            "    pass\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == "no tests ran"
+
+    def it_errors_when_nothing_is_collected(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_empty")
+        test_dir = tmp_path / "real_empty_tests"
+        test_dir.mkdir()
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with NO_TESTS_COLLECTED"
+
+    def it_errors_when_a_test_id_does_not_exist(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_nope")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_ids=["nope.py::x"])
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with USAGE_ERROR"
+
+    def it_keeps_a_green_run_survived_when_an_import_error_was_caught(
+        tmp_path, monkeypatch
+    ):
+        """Regression: the mutated module raised on import, but the test caught
+        it and the run completed green, so nothing detected the mutant."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        (tmp_path / "caught_calc.py").write_text(source)
+        test_dir = tmp_path / "caught_tests"
+        test_dir.mkdir()
+        (test_dir / "test_caught.py").write_text(
+            "try:\n"
+            "    import caught_calc\n"
+            "except Exception:\n"
+            "    caught_calc = None\n\n\n"
+            "def test_ratio_if_available():\n"
+            "    if caught_calc is None:\n"
+            "        return\n"
+            "    assert caught_calc.RATIO in (5, 10, 5.0, 10.0, 0, 20)\n"
+        )
+        points = find_mutation_points(
+            source, str(tmp_path / "caught_calc.py"), "caught_calc"
+        )
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"caught_calc": source},
+            {"caught_calc": str(tmp_path / "caught_calc.py")},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "survived"
+        assert result.tests_run == 1
+        assert result.killing_tests == []
+
+    def _import_skip_run(tmp_path, monkeypatch, name, test_source, by_id=False):
+        """Run Add -> Sub on ``DIVISOR = 1 + 1``, whose import then raises.
+
+        *by_id* passes the test's node id, as coverage-based selection does.
+        """
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        (tmp_path / f"{name}.py").write_text(source)
+        test_dir = tmp_path / f"{name}_tests"
+        test_dir.mkdir()
+        (test_dir / f"test_{name}.py").write_text(test_source)
+        points = find_mutation_points(source, str(tmp_path / f"{name}.py"), name)
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        if by_id:
+            return run_tests_for_mutant(
+                mutant,
+                {name: source},
+                {name: str(tmp_path / f"{name}.py")},
+                test_ids=[f"{name}_tests/test_{name}.py::test_ratio"],
+            )
+        return run_tests_for_mutant(
+            mutant,
+            {name: source},
+            {name: str(tmp_path / f"{name}.py")},
+            test_dir=str(test_dir),
+        )
+
+    def it_errors_when_a_module_level_skip_hides_an_import_error(tmp_path, monkeypatch):
+        """Regression: the import error turns into a module-level skip, pytest
+        exits NO_TESTS_COLLECTED, a green outcome: no kill, nothing tested."""
+        result = _import_skip_run(
+            tmp_path,
+            monkeypatch,
+            "modskip_calc",
+            "import pytest\n\n"
+            "try:\n"
+            "    import modskip_calc\n"
+            "except Exception:\n"
+            "    pytest.skip('unavailable', allow_module_level=True)\n\n\n"
+            "def test_ratio():\n"
+            "    assert modskip_calc.RATIO == 5\n",
+        )
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with NO_TESTS_COLLECTED"
+        assert result.killing_tests == []
+        assert result.tests_run == 0
+
+    def it_errors_when_a_module_level_skip_hides_a_selected_test(tmp_path, monkeypatch):
+        """Regression: with the test selected by node id, the skipped module
+        leaves the id unmatched and pytest exits USAGE_ERROR after the session
+        started.  Still green: no kill."""
+        result = _import_skip_run(
+            tmp_path,
+            monkeypatch,
+            "idskip_calc",
+            "import pytest\n\n"
+            "try:\n"
+            "    import idskip_calc\n"
+            "except Exception:\n"
+            "    pytest.skip('unavailable', allow_module_level=True)\n\n\n"
+            "def test_ratio():\n"
+            "    assert idskip_calc.RATIO == 5\n",
+            by_id=True,
+        )
+
+        assert result.status == "error"
+        assert result.error == "pytest exited with USAGE_ERROR"
+        assert result.killing_tests == []
+        assert result.tests_run == 0
+
+    def it_errors_when_a_skip_marker_hides_an_import_error(tmp_path, monkeypatch):
+        """Regression: every test skips at setup, pytest exits OK with zero
+        tests run, a green outcome: no kill, nothing tested."""
+        result = _import_skip_run(
+            tmp_path,
+            monkeypatch,
+            "markskip_calc",
+            "import pytest\n\n"
+            "try:\n"
+            "    import markskip_calc\n"
+            "except Exception:\n"
+            "    markskip_calc = None\n\n\n"
+            "@pytest.mark.skipif(markskip_calc is None, reason='unavailable')\n"
+            "def test_ratio():\n"
+            "    assert markskip_calc.RATIO == 5\n",
+        )
+
+        assert result.status == "error"
+        assert result.error == "no tests ran"
+        assert result.killing_tests == []
+        assert result.tests_run == 0
+
+    def it_kills_on_a_real_setup_error(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(tmp_path, monkeypatch, "real_setup")
+        test_dir = tmp_path / "real_setup_tests"
+        test_dir.mkdir()
+        (test_dir / "test_setup.py").write_text(
+            "import pytest\n"
+            "from real_setup import add\n\n"
+            "@pytest.fixture\n"
+            "def three():\n"
+            "    assert add(1, 2) == 3\n"
+            "    return 3\n\n"
+            "def test_uses_fixture(three):\n"
+            "    assert three\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "killed"
+        assert result.tests_run == 0
+        assert result.killing_test == (
+            "real_setup_tests/test_setup.py::test_uses_fixture"
+        )
+
+
+def describe_scope_is_passed_down():
+    def it_uses_the_given_scope_instead_of_building_one(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "scope_down.py"
+        target.write_text(source)
+        points = find_mutation_points(source, str(target), "scope_down")
+        mutant = Mutant(point=points[0], replacement_op="Sub", mutant_id=0)
+        scope = ProjectModuleScope(str(tmp_path))
+
+        with (
+            patch("pytest_leela.runner.ProjectModuleScope", side_effect=AssertionError),
+            patch("pytest_leela.runner.pytest.main", return_value=0),
+        ):
+            result = run_tests_for_mutant(
+                mutant,
+                {"scope_down": source},
+                {"scope_down": str(target)},
+                test_dir=str(tmp_path),
+                scope=scope,
+            )
+
+        assert result.status == "error"
+
+
+def describe_InnerSession():
+    def it_has_no_import_errors_without_a_finder():
+        session = InnerSession(None, None, None, ProjectModuleScope("/p"))
+        assert session.import_errors == []
+
+    def it_reports_the_finders_import_errors():
+        finder = MutatingFinder({"m": "x = 1"}, _probe_mutant())
+        finder.import_errors.append("m: ValueError: boom")
+        session = InnerSession(finder, None, None, ProjectModuleScope("/p"))
+        assert session.import_errors == ["m: ValueError: boom"]
+
+    def it_stops_at_the_first_failure_by_default():
+        session = InnerSession(None, ["t::a"], None, ProjectModuleScope("/p"))
+        assert "-x" in session._args()
+
+    def it_runs_everything_when_exitfirst_is_off():
+        session = InnerSession(
+            None, ["t::a"], None, ProjectModuleScope("/p"), exitfirst=False
+        )
+        assert "-x" not in session._args()
+        assert session._args()[-1] == "t::a"
+
+
+def _probe_mutant():
+    point = find_mutation_points("x = 1 + 1\n", "/p/m.py", "m")[0]
+    return Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+
+class _FakeAdminSite:
+    def __init__(self, admins):
+        self._registry = {object(): admin for admin in admins}
+
+
+def describe_django_registry_admin_site_walk():
+    def it_pins_the_module_of_every_registered_model_admin(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps", _FakeApps(True, {"shop": None})
+        )
+        admin_cls = type("ItemAdmin", (), {"__module__": "_shop.site_admin"})
+        other_cls = type("PageAdmin", (), {"__module__": "_pages.custom"})
+        sites = types.ModuleType("django.contrib.admin.sites")
+        sites.all_sites = [_FakeAdminSite([admin_cls()]), _FakeAdminSite([other_cls()])]
+        monkeypatch.setitem(sys.modules, "django.contrib.admin.sites", sites)
+        for name in ("_shop.site_admin", "_pages.custom", "_shop.views"):
+            monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+
+        names = _django_registry_module_names()
+
+        assert {"_shop.site_admin", "_pages.custom"} <= names
+        assert "_shop.views" not in names
+
+    def it_skips_the_admin_walk_when_admin_was_never_imported(monkeypatch):
+        monkeypatch.setattr(
+            "pytest_leela.runner._django_apps", _FakeApps(True, {"_noadmin": None})
+        )
+        monkeypatch.delitem(sys.modules, "django.contrib.admin.sites", raising=False)
+        monkeypatch.setitem(
+            sys.modules, "_noadmin.admin", types.ModuleType("_noadmin.admin")
+        )
+
+        assert _django_registry_module_names() == frozenset({"_noadmin.admin"})
+
+
+def describe_import_error_inconclusive_rule():
+    """The mutated module raised on import: classified as an inconclusive
+    error until a clean control and a mutant confirmation prove causality."""
+
+    codes = pytest.ExitCode
+
+    @pytest.mark.parametrize(
+        ("exit_code", "session_started", "collection_failed", "error_pattern"),
+        [
+            (codes.OK, True, False, "no tests ran"),
+            (
+                codes.TESTS_FAILED,
+                True,
+                True,
+                "inconclusive: no tests ran .*phases: collection: test_x.py",
+            ),
+            (
+                codes.INTERRUPTED,
+                True,
+                True,
+                "inconclusive: pytest exited with INTERRUPTED .*phases: collection: test_x.py",
+            ),
+            (codes.INTERRUPTED, True, False, "pytest exited with INTERRUPTED"),
+            (codes.INTERNAL_ERROR, True, False, "pytest exited with INTERNAL_ERROR"),
+            (
+                codes.USAGE_ERROR,
+                False,
+                False,
+                "inconclusive: pytest exited with USAGE_ERROR; phases: import: "
+                "rule_calc_4_False_False: ZeroDivisionError",
+            ),
+            (
+                codes.USAGE_ERROR,
+                True,
+                True,
+                "inconclusive: pytest exited with USAGE_ERROR .*phases: collection: test_x.py",
+            ),
+            (codes.USAGE_ERROR, True, False, "pytest exited with USAGE_ERROR"),
+            (codes.NO_TESTS_COLLECTED, True, False, "pytest exited with NO_TESTS_COLLECTED"),
+            (99, True, False, "pytest exited with exit code 99"),
+        ],
+    )
+    def it_classifies_the_run_as_error_until_proven(
+        tmp_path,
+        monkeypatch,
+        exit_code,
+        session_started,
+        collection_failed,
+        error_pattern,
+    ):
+        name = f"rule_calc_{int(exit_code)}_{session_started}_{collection_failed}"
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+        (tmp_path / f"{name}.py").write_text(source)
+        points = find_mutation_points(source, str(tmp_path / f"{name}.py"), name)
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        def fake_main(args, plugins=None):
+            collector = plugins[0]
+            if session_started:
+                collector.pytest_sessionstart(None)
+            with pytest.raises(ZeroDivisionError):
+                importlib.import_module(name)
+            if collection_failed:
+                collector.pytest_collectreport(
+                    _FakeCollectReport("test_x.py", failed=True, longreprtext="E")
+                )
+            return exit_code
+
+        with patch("pytest_leela.runner.pytest.main", side_effect=fake_main):
+            finder = install_hook(
+                {name: source}, mutant, {name: str(tmp_path / f"{name}.py")}
+            )
+            session = InnerSession(
+                finder, None, str(tmp_path), ProjectModuleScope(str(tmp_path))
+            )
+            result = session.run().result_for(mutant)
+
+        assert result.status == "error"
+        assert result.killed is False
+        assert re.search(error_pattern, result.error or "")
+
+
+def describe_collection_failures():
+    """A test module that fails to collect under the mutant is a detection;
+    a conftest that skips or exits at import is an error, not a crash."""
+
+    calc_source = "DIVISOR = 1 + 1\nRATIO = 10 // DIVISOR\n"
+
+    def _mutant(tmp_path, monkeypatch, name, op, replacement, source=calc_source):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        (tmp_path / f"{name}.py").write_text(source)
+        points = find_mutation_points(source, str(tmp_path / f"{name}.py"), name)
+        point = next(
+            p for p in points if p.node_type == "BinOp" and p.original_op == op
+        )
+        mutant = Mutant(point=point, replacement_op=replacement, mutant_id=0)
+        return mutant, {name: source}, {name: str(tmp_path / f"{name}.py")}
+
+    def it_kills_through_tests_failed_when_two_modules_fail_to_collect(
+        tmp_path, monkeypatch
+    ):
+        """With -x and a directory, the first module's collection error makes
+        pytest stop and exit TESTS_FAILED: the path the judge's twoassert probe
+        takes.  The Session's own echo of that failure is not a killing test.
+
+        A clean control passes and the mutant failure recurs, so the collection
+        failure is proven causal and counts as a kill.
+        """
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "two_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "two_tests"
+        test_dir.mkdir()
+        for letter in "ab":
+            (test_dir / f"test_{letter}.py").write_text(
+                "import two_calc\n\n"
+                "assert two_calc.RATIO == 5\n\n\n"
+                f"def test_{letter}():\n"
+                "    assert two_calc.RATIO == 5\n"
+            )
+
+        result = run_tests_for_mutant(
+            mutant, sources, files, test_dir=str(test_dir)
+        )
+
+        assert result.status == "killed"
+        assert result.killing_tests == ["two_tests/test_a.py"]
+        assert result.tests_run == 0
+
+    def it_kills_when_a_module_level_assert_fails_under_a_non_import_mutant(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "assert_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "assert_tests"
+        test_dir.mkdir()
+        (test_dir / "test_assert.py").write_text(
+            "import assert_calc\n\n"
+            "assert assert_calc.RATIO == 5\n\n\n"
+            "def test_ratio():\n"
+            "    assert assert_calc.RATIO == 5\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "killed"
+        assert result.killing_tests == ["assert_tests/test_assert.py"]
+        assert result.tests_run == 0
+
+    def it_reports_a_conftest_skip_at_import_as_an_error(tmp_path, monkeypatch):
+        """pytest.main lets a conftest's module-level Skipped escape; leela
+        records it instead of crashing the outer run."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "confskip_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "confskip_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import pytest\n\n"
+            "try:\n"
+            "    import confskip_calc  # noqa: F401\n"
+            "except ZeroDivisionError:\n"
+            "    pytest.skip('unavailable', allow_module_level=True)\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        try:
+            result = run_tests_for_mutant(
+                mutant, sources, files, test_dir=str(test_dir)
+            )
+        except pytest.skip.Exception as exc:
+            # Escaping, it would skip this test instead of failing it.
+            pytest.fail(f"Skipped escaped run_tests_for_mutant: {exc}")
+
+        assert result.status == "error"
+        assert result.error == "pytest crashed: Skipped: unavailable"
+        assert result.killing_tests == []
+
+    def _exit_conftest(name):
+        return (
+            "import pytest\n\n"
+            "try:\n"
+            f"    import {name}  # noqa: F401\n"
+            "except ZeroDivisionError:\n"
+            "    pytest.exit('calc unavailable')\n"
+        )
+
+    def it_reports_a_conftest_exit_at_import_as_an_error(tmp_path, monkeypatch):
+        """The judge's confexit probe: pytest reports it as a conftest import
+        failure, like a broken target import, but the conftest exited on
+        purpose, as a conftest skip does: an error, not a kill."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "confexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "confexit_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(_exit_conftest("confexit_calc"))
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "conftest called pytest.exit() at import (calc unavailable)"
+        )
+        assert result.killing_tests == []
+
+    def it_reports_a_subdirectory_conftest_exit_as_an_error(tmp_path, monkeypatch):
+        """The judge's subexit probe, selected by node id as coverage does:
+        pytest loads the subdirectory conftest before the session starts."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "subexit_calc", "Add", "Sub"
+        )
+        sub = tmp_path / "subexit_tests" / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text(_exit_conftest("subexit_calc"))
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(
+            mutant, sources, files, test_ids=["subexit_tests/sub/test_c.py::test_c"]
+        )
+
+        assert result.status == "error"
+        assert result.error == (
+            "conftest called pytest.exit() at import (calc unavailable)"
+        )
+
+    def it_reports_a_test_module_exit_at_import_as_an_error(tmp_path, monkeypatch):
+        """The judge's modexit probe: the test module catches the target's
+        import error and exits, as modskip skips: an error, not a kill."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "modexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "modexit_tests"
+        test_dir.mkdir()
+        (test_dir / "test_m.py").write_text(
+            _exit_conftest("modexit_calc") + "\n\ndef test_m():\n    pass\n"
+        )
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "test module modexit_tests/test_m.py called pytest.exit() at import"
+            " (calc unavailable)"
+        )
+        assert result.killing_tests == []
+
+    def it_names_a_collection_hook_exit_by_the_node_collecting(tmp_path, monkeypatch):
+        """The judge's hookcollectexit probe: a conftest pytest_collect_file
+        hook exits while the directory, not a test module, is collecting."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "hookexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "hookexit_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import pytest\n\n\n"
+            "def pytest_collect_file(file_path, parent):\n"
+            "    try:\n"
+            "        import hookexit_calc  # noqa: F401\n"
+            "    except ZeroDivisionError:\n"
+            "        pytest.exit('calc unavailable')\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        # pytest 8 added the Dir node; pytest 7 collects files on the Session.
+        if hasattr(pytest, "Dir"):
+            node = "Dir hookexit_tests"
+        else:
+            node = f"Session {tmp_path.name}"
+        assert result.status == "error"
+        assert result.killing_tests == []
+        assert result.error == (
+            f"pytest.exit() while collecting {node} (calc unavailable)"
+        )
+
+    def it_names_a_conftest_check_failing_before_the_session(tmp_path, monkeypatch):
+        """The judge's confassert probe: the error names the conftest's own
+        exception instead of a bare USAGE_ERROR."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "precheck_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "precheck_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import precheck_calc\n\n"
+            "if precheck_calc.RATIO != 5:\n"
+            "    raise RuntimeError('ratio changed')\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "pytest exited with USAGE_ERROR"
+            f" ({os.path.join('precheck_tests', 'conftest.py')}:"
+            " RuntimeError: ratio changed)"
+        )
+
+    def it_reports_a_conftest_exit_during_collection_as_an_error(tmp_path, monkeypatch):
+        """With a directory argument the subdirectory conftest loads during
+        collection and fails as a collection error, not a kill."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "collexit_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "collexit_tests"
+        sub = test_dir / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text(_exit_conftest("collexit_calc"))
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == (
+            "conftest called pytest.exit() at import (calc unavailable)"
+        )
+
+    def it_kills_when_a_conftest_check_fails_only_under_the_mutant(
+        tmp_path, monkeypatch
+    ):
+        """The conftest's own check fails during collection only because the
+        mutant changed the target value.  A clean control passes and the
+        failure recurs, so the check counts as a kill."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "collcheck_calc", "FloorDiv", "Mult"
+        )
+        test_dir = tmp_path / "collcheck_tests"
+        sub = test_dir / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text(
+            "import collcheck_calc\n\n"
+            "if collcheck_calc.RATIO != 5:\n"
+            "    raise RuntimeError('ratio changed')\n"
+        )
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.killing_tests[0] in (
+            "collcheck_tests/sub",
+            os.path.join("collcheck_tests", "sub", "conftest.py"),
+        )
+
+    def it_kills_when_the_target_breaks_a_conftest_loaded_during_collection(
+        tmp_path, monkeypatch
+    ):
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "collimport_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "collimport_tests"
+        sub = test_dir / "sub"
+        sub.mkdir(parents=True)
+        (sub / "conftest.py").write_text("import collimport_calc  # noqa: F401\n")
+        (sub / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "killed"
+        # pytest 8+ reports the directory; pytest 7 the Session, so leela
+        # names the conftest instead.
+        [killing_test] = result.killing_tests
+        assert killing_test in (
+            "collimport_tests/sub",
+            os.path.join("collimport_tests", "sub", "conftest.py"),
+        )
+
+    def it_reports_an_exit_from_a_conftest_addoption_hook_as_an_error(
+        tmp_path, monkeypatch
+    ):
+        """pytest_addoption runs while pytest.main prepares its config, before
+        the session catches outcomes, so this Exit escapes pytest.main (the
+        judge's addoptexit probe)."""
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "addopt_calc", "Add", "Sub"
+        )
+        test_dir = tmp_path / "addopt_tests"
+        test_dir.mkdir()
+        (test_dir / "conftest.py").write_text(
+            "import pytest\n\n\n"
+            "def pytest_addoption(parser):\n"
+            "    try:\n"
+            "        import addopt_calc  # noqa: F401\n"
+            "    except ZeroDivisionError:\n"
+            "        pytest.exit('calc unavailable')\n"
+        )
+        (test_dir / "test_c.py").write_text("def test_c():\n    pass\n")
+
+        result = run_tests_for_mutant(mutant, sources, files, test_dir=str(test_dir))
+
+        assert result.status == "error"
+        assert result.error == "pytest crashed: Exit: calc unavailable"
+
+    def it_lets_a_keyboard_interrupt_stop_the_run(tmp_path, monkeypatch):
+        mutant, sources, files = _mutant(
+            tmp_path, monkeypatch, "kbd_calc", "Add", "Sub"
+        )
+
+        with (
+            patch("pytest_leela.runner.pytest.main", side_effect=KeyboardInterrupt),
+            pytest.raises(KeyboardInterrupt),
+        ):
+            run_tests_for_mutant(mutant, sources, files, test_dir=str(tmp_path))
+
+    def describe_result_collector():
+        def it_uses_the_conftest_path_when_session_report_has_no_nodeid():
+            collector = _ResultCollector()
+            from _pytest.config import ConftestImportFailure
+
+            cause = RuntimeError("broken")
+            try:
+                failure = ConftestImportFailure(Path("tests/conftest.py"), cause=cause)
+            except TypeError:
+                failure = ConftestImportFailure(
+                    Path("tests/conftest.py"),
+                    (type(cause), cause, cause.__traceback__),
+                )
+            call = types.SimpleNamespace(excinfo=types.SimpleNamespace(value=failure))
+            node = types.SimpleNamespace(nodeid="")
+            report = types.SimpleNamespace(nodeid="")
+
+            collector.pytest_exception_interact(node, call, report)
+
+            assert collector.conftest_failure_ids == {"tests/conftest.py"}
+            assert collector._session_conftest_failure == "tests/conftest.py"
+
+        def it_ignores_the_session_report_that_echoes_a_module_failure():
+            collector = _ResultCollector()
+
+            collector.pytest_collectreport(
+                _FakeCollectReport(
+                    "test_a.py", failed=True, longreprtext="E   RuntimeError: boom"
+                )
+            )
+            collector.pytest_collectreport(
+                _FakeCollectReport(
+                    "",
+                    failed=True,
+                    longreprtext="E   _pytest.main.Failed: stopping after 1 failures",
+                )
+            )
+
+            assert collector.collection_error_ids == ["test_a.py"]
+            assert collector.collection_errors == ["test_a.py: RuntimeError: boom"]
+
+    def describe_inner_run_error():
+        def it_names_collection_errors_when_no_tests_ran_on_a_completed_exit():
+            collector = _ResultCollector()
+            collector.pytest_collectreport(
+                _FakeCollectReport(
+                    "test_a.py", failed=True, longreprtext="E   RuntimeError: boom"
+                )
+            )
+
+            assert _inner_run_error(pytest.ExitCode.TESTS_FAILED, collector) == (
+                "no tests ran (test_a.py: RuntimeError: boom)"
+            )
+
+        def it_names_collection_errors_on_an_abnormal_exit():
+            collector = _ResultCollector()
+            collector.pytest_collectreport(
+                _FakeCollectReport(
+                    "test_a.py", failed=True, longreprtext="E   RuntimeError: boom"
+                )
+            )
+
+            assert _inner_run_error(pytest.ExitCode.INTERRUPTED, collector) == (
+                "pytest exited with INTERRUPTED (test_a.py: RuntimeError: boom)"
+            )
+
+
+def describe_causal_proof_for_inconclusive_failures():
+    """Setup/teardown/collection/import failures are errors unless a clean
+    unmutated control passes and the same failure recurs on mutant
+    confirmation."""
+
+    def it_errors_when_a_flaky_collection_failure_does_not_recur(tmp_path, monkeypatch):
+        """A flaky import OSError kills the first mutant run but is gone on
+        the confirmation run, so the result is inconclusive error, not kill."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        counter = tmp_path / "import_counter.txt"
+        counter.write_text("0")
+
+        target = tmp_path / "flaky_target.py"
+        target.write_text(
+            "from pathlib import Path\n"
+            "_counter = Path(__file__).with_name('import_counter.txt')\n"
+            "_n = int(_counter.read_text())\n"
+            "_counter.write_text(str(_n + 1))\n"
+            "if _n == 0:\n"
+            "    raise OSError('flaky import failure')\n"
+            "\n"
+            "def value():\n"
+            "    return 1\n"
+        )
+
+        test_dir = tmp_path / "flaky_tests"
+        test_dir.mkdir()
+        (test_dir / "test_flaky.py").write_text(
+            "from flaky_target import value\n\n"
+            "def test_value():\n"
+            "    assert value() in (1, None)\n"
+        )
+
+        source = target.read_text()
+        points = find_mutation_points(source, str(target), "flaky_target")
+        # Mutate the return in value() to None; the test is weak enough
+        # that the mutant survives when the import succeeds.
+        point = next(p for p in points if p.node_type == "Return")
+        mutant = Mutant(point=point, replacement_op="None", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"flaky_target": source},
+            {"flaky_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert "inconclusive" in (result.error or "")
+        assert "same-failure recurrence was not established" in result.error
+        assert "OSError: flaky import failure" in result.error
+        assert "confirmation: survived" in result.error
+
+    def it_errors_when_the_control_run_also_fails(tmp_path, monkeypatch):
+        """A fixture that fails setup in every run is ambient, not mutant
+        caused; the clean control also fails, so the result is error."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "ambient_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "ambient_tests"
+        test_dir.mkdir()
+        (test_dir / "test_a_pass.py").write_text(
+            "def test_a_pass():\n    assert True\n"
+        )
+        (test_dir / "test_b_ambient.py").write_text(
+            "import pytest\n"
+            "from ambient_target import add\n\n"
+            "@pytest.fixture\n"
+            "def broken():\n"
+            "    assert False, 'ambient setup failure'\n\n"
+            "def test_add(broken):\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "ambient_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"ambient_target": source},
+            {"ambient_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert "inconclusive" in (result.error or "")
+        assert "control run also failed" in (result.error or "")
+        assert "original result: inconclusive:" in (result.error or "")
+        assert "failed: ambient_tests/test_b_ambient.py::test_add" in result.error
+        assert "setup: ambient_tests/test_b_ambient.py::test_add" in result.error
+        assert result.error.count("AssertionError: ambient setup failure") == 2
+        assert result.tests_run == 1
+        _assert_inconclusive_diagnostics_roundtrip(
+            result, tmp_path, ["setup:", "AssertionError: ambient setup failure", "control run also failed"]
+        )
+
+    def it_preserves_control_error_when_ambient_setup_fails_before_any_call(
+        tmp_path, monkeypatch
+    ):
+        """If setup fails before any call, retain the control's specific
+        no-tests-ran error rather than replacing it with a generic failure list."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "ambient_zero_target.py"
+        target.write_text(source)
+        test_dir = tmp_path / "ambient_zero_tests"
+        test_dir.mkdir()
+        (test_dir / "test_ambient.py").write_text(
+            "import pytest\n"
+            "from ambient_zero_target import add\n\n"
+            "@pytest.fixture\n"
+            "def broken():\n"
+            "    assert False, 'ambient setup failure'\n\n"
+            "def test_add(broken):\n"
+            "    assert add(1, 2) == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "ambient_zero_target")
+        mutant = Mutant(
+            point=next(p for p in points if p.node_type == "BinOp"),
+            replacement_op="Sub",
+            mutant_id=0,
+        )
+        result = run_tests_for_mutant(
+            mutant,
+            {"ambient_zero_target": source},
+            {"ambient_zero_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "error"
+        assert "control run also failed (no tests ran" in (result.error or "")
+        assert "original result: inconclusive: no tests ran" in result.error
+        assert "setup: ambient_zero_tests/test_ambient.py::test_add" in result.error
+        assert result.error.count("AssertionError: ambient setup failure") == 2
+        assert result.tests_run == 0
+        _assert_inconclusive_diagnostics_roundtrip(
+            result, tmp_path, ["setup:", "AssertionError: ambient setup failure", "no tests ran"]
+        )
+
+    def it_kills_when_a_setup_failure_recurrs_after_a_prior_test_passes(
+        tmp_path, monkeypatch
+    ):
+        """A prior test passing does not make a later setup failure causal;
+        the bounded clean control and mutant confirmation are still required."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "nonzero_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "nonzero_tests"
+        test_dir.mkdir()
+        (test_dir / "test_a_pass.py").write_text("def test_a_pass():\n    assert True\n")
+        (test_dir / "test_b_setup.py").write_text(
+            "import pytest\n"
+            "from nonzero_target import add\n\n"
+            "@pytest.fixture\n"
+            "def three():\n"
+            "    assert add(1, 2) == 3\n"
+            "    return 3\n\n"
+            "def test_b_setup(three):\n"
+            "    assert three == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "nonzero_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        finder = install_hook(
+            {"nonzero_target": source}, mutant, {"nonzero_target": str(target)}
+        )
+        session = InnerSession(
+            finder,
+            None,
+            str(test_dir),
+            ProjectModuleScope(str(tmp_path)),
+        ).run()
+        unverified = session.result_for(mutant)
+        assert unverified.status == "error"
+        assert unverified.error.startswith("inconclusive:")
+        assert "setup: nonzero_tests/test_b_setup.py::test_b_setup" in unverified.error
+        assert "AssertionError" in unverified.error
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"nonzero_target": source},
+            {"nonzero_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        assert result.tests_run == 1
+        assert result.killing_test == "nonzero_tests/test_b_setup.py::test_b_setup"
+        assert result.error is None
+
+    def it_kills_when_a_setup_failure_recurrs_after_a_clean_control(
+        tmp_path, monkeypatch
+    ):
+        """A fixture broken by the mutant fails setup; the control passes and
+        the failure recurs, so the mutant is killed."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+
+        source = "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "proof_target.py"
+        target.write_text(source)
+
+        test_dir = tmp_path / "proof_tests"
+        test_dir.mkdir()
+        (test_dir / "test_proof.py").write_text(
+            "import pytest\n"
+            "from proof_target import add\n\n"
+            "@pytest.fixture\n"
+            "def three():\n"
+            "    assert add(1, 2) == 3\n"
+            "    return 3\n\n"
+            "def test_add(three):\n"
+            "    assert three == 3\n"
+        )
+
+        points = find_mutation_points(source, str(target), "proof_target")
+        point = next(p for p in points if p.node_type == "BinOp")
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+
+        result = run_tests_for_mutant(
+            mutant,
+            {"proof_target": source},
+            {"proof_target": str(target)},
+            test_dir=str(test_dir),
+        )
+
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 0
+        assert result.killing_test == "proof_tests/test_proof.py::test_add"
+
+
+def _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, required):
+    import json
+    from pytest_leela.models import RunResult
+    from pytest_leela.output import format_json_report, format_terminal_report
+    from pytest_leela.html_report import generate_html_report
+
+    assert result.status == "error"
+    assert not result.killed
+    assert result.killing_tests == []
+    run = RunResult([result.mutant.point.file_path], 1, 1, 0, [result], 0.0)
+    assert run.mutants_scored == 0
+    assert run.mutation_score == 0.0
+    assert run.errors == [result]
+    terminal = format_terminal_report(run)
+    json_report = format_json_report(run)
+    # Retain actual renderer outputs during this already-required focused run.
+    (tmp_path / "evidence-terminal.txt").write_text(terminal)
+    (tmp_path / "evidence-report.json").write_text(json_report)
+    import hashlib
+    import pytest_leela.runner as runner_module
+    import pytest_leela.import_hook as hook_module
+
+    paths = [Path(runner_module.__file__), Path(hook_module.__file__), Path(__file__)]
+    (tmp_path / "evidence-source-binding.json").write_text(json.dumps({
+        str(p.resolve()): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths
+    }, indent=2))
+    data = json.loads(json_report)
+    assert data["errors"] == 1
+    assert data["error_mutants"][0]["error"] == result.error
+    html = tmp_path / "evidence.html"
+    generate_html_report(run, str(html))
+    embedded = html.read_text().split("window.LEELA_DATA = ", 1)[1]
+    html_data, _ = json.JSONDecoder().raw_decode(embedded)
+    rendered = next(iter(html_data["files"].values()))["mutants"][0]
+    assert rendered["error"] == result.error
+    assert rendered["tests_run"] == result.tests_run
+    for detail in required:
+        assert detail in result.error
+        assert detail in terminal
+        assert detail in data["error_mutants"][0]["error"]
+        assert detail in rendered["error"]
+
+
+def describe_same_failure_evidence():
+    """Real baseline/control/confirmation sessions, never fabricated outcomes."""
+
+    counter_code = (
+        "from pathlib import Path\n"
+        "counter = Path(__file__).parents[1] / 'attempts.txt'\n"
+        "attempt = int(counter.read_text())\n"
+        "counter.write_text(str(attempt + 1))\n"
+    )
+
+    def _project(tmp_path, monkeypatch, test_source, prior=False, source=None):
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        source = source or "def add(a, b):\n    return a + b\n"
+        target = tmp_path / "evidence_target.py"
+        target.write_text(source)
+        tests = tmp_path / "evidence_tests"
+        tests.mkdir()
+        if prior:
+            (tests / "test_a_prior.py").write_text("def test_prior():\n    pass\n")
+        (tests / "test_b_evidence.py").write_text(test_source)
+        (tmp_path / "attempts.txt").write_text("0")
+        point = next(
+            p for p in find_mutation_points(source, str(target), "evidence_target")
+            if p.node_type == "BinOp" and p.original_op == "Add"
+        )
+        return Mutant(point, "Sub", 0), source, target, tests
+
+    def _baseline_then_mutant(tmp_path, project, test_ids=None, test_times=None):
+        from pytest_leela.runner import run_baseline
+
+        mutant, source, target, tests = project
+        scope = ProjectModuleScope(str(tmp_path))
+        known = precompute_user_modules(scope)
+        baseline = run_baseline(test_ids, str(tests), known, scope)
+        assert baseline.error() is None
+        assert baseline.failures() == []
+        return run_tests_for_mutant(
+            mutant, {"evidence_target": source}, {"evidence_target": str(target)},
+            test_ids=test_ids, test_dir=str(tests), known_user_modules=known,
+            scope=scope, test_times=test_times,
+        )
+
+    @pytest.mark.parametrize("prior", [False, True])
+    @pytest.mark.parametrize(
+        ("first", "last", "details"),
+        [
+            ("raise OSError('endpoint A unavailable')",
+             "raise ValueError('invalid endpoint B response')",
+             ["OSError: endpoint A unavailable", "ValueError: invalid endpoint B response"]),
+            ("raise OSError('endpoint A unavailable')",
+             "raise OSError('endpoint B unavailable')",
+             ["OSError: endpoint A unavailable", "OSError: endpoint B unavailable"]),
+            ("raise RuntimeError('service failed') from OSError('endpoint A unavailable')",
+             "raise RuntimeError('service failed') from ValueError('endpoint B invalid')",
+             ["RuntimeError: service failed", "OSError: endpoint A unavailable", "ValueError: endpoint B invalid"]),
+            ("raise ExceptionGroup('service failed', [OSError('endpoint A unavailable')])",
+             "raise ExceptionGroup('service failed', [ValueError('endpoint B invalid')])",
+             ["ExceptionGroup: service failed", "OSError: endpoint A unavailable", "ValueError: endpoint B invalid"]),
+        ],
+        ids=["different-class", "different-message", "different-cause", "different-group-child"],
+    )
+    def it_does_not_kill_different_failures_at_the_same_setup_node(
+        tmp_path, monkeypatch, prior, first, last, details
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            f"    if attempt == 1:\n        {first}\n"
+            f"    if attempt == 3:\n        {last}\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n", prior)
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert result.tests_run == int(prior)
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["original", "control", "confirmation", "setup:", "test_weak", *details])
+
+    def it_distinguishes_setup_from_teardown_at_the_same_node(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('same message')\n"
+            "    yield\n"
+            "    if attempt == 3:\n        raise OSError('same message')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert result.tests_run == 1
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["setup:", "teardown:", "OSError: same message", "confirmation"])
+
+    def it_distinguishes_collection_exceptions_and_retains_both(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            counter_code + "from evidence_target import add\n"
+            "if attempt == 1:\n    raise OSError('endpoint A unavailable')\n"
+            "if attempt == 3:\n    raise ValueError('endpoint B invalid')\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert result.tests_run == 0
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["collection:", "OSError: endpoint A unavailable", "ValueError: endpoint B invalid"])
+
+    @pytest.mark.parametrize("prior", [False, True])
+    def it_preserves_original_and_failed_control_exceptions(tmp_path, monkeypatch, prior):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('original endpoint failed')\n"
+            "    if attempt == 2:\n        raise RuntimeError('control service unavailable')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n", prior)
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.tests_run == int(prior)
+        assert (tmp_path / "attempts.txt").read_text() == "3"  # no confirmation
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["control run also failed", "setup:", "original", "OSError: original endpoint failed", "RuntimeError: control service unavailable"])
+
+    def it_retains_a_truly_surviving_confirmation_after_green_baseline(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            counter_code + "from evidence_target import add\n"
+            "if attempt == 1:\n    raise OSError('transient collection outage')\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.tests_run == 1
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["OSError: transient collection outage", "collection:", "control", "confirmation", "survived"])
+
+    def it_retains_a_different_call_failure_on_confirmation(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('transient setup outage')\n"
+            "    return attempt\n"
+            "def test_weak(endpoint):\n"
+            "    assert endpoint != 3, 'confirmation assertion failed'\n"
+            "    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["OSError: transient setup outage", "call:", "AssertionError: confirmation assertion failed"])
+
+    @pytest.mark.parametrize(
+        "phase", ["setup", "setup-group", "teardown", "collection", "import"]
+    )
+    def it_preserves_genuine_same_failure_kills(tmp_path, monkeypatch, phase):
+        code = ("import pytest\nfrom evidence_target import add\n"
+                "@pytest.fixture\ndef endpoint():\n")
+        if phase == "teardown":
+            code += "    yield\n"
+        code += "    if add(1, 2) != 3:\n"
+        if phase == "setup-group":
+            code += "        raise ExceptionGroup('mutant broke endpoint', [OSError('endpoint unavailable')])\n"
+        else:
+            code += "        raise OSError('mutant broke endpoint')\n"
+        code += "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n"
+        if phase == "collection":
+            code = ("from evidence_target import add\n"
+                    "if add(1, 2) != 3:\n    raise OSError('mutant broke endpoint')\n"
+                    "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        source = None
+        if phase == "import":
+            source = ("DIVISOR = 1 + 1\n"
+                      "try:\n    RATIO = 10 // DIVISOR\n"
+                      "except ZeroDivisionError as exc:\n    raise RuntimeError('ratio unavailable') from exc\n"
+                      "def add(a, b):\n    return a + b\n")
+            code = "def test_weak():\n    pass\n"
+        project = _project(tmp_path, monkeypatch, code, source=source)
+        if phase == "import":
+            (project[3] / "conftest.py").write_text("import evidence_target\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == int(phase == "teardown")
+        assert result.killing_tests
+
+    def it_keeps_call_assertion_kills_even_with_a_teardown_error(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n    yield\n"
+            "    if add(1, 2) != 3:\n        raise OSError('teardown endpoint failed')\n"
+            "def test_strong(endpoint):\n    assert add(1, 2) == 3\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 1
+        assert result.killing_tests == ["evidence_tests/test_b_evidence.py::test_strong"]
+
+    def it_errors_on_non_idempotent_registration_after_an_engine_baseline(tmp_path, monkeypatch):
+        import builtins
+        from pytest_leela.engine import Engine
+
+        monkeypatch.setattr(builtins, "_issue13_registration", False, raising=False)
+        source = ("import builtins\n"
+                  "if builtins._issue13_registration:\n    raise RuntimeError('registry already installed')\n"
+                  "builtins._issue13_registration = True\n"
+                  "def add(a, b):\n    return a + b\n")
+        project = _project(tmp_path, monkeypatch,
+            "from evidence_target import add\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), (int, float))\n", source=source)
+        run = Engine(use_types=False, use_coverage=False, enabled_categories=["arithmetic"]).run(
+            [str(project[2])], test_dir=str(project[3]))
+        assert run.results
+        assert all(r.status == "error" for r in run.results)
+        assert run.mutants_scored == 0
+        assert run.killed == 0
+        for result in run.results:
+            assert result.tests_run == 0
+            _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["RuntimeError: registry already installed", "control run also failed", "collection:"])
+
+    @pytest.mark.parametrize(
+        "kind", ["implicit-context", "cycle", "broken-message", "broken-group-child"]
+    )
+    def it_preserves_meaningful_chains_and_never_proves_uncertain_exceptions(
+        tmp_path, monkeypatch, kind
+    ):
+        failure = {
+            "implicit-context": (
+                "        try:\n"
+                "            raise OSError('first endpoint' if attempt == 1 else 'second endpoint')\n"
+                "        except OSError:\n            raise RuntimeError('same wrapper')\n"
+            ),
+            "cycle": (
+                "        failure = RuntimeError('cyclic endpoint failure')\n"
+                "        failure.__cause__ = failure\n        raise failure\n"
+            ),
+            "broken-message": "        raise BrokenMessage()\n",
+            "broken-group-child": "        raise ExceptionGroup('endpoint group', [BrokenMessage()])\n",
+        }[kind]
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "class BrokenMessage(RuntimeError):\n"
+            "    def __str__(self):\n        raise ValueError('message formatter failed')\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt in (1, 3):\n" + failure +
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "error", result
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        required = {
+            "implicit-context": ["RuntimeError: same wrapper", "OSError: first endpoint", "OSError: second endpoint"],
+            "cycle": ["RuntimeError: cyclic endpoint failure", "cycle"],
+            "broken-message": ["BrokenMessage", "message unavailable", "ValueError"],
+            "broken-group-child": ["ExceptionGroup: endpoint group", "BrokenMessage", "message unavailable"],
+        }[kind]
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["setup:", "original", "confirmation", *required])
+
+    def it_does_not_promote_a_plugin_failure_without_exception_evidence(tmp_path, monkeypatch):
+        project = _project(tmp_path, monkeypatch,
+            "from evidence_target import add\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        (project[3] / "conftest.py").write_text(
+            "import pytest\n"
+            "@pytest.hookimpl(hookwrapper=True)\n"
+            "def pytest_runtest_makereport(item, call):\n"
+            "    outcome = yield\n    report = outcome.get_result()\n"
+            "    if report.when == 'setup':\n"
+            "        from evidence_target import add\n"
+            "        if add(1, 2) != 3:\n"
+            "            report.outcome = 'failed'\n"
+            "            report.longrepr = 'plugin rejected endpoint without exception'\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "setup:", "plugin rejected endpoint without exception", "confirmation",
+            "exception evidence unavailable",
+        ])
+
+    @pytest.mark.parametrize("bridge", [False, True])
+    def it_distinguishes_causes_of_a_target_import_before_session_start(
+        tmp_path, monkeypatch, bridge
+    ):
+        source = (
+            "from pathlib import Path\n"
+            "counter = Path(__file__).with_name('attempts.txt')\n"
+            "attempt = int(counter.read_text())\n"
+            "counter.write_text(str(sum((attempt, 1))))\n"
+            "if attempt == 1:\n    raise RuntimeError('import unavailable') from OSError('endpoint A unavailable')\n"
+            "if attempt == 3:\n    raise RuntimeError('import unavailable') from ValueError('endpoint B invalid')\n"
+            "def add(a, b):\n    return a + b\n"
+        )
+        project = _project(tmp_path, monkeypatch, "def test_weak():\n    pass\n", source=source)
+        (project[3] / "conftest.py").write_text("import evidence_target\n")
+        if bridge:
+            # A real pytest extension replaces the wrapper before the runner
+            # can observe its cause. The loader must retain that evidence.
+            (tmp_path / "evidence_bridge.py").write_text(
+                "import pytest\nfrom _pytest.config import ConftestImportFailure\n"
+                "@pytest.hookimpl(hookwrapper=True, trylast=True)\n"
+                "def pytest_load_initial_conftests():\n"
+                "    outcome = yield\n"
+                "    if outcome.excinfo and isinstance(outcome.excinfo[1], ConftestImportFailure):\n"
+                "        outcome.force_exception(pytest.UsageError('bridge replaced conftest wrapper'))\n"
+            )
+            monkeypatch.setenv("PYTEST_PLUGINS", "evidence_bridge")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.tests_run == 0
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "import:", "evidence_target" if bridge else "conftest.py",
+            "RuntimeError: import unavailable",
+            "OSError: endpoint A unavailable", "ValueError: endpoint B invalid",
+        ])
+
+    def it_distinguishes_exception_identity_beyond_the_class_name(tmp_path, monkeypatch):
+        for name in ("endpoint_a", "endpoint_b"):
+            (tmp_path / (name + ".py")).write_text("class UnavailableError(RuntimeError):\n    pass\n")
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "import endpoint_a, endpoint_b\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise endpoint_a.UnavailableError('same message')\n"
+            "    if attempt == 3:\n        raise endpoint_b.UnavailableError('same message')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, ["setup:", "UnavailableError: same message", "confirmation"])
+
+    def it_retains_the_actual_call_exception_when_control_fails(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('original setup outage')\n"
+            "    return attempt\n"
+            "def test_weak(endpoint):\n"
+            "    assert endpoint != 2, 'control assertion failed'\n"
+            "    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert (tmp_path / "attempts.txt").read_text() == "3"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "setup:", "OSError: original setup outage", "call:", "AssertionError: control assertion failed",
+        ])
+
+    def it_does_not_compare_a_deliberately_suppressed_context(tmp_path, monkeypatch):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt in (1, 3):\n"
+            "        try:\n            raise OSError('first' if attempt == 1 else 'second')\n"
+            "        except OSError:\n            raise RuntimeError('visible endpoint failure') from None\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "killed"
+        assert result.error is None
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+
+    def it_names_an_actual_confirmation_timeout_without_promoting_the_original_failure(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nimport time\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n        raise OSError('initial setup outage')\n"
+            "    if attempt == 3:\n        time.sleep(5.1)\n"
+            "def test_first(endpoint):\n    assert isinstance(add(1, 2), int)\n"
+            "def test_last():\n    pass\n")
+        ids = [f"evidence_tests/test_b_evidence.py::test_{name}" for name in ("first", "last")]
+        result = _baseline_then_mutant(tmp_path, project, ids, dict.fromkeys(ids, 0.0))
+        assert result.tests_run == 1
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "setup:", "OSError: initial setup outage", "confirmation: killed", "<timeout>",
+        ])
+
+    def it_distinguishes_explicit_cause_from_implicit_context_with_identical_messages(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if attempt == 1:\n"
+            "        raise RuntimeError('endpoint unavailable') from OSError('transport unavailable')\n"
+            "    if attempt == 3:\n"
+            "        try:\n            raise OSError('transport unavailable')\n"
+            "        except OSError:\n            raise RuntimeError('endpoint unavailable')\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        _assert_inconclusive_diagnostics_roundtrip(result, tmp_path, [
+            "original", "confirmation", "RuntimeError: endpoint unavailable",
+            "OSError: transport unavailable", "caused by:", "during handling:",
+        ])
+
+    def it_confirms_the_same_visible_failure_when_only_empty_context_suppression_changes(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture\ndef endpoint():\n" + code + "\n"
+            "    if add(1, 2) != 3:\n"
+            "        if attempt == 1:\n            raise RuntimeError('mutant broke endpoint')\n"
+            "        raise RuntimeError('mutant broke endpoint') from None\n"
+            "def test_weak(endpoint):\n    assert isinstance(add(1, 2), int)\n")
+        result = _baseline_then_mutant(tmp_path, project)
+        assert (tmp_path / "attempts.txt").read_text() == "4"
+        assert result.status == "killed"
+        assert result.error is None
+        assert result.tests_run == 0
+        assert result.killing_test == "evidence_tests/test_b_evidence.py::test_weak"
+
+    def it_does_not_count_a_setup_exception_that_a_real_plugin_reports_as_passed(
+        tmp_path, monkeypatch
+    ):
+        code = "\n".join("    " + line for line in counter_code.splitlines())
+        project = _project(tmp_path, monkeypatch,
+            "import pytest\nfrom evidence_target import add\n"
+            "@pytest.fixture(autouse=True)\ndef advisory_check():\n" + code + "\n"
+            "    if add(1, 2) != 3:\n        raise RuntimeError('advisory endpoint check')\n"
+            "def test_weak():\n    assert isinstance(add(1, 2), int)\n")
+        (project[3] / "conftest.py").write_text(
+            "import pytest\n"
+            "@pytest.hookimpl(hookwrapper=True)\n"
+            "def pytest_runtest_makereport(item, call):\n"
+            "    outcome = yield\n    report = outcome.get_result()\n"
+            "    if report.when == 'setup' and call.excinfo is not None:\n"
+            "        if isinstance(call.excinfo.value, RuntimeError):\n"
+            "            report.outcome = 'passed'\n"
+            "            report.longrepr = None\n")
+        # Pytest still invokes exception_interact for this exception: it does
+        # not require report.failed. Only the published failed reports count.
+        result = _baseline_then_mutant(tmp_path, project)
+        assert result.status == "survived"
+        assert result.error is None
+        assert result.tests_run == 1
+        assert (tmp_path / "attempts.txt").read_text() == "2"  # no causal retries
+>>>>>>> ccd010f97938e3414c0078ab1de5d0c404c593f6

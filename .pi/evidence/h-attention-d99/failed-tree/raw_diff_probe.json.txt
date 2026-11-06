@@ -1,0 +1,611 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "Or"
+      ],
+      "default_mutations": [
+        "Or"
+      ],
+      "point": {
+        "col_offset": 13,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": "bool",
+        "lineno": 16,
+        "module_name": "raw_diff_probe",
+        "node_type": "BoolOp",
+        "original_op": "And"
+      }
+    },
+    {
+      "all_mutations": [
+        "And"
+      ],
+      "default_mutations": [
+        "And"
+      ],
+      "point": {
+        "col_offset": 24,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": "bool",
+        "lineno": 19,
+        "module_name": "raw_diff_probe",
+        "node_type": "BoolOp",
+        "original_op": "Or"
+      }
+    },
+    {
+      "all_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "default_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "point": {
+        "col_offset": 46,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 20,
+        "module_name": "raw_diff_probe",
+        "node_type": "BinOp",
+        "original_op": "Add"
+      }
+    },
+    {
+      "all_mutations": [
+        "In"
+      ],
+      "default_mutations": [
+        "In"
+      ],
+      "point": {
+        "col_offset": 11,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 23,
+        "module_name": "raw_diff_probe",
+        "node_type": "Compare",
+        "original_op": "NotIn"
+      }
+    },
+    {
+      "all_mutations": [
+        "break"
+      ],
+      "default_mutations": [],
+      "point": {
+        "col_offset": 12,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 24,
+        "module_name": "raw_diff_probe",
+        "node_type": "Continue",
+        "original_op": "continue"
+      }
+    },
+    {
+      "all_mutations": [
+        "BitOr",
+        "BitXor"
+      ],
+      "default_mutations": [],
+      "point": {
+        "col_offset": 19,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 26,
+        "module_name": "raw_diff_probe",
+        "node_type": "BinOp",
+        "original_op": "BitAnd"
+      }
+    },
+    {
+      "all_mutations": [
+        "BitOr",
+        "BitXor"
+      ],
+      "default_mutations": [],
+      "point": {
+        "col_offset": 18,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 27,
+        "module_name": "raw_diff_probe",
+        "node_type": "BinOp",
+        "original_op": "BitAnd"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 69,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 28,
+        "module_name": "raw_diff_probe",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 67,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 29,
+        "module_name": "raw_diff_probe",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    },
+    {
+      "all_mutations": [
+        "None"
+      ],
+      "default_mutations": [
+        "None"
+      ],
+      "point": {
+        "col_offset": 4,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 37,
+        "module_name": "raw_diff_probe",
+        "node_type": "Return",
+        "original_op": "expr"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotEq"
+      ],
+      "default_mutations": [
+        "NotEq"
+      ],
+      "point": {
+        "col_offset": 3,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/raw_diff_probe.py",
+        "inferred_type": null,
+        "lineno": 51,
+        "module_name": "raw_diff_probe",
+        "node_type": "Compare",
+        "original_op": "Eq"
+      }
+    }
+  ],
+  "sha256": "cb93c8a4449f1ead7c1ac0fa66bc47539940cb0b9f2f4d499469aeea10f11e55",
+  "src/pytest_leela/daemon.py": {
+    "changed_lines_from_git": 30,
+    "missing_new_branches": [],
+    "missing_new_lines": [],
+    "new_branches_covered": [
+      [
+        531,
+        532
+      ],
+      [
+        531,
+        535
+      ],
+      [
+        686,
+        689
+      ],
+      [
+        686,
+        690
+      ]
+    ],
+    "new_executable_covered": [
+      268,
+      519,
+      520,
+      521,
+      522,
+      523,
+      524,
+      526,
+      527,
+      528,
+      531,
+      532,
+      533,
+      534,
+      655,
+      686,
+      689,
+      845
+    ]
+  },
+  "src/pytest_leela/index.py": {
+    "changed_lines_from_git": 45,
+    "missing_new_branches": [],
+    "missing_new_lines": [],
+    "new_branches_covered": [
+      [
+        472,
+        473
+      ],
+      [
+        472,
+        474
+      ],
+      [
+        474,
+        475
+      ],
+      [
+        474,
+        476
+      ],
+      [
+        656,
+        -648
+      ],
+      [
+        656,
+        657
+      ],
+      [
+        673,
+        674
+      ],
+      [
+        673,
+        675
+      ],
+      [
+        812,
+        813
+      ],
+      [
+        812,
+        814
+      ]
+    ],
+    "new_executable_covered": [
+      265,
+      266,
+      394,
+      395,
+      403,
+      404,
+      405,
+      406,
+      408,
+      410,
+      411,
+      472,
+      473,
+      474,
+      475,
+      655,
+      656,
+      657,
+      671,
+      672,
+      673,
+      674,
+      675,
+      676,
+      682,
+      812,
+      813
+    ]
+  },
+  "tests/leela/describe_daemon.py": {
+    "changed_lines_from_git": 223,
+    "missing_new_branches": [],
+    "missing_new_lines": [],
+    "new_branches_covered": [
+      [
+        4042,
+        4043
+      ],
+      [
+        4042,
+        4046
+      ],
+      [
+        4187,
+        4188
+      ],
+      [
+        4187,
+        4189
+      ],
+      [
+        4189,
+        4190
+      ],
+      [
+        4189,
+        4196
+      ],
+      [
+        4206,
+        4207
+      ],
+      [
+        4206,
+        4208
+      ],
+      [
+        4232,
+        4233
+      ],
+      [
+        4232,
+        4236
+      ],
+      [
+        4244,
+        4245
+      ],
+      [
+        4244,
+        4247
+      ],
+      [
+        4266,
+        4267
+      ],
+      [
+        4266,
+        4269
+      ]
+    ],
+    "new_executable_covered": [
+      4042,
+      4043,
+      4044,
+      4045,
+      4056,
+      4057,
+      4149,
+      4152,
+      4153,
+      4154,
+      4155,
+      4156,
+      4157,
+      4158,
+      4164,
+      4165,
+      4166,
+      4167,
+      4168,
+      4169,
+      4170,
+      4171,
+      4179,
+      4181,
+      4187,
+      4189,
+      4190,
+      4191,
+      4192,
+      4193,
+      4206,
+      4215,
+      4216,
+      4217,
+      4218,
+      4219,
+      4221,
+      4222,
+      4223,
+      4224,
+      4225,
+      4226,
+      4227,
+      4228,
+      4230,
+      4231,
+      4232,
+      4233,
+      4234,
+      4235,
+      4236,
+      4238,
+      4239,
+      4240,
+      4241,
+      4242,
+      4243,
+      4244,
+      4245,
+      4247,
+      4248,
+      4249,
+      4252,
+      4254,
+      4256,
+      4257,
+      4260,
+      4261,
+      4262,
+      4263,
+      4264,
+      4265,
+      4266,
+      4267,
+      4269,
+      4270,
+      4271,
+      4274,
+      4275,
+      4276,
+      4277,
+      4278,
+      4279,
+      4280,
+      4281,
+      4282,
+      4283,
+      4284,
+      4285,
+      4286,
+      4287,
+      4288,
+      4289,
+      4292,
+      4293,
+      4295,
+      4296,
+      4297,
+      4298,
+      4299,
+      4300,
+      4301,
+      4302,
+      4303,
+      4304,
+      4305,
+      4306,
+      4307,
+      4308,
+      4309,
+      4310,
+      4311,
+      4312,
+      4315,
+      4316,
+      4318,
+      4319,
+      4320,
+      4321,
+      4322,
+      4323,
+      4324,
+      4325,
+      4326,
+      4327,
+      4328,
+      4329,
+      4330,
+      4331,
+      4332,
+      4333,
+      4334,
+      4335,
+      4338,
+      4339,
+      4340,
+      4341,
+      4342,
+      4343,
+      4344,
+      4345,
+      4346,
+      4347,
+      4348,
+      4349,
+      4350,
+      4351,
+      4352,
+      4353,
+      4356,
+      4357,
+      4358,
+      4359,
+      4360,
+      4361,
+      4362,
+      4363,
+      4364,
+      4365,
+      4366,
+      4367,
+      4368,
+      4369,
+      4370,
+      4371,
+      4374,
+      4375,
+      4377,
+      4378,
+      4379,
+      4380,
+      4381,
+      4382,
+      4383,
+      4384,
+      4385,
+      4386,
+      4387,
+      4388,
+      4389,
+      4390,
+      4391,
+      4392,
+      4393,
+      4394,
+      4491,
+      4492,
+      4589,
+      4597,
+      4598,
+      4602
+    ]
+  },
+  "tests/leela/describe_index.py": {
+    "changed_lines_from_git": 43,
+    "missing_new_branches": [],
+    "missing_new_lines": [],
+    "new_branches_covered": [],
+    "new_executable_covered": [
+      1787,
+      1788,
+      1789,
+      1791,
+      1792,
+      1793,
+      1794,
+      1795,
+      1796,
+      1798,
+      1799,
+      1800,
+      1801,
+      1802,
+      1803,
+      1804,
+      1805,
+      1806,
+      1807,
+      1809,
+      1810,
+      1811,
+      1812,
+      1814,
+      1815,
+      1816,
+      1817,
+      1818,
+      1819,
+      1820,
+      1821,
+      1823,
+      1824,
+      1825,
+      1826,
+      1827
+    ]
+  }
+}

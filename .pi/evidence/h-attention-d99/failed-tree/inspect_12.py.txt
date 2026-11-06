@@ -1,0 +1,1 @@
+import json; d=json.load(open(".pi/evidence/recovery-native-enumeration.json")); print([(f,sum(len(p["default_mutations"]) for p in v["points"]),sum(len(p["all_mutations"]) for p in v["points"]),v["all_pruned"]) for f,v in d.items()]); print([(f,p) for f,v in d.items() for p in v["points"] if p["default_mutations"]!=p["all_mutations"]])

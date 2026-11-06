@@ -1,0 +1,37 @@
+running: /Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python -mpytest --basetemp=/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0/runpytest-0 -p no:cacheprovider --leela --target calc.py
+     in: /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0
+============================= test session starts ==============================
+platform darwin -- Python 3.13.11, pytest-9.1.1, pluggy-1.6.0
+django: version: 6.1.2
+rootdir: /Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z
+configfile: pyproject.toml
+plugins: Faker-40.8.0, describe-3.1.0, django-4.14.0, leela-0.9.0
+collected 1 item
+
+test_calc.py .                                                           [100%]leela: mutation preparation started
+leela: mutation preparation complete
+leela: baseline started
+
+leela: aborted: tests do not pass with no mutation applied (pytest exited with USAGE_ERROR); mutant results would be meaningless, so no mutants were run
+
+
+============================== 1 passed in 0.19s ===============================
+F
+=================================== FAILURES ===================================
+_______________________ it_kills_every_mutant_and_passes _______________________
+
+pytester = <Pytester PosixPath('/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0')>
+
+    def it_kills_every_mutant_and_passes(pytester):
+        pytester.makepyfile(calc=_DOUBLE, test_calc=_DOUBLE_TEST)
+    
+        result = _leela(pytester)
+    
+>       assert result.ret == 0
+E       assert <ExitCode.TESTS_FAILED: 1> == 0
+E        +  where <ExitCode.TESTS_FAILED: 1> = <RunResult ret=1 len(stdout.lines)=16 len(stderr.lines)=0 duration=0.43s>.ret
+
+/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:302: AssertionError
+=========================== short test summary info ============================
+FAILED tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes
+1 failed in 0.48s

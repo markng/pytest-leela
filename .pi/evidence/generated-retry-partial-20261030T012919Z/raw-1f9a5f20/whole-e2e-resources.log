@@ -1,0 +1,7 @@
+baseline_kib=15196 parent=43822 guard=43823
+baseline_transient_root=[] baseline_transient_temp=[]
+elapsed=0.0 growth_kib=4 free_bytes=15894499328 transient_root=[] transient_temp=[]
+elapsed=2.1 growth_kib=68 free_bytes=15904043008 transient_root=[] transient_temp=[]
+elapsed=4.1 growth_kib=156 free_bytes=15903748096 transient_root=[] transient_temp=[]
+elapsed=6.1 growth_kib=292 free_bytes=15903567872 transient_root=[] transient_temp=[]
+elapsed=8.1 growth_kib=412 free_bytes=15903420416 transient_root=[] transient_temp=[]

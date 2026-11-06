@@ -1,0 +1,128 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "BitOr",
+        "BitXor"
+      ],
+      "default_mutations": [],
+      "point": {
+        "col_offset": 227,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_7.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_7",
+        "node_type": "BinOp",
+        "original_op": "BitAnd"
+      }
+    },
+    {
+      "all_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "default_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "point": {
+        "col_offset": 231,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_7.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_7",
+        "node_type": "BinOp",
+        "original_op": "Add"
+      }
+    },
+    {
+      "all_mutations": [
+        "BitOr",
+        "BitXor"
+      ],
+      "default_mutations": [],
+      "point": {
+        "col_offset": 340,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_7.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_7",
+        "node_type": "BinOp",
+        "original_op": "BitAnd"
+      }
+    },
+    {
+      "all_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "default_mutations": [
+        "Sub",
+        "Mult"
+      ],
+      "point": {
+        "col_offset": 434,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_7.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_7",
+        "node_type": "BinOp",
+        "original_op": "Add"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 482,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_7.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_7",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 591,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_7.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_7",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    },
+    {
+      "all_mutations": [
+        "NotIn"
+      ],
+      "default_mutations": [
+        "NotIn"
+      ],
+      "point": {
+        "col_offset": 673,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_7.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_7",
+        "node_type": "Compare",
+        "original_op": "In"
+      }
+    }
+  ],
+  "sha256": "ffc00daa8e8a7ac44fed4ae4fa0d6983c204c4ebf7d0c1ad3b85968b8dfce5c7"
+}

@@ -1,0 +1,62 @@
+"""Probe changed coverage with raw git-U0 hunks."""
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+COVERAGE_PATH = Path('.pi/evidence/final-coverage.json')
+FILES = [
+    'src/pytest_leela/daemon.py',
+    'src/pytest_leela/index.py',
+    'tests/leela/describe_daemon.py',
+    'tests/leela/describe_index.py',
+]
+
+
+def build_report(coverage, diff_text, files):
+    changed = {}
+    name = None
+    for line in diff_text.splitlines():
+        if line.startswith('+++ b/'):
+            name = line[6:].strip()
+            changed[name] = set()
+        elif line.startswith('@@') and name:
+            match = re.search(r'\+(\d+)(?:,(\d+))?', line)
+            start = int(match[1])
+            count = int(match[2] or '1')
+            changed[name].update(range(start, start + count))
+    report = {}
+    for file_path in files:
+        data = coverage['files'][file_path]
+        lines = changed.get(file_path, set())
+        executed = set(data['executed_lines']) & lines
+        missing = set(data['missing_lines']) & lines
+        executed_branches = [b for b in data['executed_branches'] if b[0] in lines]
+        missing_branches = [b for b in data['missing_branches'] if b[0] in lines]
+        report[file_path] = {
+            'changed_lines_from_git': len(lines),
+            'new_executable_covered': sorted(executed),
+            'missing_new_lines': sorted(missing),
+            'new_branches_covered': executed_branches,
+            'missing_new_branches': missing_branches,
+        }
+    return report
+
+
+def main(input_stream=None):
+    if input_stream is None:
+        coverage = json.loads(COVERAGE_PATH.read_text())
+    else:
+        coverage = json.load(input_stream)
+    diff_text = subprocess.run(
+        ['git', 'diff', '-U0', 'HEAD'],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    print(json.dumps(build_report(coverage, diff_text, FILES), indent=2))
+
+
+if __name__ == '__main__':
+    main(sys.stdin)

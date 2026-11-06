@@ -1,0 +1,100 @@
+"""Native qualification contracts for every current Python artifact."""
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+import artifact_contracts
+
+DIRECTORY = Path(__file__).parent
+ARTIFACTS = [
+    p.name for p in sorted(DIRECTORY.glob("*.py"))
+    if p.name not in {"test_artifact_qualification.py", "artifact_contracts.py", "gen-helper-jsons.py"}
+]
+PRODUCER_ARTIFACTS = {"enumerate_mutants.py", "coverage_denominators.py", "call_evidence.py", "raw_diff_probe.py"}
+INSPECTION_ARTIFACTS = {f"inspect_{i}.py" for i in range(1, 15)}
+FIXTURE_ARTIFACTS = {"fixture_identity.py", "fixture_identity_recreated.py", "fixture_value.py", "fixture_value_replaced.py"}
+POINT_CONTRACT_ARTIFACTS = (PRODUCER_ARTIFACTS | INSPECTION_ARTIFACTS | FIXTURE_ARTIFACTS) - {"call_evidence.py"}
+HELPER_TESTS = {"test_evidence_helpers.py", "test_fixture_artifacts.py", "test_inspection_commands.py"}
+
+
+def test_all_artifact_sources_exist():
+    assert ARTIFACTS
+    assert all((DIRECTORY / name).is_file() for name in ARTIFACTS)
+
+
+@pytest.mark.parametrize("name", ARTIFACTS)
+def test_artifact_source_compile_and_hash(name):
+    source = (DIRECTORY / name).read_text()
+    compile(source, name, "exec")
+    assert len(hashlib.sha256(source.encode()).hexdigest()) == 64
+
+
+@pytest.mark.parametrize("name", sorted(POINT_CONTRACT_ARTIFACTS))
+def test_artifact_native_point_contract_matches_expected(name, monkeypatch):
+    monkeypatch.syspath_prepend(str(DIRECTORY))
+    actual = artifact_contracts.native_point_report(name)
+    expected = artifact_contracts.load_expected(name)
+    artifact_contracts.compare_point_reports(actual, expected)
+
+
+@pytest.mark.parametrize("name", ARTIFACTS)
+def test_artifact_expanded_ast_denominator(name, monkeypatch):
+    monkeypatch.syspath_prepend(str(DIRECTORY))
+    result = artifact_contracts.execute_and_expand(name)
+    expanded = result["expanded"]
+    assert expanded["statement_denominator"] == len(expanded["statements"])
+    assert all(item["covered"] for item in expanded["statements"])
+
+
+@pytest.mark.parametrize("name", sorted(PRODUCER_ARTIFACTS))
+def test_producer_expected_receipt_binding(name, monkeypatch):
+    monkeypatch.syspath_prepend(str(DIRECTORY))
+    result = artifact_contracts.execute_and_expand(name)
+    actual_output = json.loads(result["main_output"])
+    expected = artifact_contracts.load_expected(name)
+    if name == "call_evidence.py":
+        assert actual_output == expected
+    else:
+        comparable_expected = {key: value for key, value in expected.items() if key not in {"sha256", "points", "default_pruned", "all_pruned"}}
+        if actual_output != comparable_expected:
+            if set(actual_output) == set(comparable_expected):
+                pytest.fail(f"{name} output needs refreshed golden input")
+            raise AssertionError(actual_output != comparable_expected)
+
+
+@pytest.mark.parametrize("name", sorted(INSPECTION_ARTIFACTS))
+def test_inspection_expected_receipt_binding(name, monkeypatch, capsys):
+    monkeypatch.syspath_prepend(str(DIRECTORY))
+    module_name = Path(name).stem
+    artifact_contracts.importlib.import_module(module_name)
+    artifact_contracts.importlib.reload(artifact_contracts.sys.modules[module_name])
+    expected = (DIRECTORY / (Path(name).stem + ".txt")).read_text()
+    actual = capsys.readouterr().out
+    if actual != expected:
+        refreshed = "\n".join(
+            sorted(set(expected.splitlines()) | set(actual.splitlines()))
+        ) + "\n"
+        if actual == refreshed:
+            pytest.fail(f"{name} output needs refreshed golden input")
+        raise
+
+
+@pytest.mark.parametrize("name", sorted(HELPER_TESTS))
+def test_helper_test_source_self_compile(name):
+    source = (DIRECTORY / name).read_text()
+    compile(source, name, "exec")
+
+
+def test_fixture_source_binding():
+    source = (DIRECTORY / "test_fixture_artifacts.py").read_text()
+    for fixture in sorted(FIXTURE_ARTIFACTS):
+        assert f"import {Path(fixture).stem}" in source
+
+
+@pytest.mark.parametrize("name", ["enumerate_mutants.py", "coverage_denominators.py", "raw_diff_probe.py"])
+def test_artifact_source_and_input_hash_binding(name):
+    source = (DIRECTORY / name).read_text()
+    payload = artifact_contracts.load_expected(name)
+    assert payload["sha256"] == hashlib.sha256(source.encode()).hexdigest()

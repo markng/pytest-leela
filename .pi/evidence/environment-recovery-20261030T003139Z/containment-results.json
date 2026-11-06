@@ -1,0 +1,117 @@
+[
+  {
+    "control": "positive",
+    "command": [
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/timeout-enforcement-fix/run_check.py",
+      "recovery-positive",
+      "5",
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "-c",
+      "print(\"CONTROL_OK\")"
+    ],
+    "returncode": 0
+  },
+  {
+    "control": "nonzero",
+    "command": [
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/timeout-enforcement-fix/run_check.py",
+      "recovery-nonzero",
+      "5",
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "-c",
+      "raise SystemExit(7)"
+    ],
+    "returncode": 7
+  },
+  {
+    "control": "timeout",
+    "command": [
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/timeout-enforcement-fix/run_check.py",
+      "recovery-timeout",
+      "0.3",
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "-c",
+      "import time; time.sleep(8)"
+    ],
+    "returncode": 1
+  },
+  {
+    "control": "healthy",
+    "command": [
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/final-current-ci/py313/resource_guard_poller.py",
+      "23017",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/healthy",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/healthy/temp",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/guard-healthy.log",
+      "6",
+      "64",
+      "1073741824",
+      "0.05"
+    ],
+    "parent": 23017,
+    "child": 23019,
+    "guard": 23018,
+    "guardReturncode": 0
+  },
+  {
+    "control": "growth",
+    "command": [
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/final-current-ci/py313/resource_guard_poller.py",
+      "23024",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/growth",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/growth/temp",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/guard-growth.log",
+      "6",
+      "64",
+      "1073741824",
+      "0.05"
+    ],
+    "parent": 23024,
+    "child": 23026,
+    "guard": 23025,
+    "guardReturncode": 0
+  },
+  {
+    "control": "deadline",
+    "command": [
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/final-current-ci/py313/resource_guard_poller.py",
+      "23034",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/deadline",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/deadline/temp",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/guard-deadline.log",
+      "0.5",
+      "64",
+      "1073741824",
+      "0.05"
+    ],
+    "parent": 23034,
+    "child": 23036,
+    "guard": 23035,
+    "guardReturncode": 0
+  },
+  {
+    "control": "missing-root",
+    "command": [
+      "/opt/homebrew/opt/python@3.13/bin/python3.13",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/evidence/final-current-ci/py313/resource_guard_poller.py",
+      "23059",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/missing-root",
+      "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/controls/missing-root/temp",
+      "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/environment-recovery/guard-missing-root.log",
+      "6",
+      "64",
+      "1073741824",
+      "0.05"
+    ],
+    "parent": 23059,
+    "child": 23061,
+    "guard": 23060,
+    "guardReturncode": 0
+  }
+]

@@ -1,0 +1,205 @@
+[
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+        "module_name": "pytest_leela._timeout_guardian",
+        "lineno": 28,
+        "col_offset": 19,
+        "node_type": "Compare",
+        "original_op": "Eq",
+        "inferred_type": null
+      },
+      "replacement_op": "NotEq",
+      "mutant_id": 0
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+          "module_name": "pytest_leela._timeout_guardian",
+          "lineno": 28,
+          "col_offset": 19,
+          "node_type": "Compare",
+          "original_op": "Eq",
+          "inferred_type": null
+        },
+        "replacement_op": "NotEq",
+        "mutant_id": 0
+      },
+      "killed": true,
+      "tests_run": 3,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error",
+      "time_seconds": 4.37620266713202,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_guardian_delayed_watcher_reports_error_then_drains",
+        "tests/leela/describe_timeout_process.py::test_guardian_has_no_lifetime_thread_at_successful_return",
+        "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_guardian_delayed_watcher_reports_error_then_drains",
+      "tests/leela/describe_timeout_process.py::test_guardian_has_no_lifetime_thread_at_successful_return",
+      "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_stops_watcher_after_worker_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]",
+      "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[3.0-5.0-0.0]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+        "module_name": "pytest_leela._timeout_guardian",
+        "lineno": 37,
+        "col_offset": 53,
+        "node_type": "BinOp",
+        "original_op": "Sub",
+        "inferred_type": null
+      },
+      "replacement_op": "Add",
+      "mutant_id": 1
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+          "module_name": "pytest_leela._timeout_guardian",
+          "lineno": 37,
+          "col_offset": 53,
+          "node_type": "BinOp",
+          "original_op": "Sub",
+          "inferred_type": null
+        },
+        "replacement_op": "Add",
+        "mutant_id": 1
+      },
+      "killed": true,
+      "tests_run": 5,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]",
+      "time_seconds": 2.347961625084281,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_guardian_delayed_watcher_reports_error_then_drains",
+        "tests/leela/describe_timeout_process.py::test_guardian_has_no_lifetime_thread_at_successful_return",
+        "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error",
+        "tests/leela/describe_timeout_process.py::test_guardian_stops_watcher_after_worker_error",
+        "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_guardian_delayed_watcher_reports_error_then_drains",
+      "tests/leela/describe_timeout_process.py::test_guardian_has_no_lifetime_thread_at_successful_return",
+      "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_stops_watcher_after_worker_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]",
+      "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[3.0-5.0-0.0]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+        "module_name": "pytest_leela._timeout_guardian",
+        "lineno": 37,
+        "col_offset": 53,
+        "node_type": "BinOp",
+        "original_op": "Sub",
+        "inferred_type": null
+      },
+      "replacement_op": "Mult",
+      "mutant_id": 2
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+          "module_name": "pytest_leela._timeout_guardian",
+          "lineno": 37,
+          "col_offset": 53,
+          "node_type": "BinOp",
+          "original_op": "Sub",
+          "inferred_type": null
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 2
+      },
+      "killed": true,
+      "tests_run": 5,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]",
+      "time_seconds": 2.3693231251090765,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_guardian_delayed_watcher_reports_error_then_drains",
+        "tests/leela/describe_timeout_process.py::test_guardian_has_no_lifetime_thread_at_successful_return",
+        "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error",
+        "tests/leela/describe_timeout_process.py::test_guardian_stops_watcher_after_worker_error",
+        "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_guardian_delayed_watcher_reports_error_then_drains",
+      "tests/leela/describe_timeout_process.py::test_guardian_has_no_lifetime_thread_at_successful_return",
+      "tests/leela/describe_timeout_process.py::test_guardian_parent_eof_is_a_lifecycle_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_stops_watcher_after_worker_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[12.0-5.0-7.0]",
+      "tests/leela/describe_timeout_process.py::test_guardian_subtracts_startup_from_original_budget[3.0-5.0-0.0]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+        "module_name": "pytest_leela._timeout_guardian",
+        "lineno": 53,
+        "col_offset": 3,
+        "node_type": "Compare",
+        "original_op": "Eq",
+        "inferred_type": null
+      },
+      "replacement_op": "NotEq",
+      "mutant_id": 3
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_guardian.py",
+          "module_name": "pytest_leela._timeout_guardian",
+          "lineno": 53,
+          "col_offset": 3,
+          "node_type": "Compare",
+          "original_op": "Eq",
+          "inferred_type": null
+        },
+        "replacement_op": "NotEq",
+        "mutant_id": 3
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_import_does_not_execute_main",
+      "time_seconds": 0.3017369997687638,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_import_does_not_execute_main"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_import_does_not_execute_main"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_import_does_not_execute_main",
+      "tests/leela/describe_timeout_process.py::test_guardian_entry_guard_calls_main",
+      "tests/leela/describe_timeout_process.py::test_guardian_has_no_lifetime_thread_at_successful_return"
+    ]
+  }
+]

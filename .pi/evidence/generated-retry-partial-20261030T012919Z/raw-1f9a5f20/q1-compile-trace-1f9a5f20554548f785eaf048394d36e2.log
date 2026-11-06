@@ -1,0 +1,18 @@
+tests/leela/describe_end_to_end.py::describe_import_breaking_mutant::it_counts_a_target_that_raises_on_import_as_killed
+tests/leela/describe_end_to_end.py::describe_import_breaking_mutant::it_keeps_a_caught_import_error_with_green_tests_survived
+tests/leela/describe_end_to_end.py::describe_import_breaking_mutant::it_reports_a_module_level_skip_on_import_error_as_an_error
+tests/leela/describe_end_to_end.py::describe_import_breaking_mutant::it_reports_a_skip_marker_on_import_error_as_an_error
+tests/leela/describe_end_to_end.py::describe_collection_failures::it_kills_when_a_module_level_assert_fails_under_the_mutant
+tests/leela/describe_end_to_end.py::describe_collection_failures::it_reports_a_conftest_that_skips_itself_as_an_error
+tests/leela/describe_end_to_end.py::describe_collection_failures::it_reports_a_conftest_that_exits_on_a_failed_import_as_an_error
+tests/leela/describe_end_to_end.py::describe_collection_failures::it_reports_a_test_module_that_exits_on_a_failed_import_as_an_error
+tests/leela/describe_end_to_end.py::describe_error_mutants::it_shows_the_error_and_fails_the_session
+tests/leela/describe_end_to_end.py::describe_error_mutants::it_passes_when_fail_on_error_is_false
+tests/leela/describe_end_to_end.py::describe_baseline_abort::it_aborts_when_a_test_only_passes_once_per_process
+tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes
+tests/leela/describe_end_to_end.py::describe_django_project::it_runs_database_tests_inside_the_inner_session
+tests/leela/describe_end_to_end.py::describe_django_project::it_lifts_the_outer_db_block_inside_inner_sessions
+tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process
+
+15 tests collected in 0.01s
+{"exit": 0, "traceTargetLine313": true, "traceLines": [1, 3, 4, 6, 7, 8, 12, 18, 19, 36, 59, 86, 110, 111, 135, 165, 195, 224, 225, 245, 260, 269, 270, 296, 297, 306, 307, 313, 399, 405, 406, 428, 449], "docstringLine314": false}

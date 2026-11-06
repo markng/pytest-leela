@@ -1,0 +1,37 @@
+"""Bind latest native campaign HTML receipts into a source-bound CALL ledger."""
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+
+def extract_campaign(path: Path) -> dict:
+    raw = next(
+        line for line in path.read_text().splitlines()
+        if line.startswith("window.LEELA_DATA = ")
+    )
+    data = json.loads(raw.removeprefix("window.LEELA_DATA = ").removesuffix(";"))
+    return {
+        "html_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "summary": data["summary"],
+        "files": {
+            file_path: {
+                "source_sha256": hashlib.sha256(file_data["source"].encode()).hexdigest(),
+                "mutants": file_data["mutants"],
+            }
+            for file_path, file_data in data["files"].items()
+        },
+    }
+
+
+def main(input_stream=sys.stdin):
+    stems = json.load(input_stream)
+    reports = {
+        stem: extract_campaign(Path(".pi/evidence") / f"{stem}.html")
+        for stem in stems
+    }
+    print(json.dumps(reports, indent=2))
+
+
+if __name__ == "__main__":
+    main()

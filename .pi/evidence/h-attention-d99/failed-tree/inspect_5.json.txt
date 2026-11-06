@@ -1,0 +1,41 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "UAdd"
+      ],
+      "default_mutations": [
+        "UAdd"
+      ],
+      "point": {
+        "col_offset": 140,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_5.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_5",
+        "node_type": "UnaryOp",
+        "original_op": "USub"
+      }
+    },
+    {
+      "all_mutations": [
+        "UAdd"
+      ],
+      "default_mutations": [
+        "UAdd"
+      ],
+      "point": {
+        "col_offset": 219,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/inspect_5.py",
+        "inferred_type": null,
+        "lineno": 1,
+        "module_name": "inspect_5",
+        "node_type": "UnaryOp",
+        "original_op": "USub"
+      }
+    }
+  ],
+  "sha256": "65d1203d63e4751031ac6e149d59b27642a366192f4969c01a39800ee8c17532"
+}

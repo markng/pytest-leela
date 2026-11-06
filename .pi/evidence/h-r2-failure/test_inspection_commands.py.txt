@@ -1,0 +1,60 @@
+"""Replay every retained one-line Python inspection command."""
+import importlib
+import sys
+from pathlib import Path
+from unittest.mock import mock_open, patch
+
+import pytest
+
+
+@pytest.mark.parametrize("module", [
+    "inspect_1", "inspect_2", "inspect_3", "inspect_4", "inspect_5",
+    "inspect_7", "inspect_8", "inspect_9", "inspect_10",
+    "inspect_11", "inspect_12", "inspect_13", "inspect_14",
+])
+def test_inspection_command_output(module, monkeypatch, capsys):
+    directory = Path(__file__).parent
+    monkeypatch.syspath_prepend(str(directory))
+    importlib.import_module(module)
+    assert capsys.readouterr().out == directory.joinpath(module + ".txt").read_text()
+
+
+def test_inspect_6_selects_only_included_coverage():
+    import inspect_6
+
+    daemon = str(Path("src/pytest_leela/daemon.py").resolve())
+    foreign = str(Path("foreign.py").resolve())
+    included = {daemon: {1, 2}}
+    coverage = {
+        "files": {
+            "src/pytest_leela/daemon.py": {
+                "executed_lines": [1], "missing_lines": [2],
+                "executed_branches": [[1, 2]], "missing_branches": [[2, 3]],
+            },
+            "foreign.py": {
+                "executed_lines": [8], "missing_lines": [],
+                "executed_branches": [], "missing_branches": [],
+            },
+        },
+    }
+    assert inspect_6.select_changed_coverage(coverage, included) == {
+        "src/pytest_leela/daemon.py": {
+            "new_executable_lines": [1, 2], "missing_new_lines": [2],
+            "new_branches": [[1, 2], [2, 3]], "missing_new_branches": [[2, 3]],
+        },
+    }
+    assert foreign not in included
+
+
+def test_inspect_6_import_does_not_execute_main(capsys):
+    sys.modules.pop("inspect_6", None)
+    importlib.import_module("inspect_6")
+    assert capsys.readouterr().out == ""
+
+
+def test_inspection_missing_range_boundaries(capsys):
+    import inspect_4
+    capsys.readouterr()
+    with patch("builtins.open", mock_open(read_data='{"files":{"src/pytest_leela/daemon.py":{"missing_lines":[267,268,269],"missing_branches":[[267,1],[268,1],[269,1]]}}}')):
+        importlib.reload(inspect_4)
+    assert capsys.readouterr().out == "[('src/pytest_leela/daemon.py', [((268, 268), [268], [[268, 1]]), ((519, 534), [], []), ((837, 837), [], [])])]\n"

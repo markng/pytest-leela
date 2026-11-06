@@ -1,0 +1,553 @@
+{
+  "run": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68",
+  "originalImportContractRevision": {
+    "runId": "fd19e1db4f8f4f63862b6b0f7ae02f26",
+    "sourceRoot": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+    "head": "b1bb565883c75356be1a493c64084607d5769f3f",
+    "environment": {
+      "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python",
+      "pythonVersion": "3.13.11",
+      "pytestVersion": "9.1.1",
+      "djangoVersion": "6.1.2"
+    },
+    "selection": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+    "collectionCount": 15,
+    "importContract": {
+      "liveImportsLog": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/imports.log",
+      "note": "Existing test passed after exactly the first 20 rows; later diagnostic appended 10 rows. Prefix and appended rows preserved separately; live log is not relabeled as ordinary-only.",
+      "ordinaryPrefix": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/ordinary-imports-prefix-20.log",
+      "diagnosticAppend": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/native-diagnostic-appended-imports-10.log",
+      "executions": 20,
+      "pids": [
+        "24641",
+        "24649",
+        "24652",
+        "24656"
+      ],
+      "modulesByPid": {
+        "24641": [
+          "shop.models",
+          "shop.mixins",
+          "stock.models",
+          "shop.admin",
+          "shop.backoffice"
+        ],
+        "24649": [
+          "shop.models",
+          "shop.mixins",
+          "stock.models",
+          "shop.admin",
+          "shop.backoffice"
+        ],
+        "24652": [
+          "shop.models",
+          "shop.mixins",
+          "stock.models",
+          "shop.admin",
+          "shop.backoffice"
+        ],
+        "24656": [
+          "shop.models",
+          "shop.mixins",
+          "stock.models",
+          "shop.admin",
+          "shop.backoffice"
+        ]
+      },
+      "expectedModules": [
+        "shop.admin",
+        "shop.backoffice",
+        "shop.mixins",
+        "shop.models",
+        "stock.models"
+      ],
+      "outerOutput": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/django-import-contract-fd19e1db4f8f4f63862b6b0f7ae02f26.log",
+      "generatedProject": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0",
+      "postDiagnosticGeneratedFileSha256": {
+        ".pytest_cache/.gitignore": "3ed731b65d06150c138e2dadb0be0697550888a6b47eb8c45ecc9adba8b8e9bd",
+        ".pytest_cache/CACHEDIR.TAG": "37dc88ef9a0abeddbe81053a6dd8fdfb13afb613045ea1eb4a5c815a74a3bde4",
+        ".pytest_cache/README.md": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
+        ".pytest_cache/v/cache/lastfailed": "4b3afd42e0cad164bd8dcc475fe41500301fce480e59dbd465389200e4540d03",
+        ".pytest_cache/v/cache/nodeids": "c9c52c5813b788f91f52b2e62a215d8842c4592e61eda51684c6dd6bb1abb96c",
+        "imports.log": "5a672b97b449a83f58a14fb1def102f6ee2764c11e89aa2e0dedcfa106fc037e",
+        "settings.py": "117d08c32b30f30bcee0ded53e7ecff959dfc444faec107e62951101068654a8",
+        "shop/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "shop/admin.py": "cca56ca5abf978713269763bb5d9e4329c7eb6f4434aae18059c2f8f00f3d25d",
+        "shop/apps.py": "cdf45b9f47714d31cde4ff52115f547ff8303f34f52c9a06308cfd115b2ce551",
+        "shop/backoffice.py": "9a34814e7dee283ab3a7ae3c6daa072233c1fa5150da2be577091f7a0441605d",
+        "shop/mixins.py": "99e2987044cc708450c659915a2854060d60d724307502d99df8ff2b7cbeb467",
+        "shop/models.py": "93194727ad13bead500d02f4dc8c0ddd82e67ed93eb2c91678154e6faec0701c",
+        "shop/pricing.py": "9344fe33a09be455d18787e4d4b0a09b1965cb22758f1562704835a0a1410e16",
+        "stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout": "98e5eabed0a81d18b351c2b89703747df44c6349240e20bfe61a449e9c94666f",
+        "stock/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stock/models.py": "a42ab4148bf838a2abfbce6d4f740f03b0fa677ec3d54ff4f4f9bf5d41ebcfcf",
+        "tests/test_shop.py": "b81342270786435f7a5a37d003a5213c8f77d90c9b0972849fdd8fcd7100fc5d",
+        "tox.ini": "4145a0adc5ca9a0c9c1f6d285a2349ad441c67cff0c74f15a924b4638882988d"
+      }
+    },
+    "nativeBinding": {
+      "classification": "fresh-qualified-child-native-binding",
+      "job": "8e31acb7a9c540419550566913d2ec0e",
+      "sourceRoot": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+      "project": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0",
+      "target": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+      "module": "shop.pricing",
+      "sourceSha256": "9344fe33a09be455d18787e4d4b0a09b1965cb22758f1562704835a0a1410e16",
+      "observer": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/recovered-helpers/passive_timeout_observer.py",
+      "observerSha256": "9facc5f24b9d55c495e954fadac8c4427eb8acdf53d3b205a7580e36e15d8f54",
+      "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python",
+      "mutantDenominator": 3,
+      "canonicalMutants": [
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+            "module_name": "shop.pricing",
+            "lineno": 2,
+            "col_offset": 4,
+            "node_type": "Return",
+            "original_op": "expr",
+            "inferred_type": null
+          },
+          "replacement_op": "None",
+          "mutant_id": 0
+        },
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+            "module_name": "shop.pricing",
+            "lineno": 2,
+            "col_offset": 11,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Sub",
+          "mutant_id": 1
+        },
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+            "module_name": "shop.pricing",
+            "lineno": 2,
+            "col_offset": 11,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 2
+        }
+      ],
+      "selectedMutant": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+          "module_name": "shop.pricing",
+          "lineno": 2,
+          "col_offset": 11,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": null
+        },
+        "replacement_op": "Sub",
+        "mutant_id": 1
+      },
+      "enrichment": {
+        "from_annotations": 0,
+        "from_assignment_dataflow": 0
+      },
+      "testId": "tests/test_shop.py::test_registry_and_identity_hold",
+      "testTimes": {
+        "tests/test_shop.py::test_registry_and_identity_hold": 0.31
+      },
+      "control": {
+        "pid": 24735,
+        "outcome": "passed",
+        "collectorTotal": 1,
+        "elapsed": 0.3401041669967526
+      },
+      "parentResult": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+            "module_name": "shop.pricing",
+            "lineno": 2,
+            "col_offset": 11,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Sub",
+          "mutant_id": 1
+        },
+        "killed": true,
+        "tests_run": 1,
+        "killing_test": "tests/test_shop.py::test_registry_and_identity_hold",
+        "time_seconds": 0.29694745899905683,
+        "test_ids_run": [
+          "tests/test_shop.py::test_registry_and_identity_hold"
+        ],
+        "killing_tests": [
+          "tests/test_shop.py::test_registry_and_identity_hold"
+        ],
+        "error": null
+      },
+      "binding": {
+        "event": "loader-end",
+        "module": "shop.pricing",
+        "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+        "source_sha": "9344fe33a09be455d18787e4d4b0a09b1965cb22758f1562704835a0a1410e16",
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+            "module_name": "shop.pricing",
+            "lineno": 2,
+            "col_offset": 11,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Sub",
+          "mutant_id": 1
+        },
+        "completed": true,
+        "applied": true,
+        "expected_module_sha": "6ec21c79a707771bcada0888a4235a15cb5995558704c0848bd3d9fd549e0aab",
+        "executed_modules": [
+          {
+            "code_sha": "6ec21c79a707771bcada0888a4235a15cb5995558704c0848bd3d9fd549e0aab",
+            "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py"
+          }
+        ],
+        "live_functions": [
+          {
+            "qualname": "total",
+            "filename": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/outer-basetemp/it_imports_models_admin_and_references_once_per_process0/shop/pricing.py",
+            "sha": "59c951db762118848c3f298cff07e54a51df4bc2c2d914b9acd85179c5b77b2b",
+            "expected_sha": "59c951db762118848c3f298cff07e54a51df4bc2c2d914b9acd85179c5b77b2b"
+          }
+        ],
+        "ast_changed": true,
+        "pid": 24737,
+        "invocation": "8e31acb7a9c540419550566913d2ec0e-mutant"
+      },
+      "failedCall": {
+        "event": "report",
+        "nodeid": "tests/test_shop.py::test_registry_and_identity_hold",
+        "phase": "call",
+        "outcome": "failed",
+        "diagnostic": "E   assert -1 == 5\n     +  where -1 = total(2, 3)",
+        "pid": 24737,
+        "invocation": "8e31acb7a9c540419550566913d2ec0e-mutant"
+      },
+      "events": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/native-events-8e31acb7a9c540419550566913d2ec0e.jsonl",
+      "schema": {
+        "join": [
+          "invocation/job",
+          "pid",
+          "nodeid in parentResult.killing_tests"
+        ],
+        "loaderRequired": [
+          "module",
+          "filename",
+          "source_sha",
+          "mutant",
+          "applied",
+          "ast_changed",
+          "executed module code sha"
+        ],
+        "callRequired": [
+          "phase=call",
+          "outcome=failed"
+        ]
+      }
+    },
+    "diagnostics": {
+      "bindingScript": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/django_native_binding.py",
+      "bindingScriptSha256": "7afc6e59f84b96faf66bbb1a02adfa65383cba19a0f10f2e30883faf5d05fead",
+      "controlsScript": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/diagnostic_controls.py",
+      "controlsScriptSha256": "34077c1cc64f701b4896c966beed8ffbe8a4fd20910b11ab25985d3c8bec6d90",
+      "classification": "disposable single-task evidence diagnostics",
+      "controls": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/diagnostic-controls.txt"
+    },
+    "limits": [
+      "Existing Django test proves actual 4 PIDs/20 imports and its three pricing mutants, but its summary is not full-source/CALL qualification.",
+      "Native binding qualifies only fresh current canonical BinOp Sub ID1 for generated shop.pricing under this exact project/test/source/job.",
+      "Original task remains incomplete; no historical receipt reconstruction."
+    ],
+    "revisionNote": {
+      "previousJson": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current.json",
+      "previousJsonSha256": "bab25d672981562159ccc96e6d48c9535a6ad53026a703df2e2bbe2160841e2d",
+      "reason": "correct outerOutput from resource log to actual stdout; original retained"
+    }
+  },
+  "sourceRoot": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+  "environment": {
+    "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python",
+    "pythonVersion": "3.13.11",
+    "pytestVersion": "9.1.1",
+    "djangoVersion": "6.1.2"
+  },
+  "bridge": {
+    "previousEvidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/native-binding.json",
+    "previousJob": "8e31acb7a9c540419550566913d2ec0e",
+    "sourceAndSelectorHashes": {
+      "shop/pricing.py": {
+        "previous": "9344fe33a09be455d18787e4d4b0a09b1965cb22758f1562704835a0a1410e16",
+        "current": "9344fe33a09be455d18787e4d4b0a09b1965cb22758f1562704835a0a1410e16"
+      },
+      "tests/test_shop.py": {
+        "previous": "b81342270786435f7a5a37d003a5213c8f77d90c9b0972849fdd8fcd7100fc5d",
+        "current": "b81342270786435f7a5a37d003a5213c8f77d90c9b0972849fdd8fcd7100fc5d"
+      },
+      "tox.ini": {
+        "previous": "4145a0adc5ca9a0c9c1f6d285a2349ad441c67cff0c74f15a924b4638882988d",
+        "current": "4145a0adc5ca9a0c9c1f6d285a2349ad441c67cff0c74f15a924b4638882988d"
+      },
+      "settings.py": {
+        "previous": "117d08c32b30f30bcee0ded53e7ecff959dfc444faec107e62951101068654a8",
+        "current": "117d08c32b30f30bcee0ded53e7ecff959dfc444faec107e62951101068654a8"
+      },
+      "shop/apps.py": {
+        "previous": "cdf45b9f47714d31cde4ff52115f547ff8303f34f52c9a06308cfd115b2ce551",
+        "current": "cdf45b9f47714d31cde4ff52115f547ff8303f34f52c9a06308cfd115b2ce551"
+      },
+      "shop/admin.py": {
+        "previous": "cca56ca5abf978713269763bb5d9e4329c7eb6f4434aae18059c2f8f00f3d25d",
+        "current": "cca56ca5abf978713269763bb5d9e4329c7eb6f4434aae18059c2f8f00f3d25d"
+      },
+      "shop/backoffice.py": {
+        "previous": "9a34814e7dee283ab3a7ae3c6daa072233c1fa5150da2be577091f7a0441605d",
+        "current": "9a34814e7dee283ab3a7ae3c6daa072233c1fa5150da2be577091f7a0441605d"
+      },
+      "shop/mixins.py": {
+        "previous": "99e2987044cc708450c659915a2854060d60d724307502d99df8ff2b7cbeb467",
+        "current": "99e2987044cc708450c659915a2854060d60d724307502d99df8ff2b7cbeb467"
+      },
+      "shop/models.py": {
+        "previous": "93194727ad13bead500d02f4dc8c0ddd82e67ed93eb2c91678154e6faec0701c",
+        "current": "93194727ad13bead500d02f4dc8c0ddd82e67ed93eb2c91678154e6faec0701c"
+      },
+      "stock/models.py": {
+        "previous": "a42ab4148bf838a2abfbce6d4f740f03b0fa677ec3d54ff4f4f9bf5d41ebcfcf",
+        "current": "a42ab4148bf838a2abfbce6d4f740f03b0fa677ec3d54ff4f4f9bf5d41ebcfcf"
+      }
+    },
+    "observerSha": "9facc5f24b9d55c495e954fadac8c4427eb8acdf53d3b205a7580e36e15d8f54",
+    "testId": "tests/test_shop.py::test_registry_and_identity_hold",
+    "mappingExcludesPathOnly": true,
+    "caveat": "copied project path differs; same source/selector/runtime/observer/canonical mutation; old native event remains bound to old actual path"
+  },
+  "pricing": {
+    "default": {
+      "denominator": 3,
+      "entries": [
+        {
+          "id": 0,
+          "evidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/default-shop_pricing-0-84f6762b5fdc402db55f859c7adfc710.json",
+          "status": "genuine-CALL"
+        },
+        {
+          "id": 1,
+          "evidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/django-bootstrap-current/fd19e1db4f8f4f63862b6b0f7ae02f26/native-binding.json",
+          "status": "genuine-CALL-prior-bound-bridge"
+        },
+        {
+          "id": 2,
+          "evidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/default-shop_pricing-2-d6f01dd2ea2d4dd881322d1895ec06d9.json",
+          "status": "genuine-CALL"
+        }
+      ]
+    },
+    "all": {
+      "denominator": 3,
+      "entries": [
+        {
+          "id": 0,
+          "job": "afd35321849548e4938b86839863e819",
+          "status": "genuine-CALL",
+          "cleanPid": 26103,
+          "childPid": 26105,
+          "evidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/all-shop_pricing-0-afd35321849548e4938b86839863e819.json"
+        },
+        {
+          "id": 1,
+          "job": "78b3290c510f418186fecc7ccc1c2006",
+          "status": "genuine-CALL",
+          "cleanPid": 26117,
+          "childPid": 26119,
+          "evidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/all-shop_pricing-1-78b3290c510f418186fecc7ccc1c2006.json"
+        },
+        {
+          "id": 2,
+          "job": "a052aa8758e94c878e36c13ed7a96d00",
+          "status": "genuine-CALL",
+          "cleanPid": 26131,
+          "childPid": 26133,
+          "evidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/all-shop_pricing-2-a052aa8758e94c878e36c13ed7a96d00.json"
+        }
+      ]
+    }
+  },
+  "djangoModule": {
+    "candidate": {
+      "job": "0bb52f6bd8df47d886ea1ccb16a8acb5",
+      "module": "shop.admin",
+      "scope": "default",
+      "target": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+      "source_sha": "cca56ca5abf978713269763bb5d9e4329c7eb6f4434aae18059c2f8f00f3d25d",
+      "denominator": 6,
+      "mutants": [
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+            "module_name": "shop.admin",
+            "lineno": 5,
+            "col_offset": 14,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Sub",
+          "mutant_id": 0
+        },
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+            "module_name": "shop.admin",
+            "lineno": 5,
+            "col_offset": 14,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 1
+        },
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+            "module_name": "shop.admin",
+            "lineno": 5,
+            "col_offset": 14,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Sub",
+          "mutant_id": 2
+        },
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+            "module_name": "shop.admin",
+            "lineno": 5,
+            "col_offset": 14,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 3
+        },
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+            "module_name": "shop.admin",
+            "lineno": 5,
+            "col_offset": 14,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Sub",
+          "mutant_id": 4
+        },
+        {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+            "module_name": "shop.admin",
+            "lineno": 5,
+            "col_offset": 14,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Mult",
+          "mutant_id": 5
+        }
+      ],
+      "enrichment": {
+        "from_annotations": 0,
+        "from_assignment_dataflow": 0
+      },
+      "selected": {
+        "point": {
+          "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+          "module_name": "shop.admin",
+          "lineno": 5,
+          "col_offset": 14,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": null
+        },
+        "replacement_op": "Sub",
+        "mutant_id": 0
+      },
+      "test_id": "tests/test_shop.py::test_registry_and_identity_hold",
+      "clean_calls": [
+        {
+          "event": "report",
+          "nodeid": "tests/test_shop.py::test_registry_and_identity_hold",
+          "phase": "call",
+          "outcome": "passed",
+          "diagnostic": null,
+          "pid": 26153,
+          "invocation": "0bb52f6bd8df47d886ea1ccb16a8acb5-control"
+        }
+      ],
+      "bindings": [],
+      "failed_calls": [],
+      "result": {
+        "mutant": {
+          "point": {
+            "file_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/project/shop/admin.py",
+            "module_name": "shop.admin",
+            "lineno": 5,
+            "col_offset": 14,
+            "node_type": "BinOp",
+            "original_op": "Add",
+            "inferred_type": null
+          },
+          "replacement_op": "Sub",
+          "mutant_id": 0
+        },
+        "killed": false,
+        "tests_run": 0,
+        "killing_test": null,
+        "time_seconds": 0.2417946249988745,
+        "test_ids_run": [],
+        "killing_tests": [],
+        "error": "pytest crashed: TypeError: unsupported operand type(s) for -: 'str' and 'str'"
+      },
+      "status": "unqualified-error",
+      "event_path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/0bb52f6bd8df47d886ea1ccb16a8acb5.jsonl",
+      "event_counts": {
+        "configure": 0,
+        "loader-start": 0,
+        "loader-end": 0,
+        "report": 0
+      },
+      "observer_sha": "9facc5f24b9d55c495e954fadac8c4427eb8acdf53d3b205a7580e36e15d8f54",
+      "python": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python"
+    },
+    "evidence": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/default-shop_admin-0-0bb52f6bd8df47d886ea1ccb16a8acb5.json",
+    "classification": "unqualified-error",
+    "nextRepair": "instrument native loader earlier than pytest_configure, plus parent/child job-result channel; distinguish startup import failure from behavioral CALL; do not count crash as kill"
+  },
+  "artifacts": {
+    "probeSha256": "7234f00fb9a303ab6b52a34ae4a89d722798fff82af5bc6090366014203e1e50",
+    "controlsSha256": "ce73ab43877cc3a15d60d9f1de2930bb94b8fdc2840567023bef6e2fdd5cf61a",
+    "controls": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/generated-django-qualification/7570f73d6efb4927bd2ddc9f3ea29a68/probe-controls.log"
+  }
+}

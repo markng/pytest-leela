@@ -1,0 +1,3 @@
+# CURRENT — recovery inventory complete; original task incomplete
+
+REC1–REC3 administrative scope only. HEAD b1bb565, empty index, 17 preserved source hashes and tracked diff match verified; no product/test or canonical-checkout writes. `.pi/recovery-inventory.md` records historical documentary results separately from missing original raw ledgers and three pinned environments. Four helper source copies under `.pi/recovered-helpers/` match recorded SHA-256; not executed and containment not established. No tests/campaigns rerun. Next: owner-provided exact evidence/environment backup or specific authorization for isolated pinned environment recovery; preserve unrecovered T4 receipts and qualify controls before any mutants. No staging, publication or dependency changes.

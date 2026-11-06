@@ -1,0 +1,24 @@
+{
+  "all_pruned": 0,
+  "default_pruned": 0,
+  "points": [
+    {
+      "all_mutations": [
+        "None"
+      ],
+      "default_mutations": [
+        "None"
+      ],
+      "point": {
+        "col_offset": 4,
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/.pi/evidence/inline-source/fixture_identity.py",
+        "inferred_type": null,
+        "lineno": 2,
+        "module_name": "fixture_identity",
+        "node_type": "Return",
+        "original_op": "expr"
+      }
+    }
+  ],
+  "sha256": "edaaeb1663f87186a7d2b9942f72c68fdfb45038cadc123c80897872606d0c10"
+}

@@ -1,0 +1,1144 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.11, pytest-9.1.1, pluggy-1.7.0
+cachedir: .pi/evidence/final-current-ci/py313/pytest-cache
+django: version: 6.1.2
+rootdir: /private/tmp/pi-leela-responsive-watch-20261022
+configfile: pyproject.toml
+testpaths: tests
+plugins: Faker-40.43.0, django-4.14.0, leela-0.9.0, describe-3.2.0
+collected 1662 items
+
+tests/leela/describe_annotation_policy.py ..                             [  0%]
+tests/leela/describe_assignment_targets.py ............................. [  1%]
+...................                                                      [  3%]
+tests/leela/describe_ast_analysis.py ................................... [  5%]
+..................................                                       [  7%]
+tests/leela/describe_benchmark.py .....................                  [  8%]
+tests/leela/describe_ci_mutation_regressions.py ..............           [  9%]
+tests/leela/describe_config.py ...............................           [ 11%]
+tests/leela/describe_coverage_collector.py ..........................    [ 12%]
+tests/leela/describe_coverage_tracker.py .......................         [ 14%]
+tests/leela/describe_daemon.py ......................................... [ 16%]
+........................................................................ [ 20%]
+.............................................................            [ 24%]
+tests/leela/describe_daemon_contracts.py ...                             [ 24%]
+tests/leela/describe_daemon_shutdown.py ...                              [ 24%]
+tests/leela/describe_end_to_end.py ...............                       [ 25%]
+tests/leela/describe_engine.py ......................................... [ 28%]
+.............................................                            [ 30%]
+tests/leela/describe_engine_integration.py ............................. [ 32%]
+.........                                                                [ 33%]
+tests/leela/describe_execution_freshness.py .......                      [ 33%]
+tests/leela/describe_git_diff.py ....................................... [ 36%]
+                                                                         [ 36%]
+tests/leela/describe_html_report.py .................................... [ 38%]
+....................................                                     [ 40%]
+tests/leela/describe_import_hook.py .................................... [ 42%]
+.........................................                                [ 45%]
+tests/leela/describe_index.py .......................................... [ 47%]
+.........................................                                [ 50%]
+tests/leela/describe_models.py ...............................           [ 51%]
+tests/leela/describe_operators.py ...................................... [ 54%]
+............................................................             [ 57%]
+tests/leela/describe_output.py ......................................... [ 60%]
+......                                                                   [ 60%]
+tests/leela/describe_plugin.py ......................................... [ 63%]
+.....................................                                    [ 65%]
+tests/leela/describe_resources.py ............................           [ 66%]
+tests/leela/describe_runner.py ......................................... [ 69%]
+........................................................................ [ 73%]
+........................................................................ [ 78%]
+.........................                                                [ 79%]
+tests/leela/describe_type_extractor.py ................................. [ 81%]
+........................................................................ [ 85%]
+................................                                         [ 87%]
+tests/leela/describe_watcher_retained_probes.py .........                [ 88%]
+tests/leela/describe_watcher_wheel.py .                                  [ 88%]
+tests/target/describe_assignment_targets.py ............................ [ 90%]
+..........................                                               [ 91%]
+tests/target/describe_calculator.py ..................................   [ 93%]
+tests/target/describe_change_me.py .......                               [ 94%]
+tests/target/describe_collections_utils.py ............................. [ 95%]
+                                                                         [ 95%]
+tests/target/describe_strings.py ........................                [ 97%]
+tests/target/describe_validators.py .................................... [ 99%]
+........                                                                 [100%]leela: mutation preparation started
+leela: mutation preparation complete
+leela: baseline started
+leela: mutation heartbeat 0/0 baseline tests elapsed=29s
+leela: mutation heartbeat 0/0 baseline tests elapsed=59s
+leela: mutation heartbeat 0/0 baseline tests elapsed=89s
+leela: mutation heartbeat 0/0 baseline tests elapsed=119s
+leela: mutation heartbeat 0/0 baseline tests elapsed=149s
+leela: mutation heartbeat 0/0 baseline tests elapsed=179s
+leela: baseline complete
+leela: mutation run started (1324 mutants)
+leela: mutant 1/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:69 Compare:Is tests=300 timeout=319.3s
+leela: mutant 1/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:69 Compare:Is tests=300 killed timeout=no elapsed=0.71s
+leela: mutant 2/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:86 Compare:Is tests=34 timeout=49.7s
+leela: mutant 2/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:86 Compare:Is tests=34 killed timeout=no elapsed=0.17s
+leela: mutant 3/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:102 Compare:Is tests=6 timeout=5.0s
+leela: mutant 3/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:102 Compare:Is tests=6 killed timeout=no elapsed=0.11s
+leela: mutant 4/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:118 Compare:Is tests=8 timeout=5.0s
+leela: mutant 4/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:118 Compare:Is tests=8 killed timeout=no elapsed=0.08s
+leela: mutant 5/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:134 Compare:Is tests=23 timeout=5.0s
+leela: mutant 5/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:134 Compare:Is tests=23 killed timeout=no elapsed=0.08s
+leela: mutant 6/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:192 BoolOp:Or tests=10 timeout=5.0s
+leela: mutant 6/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:192 BoolOp:Or tests=10 killed timeout=no elapsed=0.09s
+leela: mutant 7/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:192 Compare:NotEq tests=10 timeout=5.0s
+leela: mutant 7/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:192 Compare:NotEq tests=10 killed timeout=no elapsed=0.10s
+leela: mutant 8/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:195 BoolOp:Or tests=10 timeout=5.0s
+leela: mutant 8/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:195 BoolOp:Or tests=10 killed timeout=no elapsed=0.10s
+leela: mutant 9/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:195 Compare:NotEq tests=10 timeout=5.0s
+leela: mutant 9/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:195 Compare:NotEq tests=10 killed timeout=no elapsed=0.10s
+leela: mutant 10/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:197 Compare:IsNot tests=5 timeout=5.0s
+leela: mutant 10/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:197 Compare:IsNot tests=5 killed timeout=no elapsed=0.09s
+leela: mutant 11/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:200 Compare:Is tests=10 timeout=5.0s
+leela: mutant 11/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:200 Compare:Is tests=10 killed timeout=no elapsed=0.09s
+leela: mutant 12/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:201 BoolOp:Or tests=8 timeout=5.0s
+leela: mutant 12/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:201 BoolOp:Or tests=8 killed timeout=no elapsed=0.09s
+leela: mutant 13/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:212 UnaryOp:_remove tests=3 timeout=5.0s
+leela: mutant 13/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:212 UnaryOp:_remove tests=3 killed timeout=no elapsed=0.07s
+leela: mutant 14/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:232 Compare:Is tests=333 timeout=352.6s
+leela: mutant 14/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:232 Compare:Is tests=333 killed timeout=no elapsed=0.31s
+leela: mutant 15/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:252 Compare:IsNot tests=28 timeout=7.6s
+leela: mutant 15/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:252 Compare:IsNot tests=28 killed timeout=no elapsed=0.14s
+leela: mutant 16/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:253 Return:empty_str tests=5 timeout=5.0s
+leela: mutant 16/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:253 Return:empty_str tests=5 killed timeout=no elapsed=0.08s
+leela: mutant 17/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:254 Compare:IsNot tests=24 timeout=7.6s
+leela: mutant 17/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:254 Compare:IsNot tests=24 killed timeout=no elapsed=0.13s
+leela: mutant 18/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:255 Return:empty_str tests=3 timeout=5.0s
+leela: mutant 18/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:255 Return:empty_str tests=3 killed timeout=no elapsed=0.07s
+leela: mutant 19/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:256 Compare:IsNot tests=22 timeout=7.6s
+leela: mutant 19/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:256 Compare:IsNot tests=22 killed timeout=no elapsed=0.14s
+leela: mutant 20/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:257 Return:empty_str tests=7 timeout=5.0s
+leela: mutant 20/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:257 Return:empty_str tests=7 killed timeout=no elapsed=0.13s
+leela: mutant 21/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:261 Compare:NotEq tests=12 timeout=5.8s
+leela: mutant 21/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:261 Compare:NotEq tests=12 killed timeout=no elapsed=0.13s
+leela: mutant 22/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:262 Return:empty_str tests=3 timeout=5.0s
+leela: mutant 22/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:262 Return:empty_str tests=3 killed timeout=no elapsed=0.09s
+leela: mutant 23/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:263 Return:empty_str tests=10 timeout=5.8s
+leela: mutant 23/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:263 Return:empty_str tests=10 killed timeout=no elapsed=0.13s
+leela: mutant 24/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:266 Compare:NotEq tests=3 timeout=5.0s
+leela: mutant 24/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:266 Compare:NotEq tests=3 killed timeout=no elapsed=0.07s
+leela: mutant 25/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:267 Return:empty_str tests=2 timeout=5.0s
+leela: mutant 25/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:267 Return:empty_str tests=2 killed timeout=no elapsed=0.07s
+leela: mutant 26/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:268 Return:empty_str tests=2 timeout=5.0s
+leela: mutant 26/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:268 Return:empty_str tests=2 killed timeout=no elapsed=0.07s
+leela: mutant 27/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:270 Compare:NotEq tests=3 timeout=5.0s
+leela: mutant 27/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:270 Compare:NotEq tests=3 killed timeout=no elapsed=0.12s
+leela: mutant 28/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:271 Return:empty_str tests=2 timeout=5.0s
+leela: mutant 28/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:271 Return:empty_str tests=2 killed timeout=no elapsed=0.09s
+leela: mutant 29/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:272 Return:empty_str tests=2 timeout=5.0s
+leela: mutant 29/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:272 Return:empty_str tests=2 killed timeout=no elapsed=0.08s
+leela: mutant 30/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:273 BoolOp:Or tests=312 timeout=347.7s
+leela: mutant 30/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:273 BoolOp:Or tests=312 killed timeout=no elapsed=0.27s
+leela: mutant 31/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:274 Return:empty_str tests=6 timeout=5.0s
+leela: mutant 31/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:274 Return:empty_str tests=6 killed timeout=no elapsed=0.09s
+leela: mutant 32/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:275 Return:empty_str tests=307 timeout=347.7s
+leela: mutant 32/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:275 Return:empty_str tests=307 killed timeout=no elapsed=0.27s
+leela: mutant 33/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:292 BoolOp:Or tests=409 timeout=369.0s
+leela: mutant 33/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:292 BoolOp:Or tests=409 killed timeout=no elapsed=0.29s
+leela: mutant 34/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:292 Compare:NotEq tests=409 timeout=369.0s
+leela: mutant 34/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:292 Compare:NotEq tests=409 killed timeout=no elapsed=0.30s
+leela: mutant 35/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:292 Compare:NotIn tests=409 timeout=369.0s
+leela: mutant 35/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:292 Compare:NotIn tests=409 killed timeout=no elapsed=0.31s
+leela: mutant 36/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:296 Return:None tests=409 timeout=369.0s
+leela: mutant 36/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:296 Return:None tests=409 killed timeout=no elapsed=0.29s
+leela: mutant 37/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:306 Compare:NotIn tests=409 timeout=369.0s
+leela: mutant 37/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:306 Compare:NotIn tests=409 killed timeout=no elapsed=0.31s
+leela: mutant 38/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:307 Return:None tests=1 timeout=5.0s
+leela: mutant 38/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:307 Return:None tests=1 killed timeout=no elapsed=0.09s
+leela: mutant 39/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:314 Return:None tests=408 timeout=369.0s
+leela: mutant 39/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:314 Return:None tests=408 killed timeout=no elapsed=0.28s
+leela: mutant 40/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:314 Compare:In tests=408 timeout=369.0s
+leela: mutant 40/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:314 Compare:In tests=408 killed timeout=no elapsed=0.27s
+leela: mutant 41/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:322 Return:None tests=1 timeout=5.0s
+leela: mutant 41/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/ast_analysis.py:322 Return:None tests=1 killed timeout=no elapsed=0.36s
+leela: mutant 42/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:33 Compare:Eq tests=7 timeout=5.0s
+leela: mutant 42/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:33 Compare:Eq tests=7 killed timeout=no elapsed=0.14s
+leela: mutant 43/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:46 UnaryOp:_remove tests=6 timeout=5.0s
+leela: mutant 43/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:46 UnaryOp:_remove tests=6 killed timeout=no elapsed=0.13s
+leela: mutant 44/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:49 BinOp:Mult tests=3 timeout=5.0s
+leela: mutant 44/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:49 BinOp:Mult tests=3 killed timeout=no elapsed=0.13s
+leela: mutant 45/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:49 BinOp:FloorDiv tests=3 timeout=5.0s
+leela: mutant 45/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:49 BinOp:FloorDiv tests=3 killed timeout=no elapsed=0.13s
+leela: mutant 46/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 Compare:GtE tests=17 timeout=5.0s
+leela: mutant 46/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 Compare:GtE tests=17 killed timeout=no elapsed=0.20s
+leela: mutant 47/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 Compare:LtE tests=17 timeout=5.0s
+leela: mutant 47/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 Compare:LtE tests=17 killed timeout=no elapsed=0.22s
+leela: mutant 48/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 BinOp:Mult tests=17 timeout=5.0s
+leela: mutant 48/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 BinOp:Mult tests=17 killed timeout=no elapsed=0.20s
+leela: mutant 49/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 BinOp:FloorDiv tests=17 timeout=5.0s
+leela: mutant 49/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:97 BinOp:FloorDiv tests=17 killed timeout=no elapsed=0.22s
+leela: mutant 50/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:98 Compare:IsNot tests=17 timeout=5.0s
+leela: mutant 50/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:98 Compare:IsNot tests=17 killed timeout=no elapsed=0.23s
+leela: mutant 51/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:104 Compare:Gt tests=17 timeout=5.0s
+leela: mutant 51/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:104 Compare:Gt tests=17 killed timeout=no elapsed=0.22s
+leela: mutant 52/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:104 Compare:Lt tests=17 timeout=5.0s
+leela: mutant 52/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:104 Compare:Lt tests=17 killed timeout=no elapsed=0.22s
+leela: mutant 53/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 Compare:GtE tests=13 timeout=5.0s
+leela: mutant 53/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 Compare:GtE tests=13 killed timeout=no elapsed=0.22s
+leela: mutant 54/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 Compare:LtE tests=13 timeout=5.0s
+leela: mutant 54/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 Compare:LtE tests=13 killed timeout=no elapsed=0.20s
+leela: mutant 55/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 UnaryOp:UAdd tests=13 timeout=5.0s
+leela: mutant 55/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 UnaryOp:UAdd tests=13 killed timeout=no elapsed=0.21s
+leela: mutant 56/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 BinOp:Mult tests=13 timeout=5.0s
+leela: mutant 56/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 BinOp:Mult tests=13 killed timeout=no elapsed=0.22s
+leela: mutant 57/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 BinOp:FloorDiv tests=13 timeout=5.0s
+leela: mutant 57/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 BinOp:FloorDiv tests=13 killed timeout=no elapsed=0.21s
+leela: mutant 58/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 UnaryOp:UAdd tests=13 timeout=5.0s
+leela: mutant 58/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:105 UnaryOp:UAdd tests=13 killed timeout=no elapsed=0.20s
+leela: mutant 59/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:109 Return:None tests=17 timeout=5.0s
+leela: mutant 59/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/benchmark.py:109 Return:None tests=17 killed timeout=no elapsed=0.20s
+leela: mutant 60/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:40 BinOp:Mult tests=24 timeout=5.0s
+leela: mutant 60/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:40 BinOp:Mult tests=24 killed timeout=no elapsed=0.08s
+leela: mutant 61/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:40 BinOp:FloorDiv tests=24 timeout=5.0s
+leela: mutant 61/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:40 BinOp:FloorDiv tests=24 killed timeout=no elapsed=0.07s
+leela: mutant 62/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:41 UnaryOp:_remove tests=24 timeout=5.0s
+leela: mutant 62/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:41 UnaryOp:_remove tests=24 killed timeout=no elapsed=0.07s
+leela: mutant 63/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:42 Return:None tests=1 timeout=5.0s
+leela: mutant 63/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:42 Return:None tests=1 killed timeout=no elapsed=0.07s
+leela: mutant 64/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:48 UnaryOp:_remove tests=23 timeout=5.0s
+leela: mutant 64/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:48 UnaryOp:_remove tests=23 killed timeout=no elapsed=0.08s
+leela: mutant 65/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:49 Return:None tests=3 timeout=5.0s
+leela: mutant 65/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:49 Return:None tests=3 killed timeout=no elapsed=0.08s
+leela: mutant 66/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:56 UnaryOp:_remove tests=20 timeout=5.0s
+leela: mutant 66/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:56 UnaryOp:_remove tests=20 killed timeout=no elapsed=0.08s
+leela: mutant 67/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:61 UnaryOp:_remove tests=17 timeout=5.0s
+leela: mutant 67/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:61 UnaryOp:_remove tests=17 killed timeout=no elapsed=0.09s
+leela: mutant 68/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:67 UnaryOp:_remove tests=14 timeout=5.0s
+leela: mutant 68/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:67 UnaryOp:_remove tests=14 killed timeout=no elapsed=0.08s
+leela: mutant 69/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:75 UnaryOp:_remove tests=5 timeout=5.0s
+leela: mutant 69/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:75 UnaryOp:_remove tests=5 killed timeout=no elapsed=0.09s
+leela: mutant 70/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:81 UnaryOp:_remove tests=11 timeout=5.0s
+leela: mutant 70/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:81 UnaryOp:_remove tests=11 killed timeout=no elapsed=0.08s
+leela: mutant 71/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:89 Compare:In tests=10 timeout=5.0s
+leela: mutant 71/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:89 Compare:In tests=10 killed timeout=no elapsed=0.08s
+leela: mutant 72/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:97 Compare:NotIn tests=9 timeout=5.0s
+leela: mutant 72/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:97 Compare:NotIn tests=9 killed timeout=no elapsed=0.08s
+leela: mutant 73/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:100 Return:None tests=9 timeout=5.0s
+leela: mutant 73/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/config.py:100 Return:None tests=9 killed timeout=no elapsed=0.08s
+leela: mutant 74/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:35 BoolOp:Or tests=6 timeout=5.0s
+leela: mutant 74/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:35 BoolOp:Or tests=6 killed timeout=no elapsed=0.10s
+leela: mutant 75/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:35 Compare:NotEq tests=6 timeout=5.0s
+leela: mutant 75/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:35 Compare:NotEq tests=6 killed timeout=no elapsed=0.12s
+leela: mutant 76/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:37 UnaryOp:_remove tests=4 timeout=5.0s
+leela: mutant 76/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:37 UnaryOp:_remove tests=4 killed timeout=no elapsed=0.12s
+leela: mutant 77/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:76 Compare:In tests=3 timeout=5.0s
+leela: mutant 77/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:76 Compare:In tests=3 killed timeout=no elapsed=0.10s
+leela: mutant 78/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:77 Return:negate_expr tests=1 timeout=5.0s
+leela: mutant 78/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:77 Return:negate_expr tests=1 killed timeout=no elapsed=0.10s
+leela: mutant 79/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:96 Compare:NotEq tests=1 timeout=5.0s
+leela: mutant 79/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_collector.py:96 Compare:NotEq tests=1 killed timeout=no elapsed=0.10s
+leela: mutant 80/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:37 Compare:NotIn tests=124 timeout=231.1s
+leela: mutant 80/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:37 Compare:NotIn tests=124 killed timeout=no elapsed=0.22s
+leela: mutant 81/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:48 BinOp:Mult tests=124 timeout=231.1s
+leela: mutant 81/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:48 BinOp:Mult tests=124 killed timeout=no elapsed=0.22s
+leela: mutant 82/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:48 BinOp:FloorDiv tests=124 timeout=231.1s
+leela: mutant 82/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:48 BinOp:FloorDiv tests=124 killed timeout=no elapsed=0.21s
+leela: mutant 83/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:56 Return:None tests=116 timeout=220.8s
+leela: mutant 83/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:56 Return:None tests=116 killed timeout=no elapsed=0.19s
+leela: mutant 84/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:57 Return:None tests=8 timeout=11.3s
+leela: mutant 84/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:57 Return:None tests=8 killed timeout=no elapsed=0.29s
+leela: mutant 85/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:78 Return:None tests=1662 timeout=5.0s
+leela: mutation heartbeat 84/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:78 Return:None tests=1662 timeout=5.0s elapsed=3s
+leela: mutant 85/1324 timeout occurred
+leela: mutant 85/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:78 Return:None tests=1662 killed timeout=yes elapsed=25.09s
+leela: mutant 86/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:81 UnaryOp:_remove tests=5 timeout=5.0s
+leela: mutant 86/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:81 UnaryOp:_remove tests=5 killed timeout=no elapsed=0.08s
+leela: mutant 87/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:82 Return:expr tests=1 timeout=5.0s
+leela: mutant 87/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:82 Return:expr tests=1 killed timeout=no elapsed=0.07s
+leela: mutant 88/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:83 Compare:NotEq tests=4 timeout=5.0s
+leela: mutant 88/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:83 Compare:NotEq tests=4 killed timeout=no elapsed=0.07s
+leela: mutant 89/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:85 Compare:NotIn tests=2 timeout=5.0s
+leela: mutant 89/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:85 Compare:NotIn tests=2 killed timeout=no elapsed=0.07s
+leela: mutant 90/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:86 Return:None tests=1 timeout=5.0s
+leela: mutant 90/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:86 Return:None tests=1 killed timeout=no elapsed=0.07s
+leela: mutant 91/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:87 Return:expr tests=1 timeout=5.0s
+leela: mutant 91/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:87 Return:expr tests=1 killed timeout=no elapsed=0.08s
+leela: mutant 92/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:88 Return:expr tests=2 timeout=5.0s
+leela: mutant 92/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:88 Return:expr tests=2 killed timeout=no elapsed=0.08s
+leela: mutant 93/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:91 Compare:NotEq tests=3 timeout=5.0s
+leela: mutant 93/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:91 Compare:NotEq tests=3 killed timeout=no elapsed=0.07s
+leela: mutant 94/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:93 Compare:NotIn tests=2 timeout=5.0s
+leela: mutant 94/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:93 Compare:NotIn tests=2 killed timeout=no elapsed=0.07s
+leela: mutant 95/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:95 Return:None tests=3 timeout=5.0s
+leela: mutant 95/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:95 Return:None tests=3 killed timeout=no elapsed=0.07s
+leela: mutant 96/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:122 BoolOp:And tests=1662 timeout=5.0s
+leela: mutation heartbeat 95/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:122 BoolOp:And tests=1662 timeout=5.0s elapsed=7s
+leela: mutant 96/1324 timeout occurred
+leela: mutant 96/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:122 BoolOp:And tests=1662 killed timeout=yes elapsed=25.49s
+leela: mutant 97/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:123 BoolOp:And tests=1662 timeout=5.0s
+leela: mutation heartbeat 96/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:123 BoolOp:And tests=1662 timeout=5.0s elapsed=12s
+leela: mutant 97/1324 timeout occurred
+leela: mutant 97/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:123 BoolOp:And tests=1662 killed timeout=yes elapsed=24.93s
+leela: mutant 98/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:124 BinOp:Add tests=1662 timeout=5.0s
+leela: mutation heartbeat 97/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:124 BinOp:Add tests=1662 timeout=5.0s elapsed=17s
+leela: mutant 98/1324 timeout occurred
+leela: mutant 98/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:124 BinOp:Add tests=1662 killed timeout=yes elapsed=25.03s
+leela: mutant 99/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:124 BinOp:Mult tests=1662 timeout=5.0s
+leela: mutation heartbeat 98/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:124 BinOp:Mult tests=1662 timeout=5.0s elapsed=21s
+leela: mutant 99/1324 timeout occurred
+leela: mutant 99/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:124 BinOp:Mult tests=1662 killed timeout=yes elapsed=25.29s
+leela: mutant 100/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:166 Return:None tests=1 timeout=5.0s
+leela: mutant 100/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:166 Return:None tests=1 killed timeout=no elapsed=0.16s
+leela: mutant 101/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:189 UnaryOp:_remove tests=32 timeout=89.7s
+leela: mutant 101/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:189 UnaryOp:_remove tests=32 killed timeout=no elapsed=0.39s
+leela: mutant 102/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:190 Return:None tests=1 timeout=5.0s
+leela: mutant 102/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:190 Return:None tests=1 killed timeout=no elapsed=0.12s
+leela: mutant 103/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:203 BoolOp:And tests=31 timeout=89.7s
+leela: mutation heartbeat 102/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:203 BoolOp:And tests=31 timeout=89.7s elapsed=26s
+leela: mutation heartbeat 102/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:203 BoolOp:And tests=31 timeout=89.7s elapsed=56s
+leela: mutation heartbeat 102/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:203 BoolOp:And tests=31 timeout=89.7s elapsed=86s
+leela: mutation heartbeat 102/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:203 BoolOp:And tests=31 timeout=89.7s elapsed=116s
+leela: mutant 103/1324 timeout occurred
+leela: mutant 103/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:203 BoolOp:And tests=31 killed timeout=yes elapsed=120.44s
+leela: mutant 104/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:229 Return:None tests=27 timeout=89.1s
+leela: mutant 104/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/coverage_tracker.py:229 Return:None tests=27 killed timeout=no elapsed=0.54s
+leela: mutant 105/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:93 Return:None tests=1 timeout=5.0s
+leela: mutant 105/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:93 Return:None tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 106/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:107 Compare:IsNot tests=8 timeout=5.0s
+leela: mutant 106/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:107 Compare:IsNot tests=8 killed timeout=no elapsed=0.38s
+leela: mutant 107/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:108 Return:None tests=1 timeout=5.0s
+leela: mutant 107/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:108 Return:None tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 108/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:112 Return:None tests=7 timeout=5.0s
+leela: mutant 108/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:112 Return:None tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 109/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:160 BinOp:Add tests=57 timeout=42.7s
+leela: mutant 109/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:160 BinOp:Add tests=57 killed timeout=no elapsed=0.17s
+leela: mutant 110/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:160 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 110/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:160 BinOp:Mult tests=57 killed timeout=no elapsed=0.17s
+leela: mutant 111/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:161 Return:None tests=57 timeout=42.7s
+leela: mutant 111/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:161 Return:None tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 112/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 timeout=42.7s
+leela: mutant 112/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 113/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 113/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 114/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 timeout=42.7s
+leela: mutant 114/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 115/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 115/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 116/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 timeout=42.7s
+leela: mutant 116/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 117/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 117/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 118/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 timeout=42.7s
+leela: mutant 118/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Sub tests=57 killed timeout=no elapsed=0.17s
+leela: mutant 119/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 119/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:162 BinOp:Mult tests=57 killed timeout=no elapsed=0.17s
+leela: mutant 120/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Sub tests=57 timeout=42.7s
+leela: mutant 120/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Sub tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 121/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 121/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Mult tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 122/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Sub tests=57 timeout=42.7s
+leela: mutant 122/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Sub tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 123/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 123/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Mult tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 124/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Sub tests=57 timeout=42.7s
+leela: mutant 124/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Sub tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 125/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Mult tests=57 timeout=42.7s
+leela: mutant 125/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:167 BinOp:Mult tests=57 killed timeout=no elapsed=0.16s
+leela: mutant 126/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:173 Return:None tests=48 timeout=42.5s
+leela: mutant 126/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:173 Return:None tests=48 killed timeout=no elapsed=0.16s
+leela: mutant 127/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:213 Compare:Is tests=143 timeout=145.9s
+leela: mutant 127/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:213 Compare:Is tests=143 killed timeout=no elapsed=0.20s
+leela: mutant 128/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:Mult tests=61 timeout=113.0s
+leela: mutant 128/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:Mult tests=61 killed timeout=no elapsed=0.17s
+leela: mutant 129/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:FloorDiv tests=61 timeout=113.0s
+leela: mutant 129/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:FloorDiv tests=61 killed timeout=no elapsed=0.17s
+leela: mutant 130/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:Mult tests=61 timeout=113.0s
+leela: mutant 130/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:Mult tests=61 killed timeout=no elapsed=0.18s
+leela: mutant 131/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:FloorDiv tests=61 timeout=113.0s
+leela: mutant 131/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:214 BinOp:FloorDiv tests=61 killed timeout=no elapsed=0.18s
+leela: mutant 132/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:220 BoolOp:And tests=143 timeout=145.9s
+leela: mutant 132/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:220 BoolOp:And tests=143 killed timeout=no elapsed=0.89s
+leela: mutant 133/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:222 Compare:Is tests=143 timeout=145.9s
+leela: mutant 133/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:222 Compare:Is tests=143 killed timeout=no elapsed=0.43s
+leela: mutant 134/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:229 Compare:Is tests=143 timeout=145.9s
+leela: mutant 134/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:229 Compare:Is tests=143 killed timeout=no elapsed=0.48s
+leela: mutant 135/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:258 BinOp:Mult tests=143 timeout=145.9s
+leela: mutant 135/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:258 BinOp:Mult tests=143 killed timeout=no elapsed=0.22s
+leela: mutant 136/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:258 BinOp:FloorDiv tests=143 timeout=145.9s
+leela: mutant 136/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:258 BinOp:FloorDiv tests=143 killed timeout=no elapsed=0.21s
+leela: mutant 137/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:300 UnaryOp:_remove tests=9 timeout=5.0s
+leela: mutant 137/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:300 UnaryOp:_remove tests=9 killed timeout=no elapsed=0.15s
+leela: mutant 138/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:308 UnaryOp:_remove tests=8 timeout=5.0s
+leela: mutant 138/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:308 UnaryOp:_remove tests=8 killed timeout=no elapsed=0.16s
+leela: mutant 139/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:326 BoolOp:And tests=9 timeout=5.0s
+leela: mutant 139/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:326 BoolOp:And tests=9 killed timeout=no elapsed=0.17s
+leela: mutant 140/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:327 BoolOp:And tests=9 timeout=5.0s
+leela: mutant 140/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:327 BoolOp:And tests=9 killed timeout=no elapsed=0.17s
+leela: mutant 141/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:328 Compare:NotEq tests=9 timeout=5.0s
+leela: mutant 141/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:328 Compare:NotEq tests=9 killed timeout=no elapsed=0.18s
+leela: mutant 142/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:333 UnaryOp:UAdd tests=5 timeout=5.0s
+leela: mutant 142/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:333 UnaryOp:UAdd tests=5 killed timeout=no elapsed=0.17s
+leela: mutant 143/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:335 Compare:NotEq tests=5 timeout=5.0s
+leela: mutant 143/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:335 Compare:NotEq tests=5 killed timeout=no elapsed=0.16s
+leela: mutant 144/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:337 Compare:NotEq tests=3 timeout=5.0s
+leela: mutant 144/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:337 Compare:NotEq tests=3 killed timeout=no elapsed=0.15s
+leela: mutant 145/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:339 Compare:NotEq tests=3 timeout=5.0s
+leela: mutant 145/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:339 Compare:NotEq tests=3 killed timeout=no elapsed=0.15s
+leela: mutant 146/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:348 Return:None tests=89 timeout=140.4s
+leela: mutant 146/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:348 Return:None tests=89 killed timeout=no elapsed=1.11s
+leela: mutant 147/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 Return:negate_expr tests=58 timeout=116.6s
+leela: mutant 147/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 Return:negate_expr tests=58 killed timeout=no elapsed=0.34s
+leela: mutant 148/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 BoolOp:Or tests=58 timeout=116.6s
+leela: mutant 148/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 BoolOp:Or tests=58 killed timeout=no elapsed=0.35s
+leela: mutant 149/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 BinOp:Mult tests=58 timeout=116.6s
+leela: mutant 149/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 BinOp:Mult tests=58 killed timeout=no elapsed=0.35s
+leela: mutant 150/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 BinOp:FloorDiv tests=58 timeout=116.6s
+leela: mutant 150/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:351 BinOp:FloorDiv tests=58 killed timeout=no elapsed=0.36s
+leela: mutant 151/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:352 UnaryOp:_remove tests=58 timeout=116.6s
+leela: mutant 151/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:352 UnaryOp:_remove tests=58 killed timeout=no elapsed=0.81s
+leela: mutant 152/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:355 Return:None tests=55 timeout=108.2s
+leela: mutant 152/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:355 Return:None tests=55 killed timeout=no elapsed=0.55s
+leela: mutant 153/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:370 Compare:IsNot tests=90 timeout=141.3s
+leela: mutant 153/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:370 Compare:IsNot tests=90 killed timeout=no elapsed=0.35s
+leela: mutant 154/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:371 Return:None tests=6 timeout=5.0s
+leela: mutant 154/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:371 Return:None tests=6 killed timeout=no elapsed=0.16s
+leela: mutant 155/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:385 BinOp:Mult tests=84 timeout=141.2s
+leela: mutant 155/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:385 BinOp:Mult tests=84 killed timeout=no elapsed=0.18s
+leela: mutant 156/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:385 BinOp:FloorDiv tests=84 timeout=141.2s
+leela: mutant 156/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:385 BinOp:FloorDiv tests=84 killed timeout=no elapsed=0.18s
+leela: mutant 157/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:395 Return:expr tests=4 timeout=8.7s
+leela: mutant 157/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:395 Return:expr tests=4 killed timeout=no elapsed=0.53s
+leela: mutant 158/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:397 Compare:Is tests=84 timeout=141.2s
+leela: mutant 158/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:397 Compare:Is tests=84 killed timeout=no elapsed=8.95s
+leela: mutant 159/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:399 BoolOp:And tests=45 timeout=58.5s
+leela: mutation heartbeat 158/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:399 BoolOp:And tests=45 timeout=58.5s elapsed=2s
+leela: mutant 159/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:399 BoolOp:And tests=45 killed timeout=no elapsed=23.33s
+leela: mutant 160/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:399 Compare:NotEq tests=45 timeout=58.5s
+leela: mutant 160/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:399 Compare:NotEq tests=45 killed timeout=no elapsed=0.36s
+leela: mutant 161/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:404 Return:None tests=84 timeout=141.2s
+leela: mutant 161/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:404 Return:None tests=84 killed timeout=no elapsed=0.37s
+leela: mutant 162/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:411 BoolOp:Or tests=15 timeout=54.3s
+leela: mutation heartbeat 161/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:411 BoolOp:Or tests=15 timeout=54.3s elapsed=8s
+leela: mutant 162/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:411 BoolOp:Or tests=15 killed timeout=no elapsed=15.88s
+leela: mutant 163/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:411 UnaryOp:_remove tests=15 timeout=54.3s
+leela: mutant 163/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:411 UnaryOp:_remove tests=15 killed timeout=no elapsed=15.94s
+leela: mutant 164/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:428 Compare:IsNot tests=86 timeout=140.2s
+leela: mutation heartbeat 163/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:428 Compare:IsNot tests=86 timeout=140.2s elapsed=6s
+leela: mutation heartbeat 163/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:428 Compare:IsNot tests=86 timeout=140.2s elapsed=36s
+leela: mutant 164/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:428 Compare:IsNot tests=86 killed timeout=no elapsed=49.67s
+leela: mutant 165/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Add tests=86 timeout=140.2s
+leela: mutant 165/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Add tests=86 killed timeout=no elapsed=1.53s
+leela: mutant 166/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Mult tests=86 timeout=140.2s
+leela: mutant 166/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Mult tests=86 killed timeout=no elapsed=1.51s
+leela: mutant 167/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Add tests=86 timeout=140.2s
+leela: mutant 167/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Add tests=86 killed timeout=no elapsed=1.58s
+leela: mutant 168/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Mult tests=86 timeout=140.2s
+leela: mutant 168/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:442 BinOp:Mult tests=86 killed timeout=no elapsed=1.49s
+leela: mutant 169/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:446 BinOp:Mult tests=109 timeout=144.5s
+leela: mutant 169/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:446 BinOp:Mult tests=109 killed timeout=no elapsed=0.21s
+leela: mutant 170/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:446 BinOp:FloorDiv tests=109 timeout=144.5s
+leela: mutant 170/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:446 BinOp:FloorDiv tests=109 killed timeout=no elapsed=0.21s
+leela: mutant 171/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:447 UnaryOp:_remove tests=109 timeout=144.5s
+leela: mutant 171/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:447 UnaryOp:_remove tests=109 killed timeout=no elapsed=0.20s
+leela: mutant 172/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:450 UnaryOp:_remove tests=107 timeout=144.4s
+leela: mutant 172/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:450 UnaryOp:_remove tests=107 killed timeout=no elapsed=0.19s
+leela: mutant 173/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:454 Return:negate_expr tests=111 timeout=145.2s
+leela: mutant 173/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:454 Return:negate_expr tests=111 killed timeout=no elapsed=0.21s
+leela: mutant 174/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:454 Compare:NotIn tests=111 timeout=145.2s
+leela: mutant 174/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:454 Compare:NotIn tests=111 killed timeout=no elapsed=0.19s
+leela: mutant 175/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:465 BoolOp:And tests=92 timeout=140.4s
+leela: mutant 175/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:465 BoolOp:And tests=92 killed timeout=no elapsed=0.18s
+leela: mutant 176/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:465 Compare:IsNot tests=92 timeout=140.4s
+leela: mutant 176/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:465 Compare:IsNot tests=92 killed timeout=no elapsed=0.18s
+leela: mutant 177/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:465 UnaryOp:_remove tests=92 timeout=140.4s
+leela: mutant 177/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:465 UnaryOp:_remove tests=92 killed timeout=no elapsed=0.54s
+leela: mutant 178/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:482 BinOp:Mult tests=2 timeout=5.0s
+leela: mutant 178/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:482 BinOp:Mult tests=2 killed timeout=no elapsed=0.14s
+leela: mutant 179/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:482 BinOp:FloorDiv tests=2 timeout=5.0s
+leela: mutant 179/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:482 BinOp:FloorDiv tests=2 killed timeout=no elapsed=0.14s
+leela: mutant 180/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:486 BoolOp:Or tests=2 timeout=5.0s
+leela: mutant 180/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:486 BoolOp:Or tests=2 killed timeout=no elapsed=0.15s
+leela: mutant 181/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:486 Compare:Is tests=2 timeout=5.0s
+leela: mutant 181/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:486 Compare:Is tests=2 killed timeout=no elapsed=0.19s
+leela: mutant 182/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:486 Compare:In tests=2 timeout=5.0s
+leela: mutant 182/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:486 Compare:In tests=2 killed timeout=no elapsed=0.14s
+leela: mutant 183/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:490 UnaryOp:_remove tests=2 timeout=5.0s
+leela: mutant 183/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:490 UnaryOp:_remove tests=2 killed timeout=no elapsed=0.15s
+leela: mutant 184/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:534 Return:None tests=1662 timeout=5.0s
+leela: mutation heartbeat 183/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:534 Return:None tests=1662 timeout=5.0s elapsed=7s
+leela: mutant 184/1324 timeout occurred
+leela: mutant 184/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:534 Return:None tests=1662 killed timeout=yes elapsed=24.73s
+leela: mutant 185/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:538 Return:None tests=1662 timeout=5.0s
+leela: mutation heartbeat 184/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:538 Return:None tests=1662 timeout=5.0s elapsed=12s
+leela: mutant 185/1324 timeout occurred
+leela: mutant 185/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:538 Return:None tests=1662 killed timeout=yes elapsed=24.57s
+leela: mutant 186/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:541 Return:None tests=58 timeout=116.2s
+leela: mutant 186/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:541 Return:None tests=58 killed timeout=no elapsed=0.54s
+leela: mutant 187/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:556 Compare:Eq tests=57 timeout=115.8s
+leela: mutant 187/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:556 Compare:Eq tests=57 killed timeout=no elapsed=1.16s
+leela: mutant 188/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:562 Compare:IsNot tests=20 timeout=43.1s
+leela: mutant 188/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:562 Compare:IsNot tests=20 killed timeout=no elapsed=0.65s
+leela: mutant 189/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:564 Compare:In tests=58 timeout=116.2s
+leela: mutant 189/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:564 Compare:In tests=58 killed timeout=no elapsed=1.49s
+leela: mutant 190/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:577 Compare:Eq tests=58 timeout=116.2s
+leela: mutant 190/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:577 Compare:Eq tests=58 killed timeout=no elapsed=0.34s
+leela: mutant 191/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:578 Compare:IsNot tests=9 timeout=19.6s
+leela: mutant 191/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:578 Compare:IsNot tests=9 killed timeout=no elapsed=0.63s
+leela: mutant 192/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:582 Compare:IsNot tests=9 timeout=19.6s
+leela: mutant 192/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:582 Compare:IsNot tests=9 killed timeout=no elapsed=7.19s
+leela: mutant 193/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:582 Compare:IsNot tests=9 timeout=19.6s
+leela: mutation heartbeat 192/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:582 Compare:IsNot tests=9 timeout=19.6s elapsed=5s
+leela: mutant 193/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:582 Compare:IsNot tests=9 killed timeout=no elapsed=6.99s
+leela: mutant 194/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:588 Return:None tests=58 timeout=116.2s
+leela: mutant 194/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:588 Return:None tests=58 killed timeout=no elapsed=1.31s
+leela: mutant 195/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:593 Compare:IsNot tests=5 timeout=5.0s
+leela: mutant 195/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:593 Compare:IsNot tests=5 killed timeout=no elapsed=0.15s
+leela: mutant 196/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:594 Return:True tests=1 timeout=5.0s
+leela: mutant 196/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:594 Return:True tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 197/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:596 Return:negate_expr tests=4 timeout=5.0s
+leela: mutant 197/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:596 Return:negate_expr tests=4 killed timeout=no elapsed=0.15s
+leela: mutant 198/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:598 Return:True tests=1 timeout=5.0s
+leela: mutant 198/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:598 Return:True tests=1 killed timeout=no elapsed=0.17s
+leela: mutant 199/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:622 Compare:IsNot tests=59 timeout=116.3s
+leela: mutant 199/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:622 Compare:IsNot tests=59 killed timeout=no elapsed=0.95s
+leela: mutant 200/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:625 Compare:Eq tests=59 timeout=116.3s
+leela: mutant 200/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:625 Compare:Eq tests=59 killed timeout=no elapsed=0.93s
+leela: mutant 201/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:630 Compare:In tests=59 timeout=116.3s
+leela: mutant 201/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:630 Compare:In tests=59 killed timeout=no elapsed=0.92s
+leela: mutant 202/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:633 Return:None tests=61 timeout=116.3s
+leela: mutant 202/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:633 Return:None tests=61 killed timeout=no elapsed=0.34s
+leela: mutant 203/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:650 UnaryOp:_remove tests=65 timeout=122.9s
+leela: mutant 203/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:650 UnaryOp:_remove tests=65 killed timeout=no elapsed=0.34s
+leela: mutant 204/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:650 BoolOp:And tests=65 timeout=122.9s
+leela: mutant 204/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:650 BoolOp:And tests=65 killed timeout=no elapsed=0.35s
+leela: mutant 205/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:665 BinOp:Mult tests=22 timeout=65.2s
+leela: mutant 205/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:665 BinOp:Mult tests=22 killed timeout=no elapsed=0.16s
+leela: mutant 206/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:665 BinOp:FloorDiv tests=22 timeout=65.2s
+leela: mutant 206/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:665 BinOp:FloorDiv tests=22 killed timeout=no elapsed=0.15s
+leela: mutant 207/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BoolOp:And tests=33 timeout=77.8s
+leela: mutant 207/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BoolOp:And tests=33 killed timeout=no elapsed=0.55s
+leela: mutant 208/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 Compare:IsNot tests=33 timeout=77.8s
+leela: mutant 208/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 Compare:IsNot tests=33 killed timeout=no elapsed=0.55s
+leela: mutant 209/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Add tests=33 timeout=77.8s
+leela: mutant 209/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Add tests=33 killed timeout=no elapsed=0.91s
+leela: mutant 210/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Mult tests=33 timeout=77.8s
+leela: mutant 210/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Mult tests=33 killed timeout=no elapsed=0.90s
+leela: mutant 211/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Sub tests=33 timeout=77.8s
+leela: mutant 211/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Sub tests=33 killed timeout=no elapsed=0.90s
+leela: mutant 212/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Mult tests=33 timeout=77.8s
+leela: mutant 212/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Mult tests=33 killed timeout=no elapsed=0.91s
+leela: mutant 213/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Sub tests=33 timeout=77.8s
+leela: mutant 213/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Sub tests=33 killed timeout=no elapsed=0.90s
+leela: mutant 214/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Mult tests=33 timeout=77.8s
+leela: mutant 214/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:668 BinOp:Mult tests=33 killed timeout=no elapsed=0.90s
+leela: mutant 215/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:676 BinOp:Sub tests=19 timeout=42.2s
+leela: mutant 215/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:676 BinOp:Sub tests=19 killed timeout=no elapsed=0.51s
+leela: mutant 216/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:676 BinOp:Mult tests=19 timeout=42.2s
+leela: mutant 216/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:676 BinOp:Mult tests=19 killed timeout=no elapsed=0.51s
+leela: mutant 217/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:681 BinOp:Sub tests=19 timeout=42.2s
+leela: mutant 217/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:681 BinOp:Sub tests=19 killed timeout=no elapsed=0.51s
+leela: mutant 218/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:681 BinOp:Mult tests=19 timeout=42.2s
+leela: mutant 218/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:681 BinOp:Mult tests=19 killed timeout=no elapsed=0.50s
+leela: mutant 219/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:685 UnaryOp:_remove tests=19 timeout=42.2s
+leela: mutant 219/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:685 UnaryOp:_remove tests=19 killed timeout=no elapsed=0.56s
+leela: mutant 220/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:686 BoolOp:Or tests=6 timeout=8.4s
+leela: mutant 220/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:686 BoolOp:Or tests=6 killed timeout=no elapsed=1.64s
+leela: mutant 221/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:686 BinOp:Sub tests=6 timeout=8.4s
+leela: mutant 221/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:686 BinOp:Sub tests=6 killed timeout=no elapsed=1.88s
+leela: mutant 222/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:686 BinOp:Mult tests=6 timeout=8.4s
+leela: mutant 222/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:686 BinOp:Mult tests=6 killed timeout=no elapsed=1.92s
+leela: mutant 223/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:695 Compare:GtE tests=13 timeout=34.7s
+leela: mutant 223/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:695 Compare:GtE tests=13 killed timeout=no elapsed=2.69s
+leela: mutant 224/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:695 Compare:LtE tests=13 timeout=34.7s
+leela: mutant 224/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:695 Compare:LtE tests=13 killed timeout=no elapsed=2.14s
+leela: mutant 225/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:723 UnaryOp:_remove tests=18 timeout=36.2s
+leela: mutant 225/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:723 UnaryOp:_remove tests=18 killed timeout=no elapsed=0.35s
+leela: mutant 226/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:724 Return:None tests=1 timeout=5.0s
+leela: mutant 226/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:724 Return:None tests=1 killed timeout=no elapsed=0.16s
+leela: mutant 227/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:737 Return:None tests=1 timeout=5.0s
+leela: mutant 227/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:737 Return:None tests=1 killed timeout=no elapsed=0.54s
+leela: mutant 228/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:739 UnaryOp:_remove tests=16 timeout=35.5s
+leela: mutant 228/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:739 UnaryOp:_remove tests=16 killed timeout=no elapsed=0.33s
+leela: mutant 229/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:748 Return:None tests=6 timeout=8.1s
+leela: mutant 229/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:748 Return:None tests=6 killed timeout=no elapsed=0.33s
+leela: mutant 230/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:759 Compare:IsNot tests=10 timeout=28.5s
+leela: mutant 230/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:759 Compare:IsNot tests=10 killed timeout=no elapsed=0.33s
+leela: mutant 231/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:764 Compare:Is tests=10 timeout=28.5s
+leela: mutant 231/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:764 Compare:Is tests=10 killed timeout=no elapsed=0.33s
+leela: mutant 232/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:766 Return:None tests=10 timeout=28.5s
+leela: mutant 232/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:766 Return:None tests=10 killed timeout=no elapsed=0.33s
+leela: mutant 233/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:791 Compare:NotEq tests=11 timeout=31.1s
+leela: mutant 233/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:791 Compare:NotEq tests=11 killed timeout=no elapsed=0.15s
+leela: mutant 234/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:791 BinOp:Mult tests=11 timeout=31.1s
+leela: mutation heartbeat 233/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:791 BinOp:Mult tests=11 timeout=31.1s elapsed=0s
+leela: mutant 234/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:791 BinOp:Mult tests=11 killed timeout=no elapsed=0.15s
+leela: mutant 235/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:791 BinOp:FloorDiv tests=11 timeout=31.1s
+leela: mutant 235/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:791 BinOp:FloorDiv tests=11 killed timeout=no elapsed=0.15s
+leela: mutant 236/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:793 Return:None tests=17 timeout=36.1s
+leela: mutant 236/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:793 Return:None tests=17 killed timeout=no elapsed=0.15s
+leela: mutant 237/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:799 Return:None tests=4 timeout=7.2s
+leela: mutant 237/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:799 Return:None tests=4 killed timeout=no elapsed=0.33s
+leela: mutant 238/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:820 Compare:IsNot tests=58 timeout=108.4s
+leela: mutant 238/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:820 Compare:IsNot tests=58 killed timeout=no elapsed=0.41s
+leela: mutant 239/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 Compare:LtE tests=55 timeout=107.5s
+leela: mutant 239/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 Compare:LtE tests=55 killed timeout=no elapsed=1.54s
+leela: mutant 240/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 Compare:GtE tests=55 timeout=107.5s
+leela: mutant 240/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 Compare:GtE tests=55 killed timeout=no elapsed=0.42s
+leela: mutant 241/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 BinOp:Add tests=55 timeout=107.5s
+leela: mutant 241/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 BinOp:Add tests=55 killed timeout=no elapsed=0.58s
+leela: mutant 242/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 BinOp:Mult tests=55 timeout=107.5s
+leela: mutant 242/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:822 BinOp:Mult tests=55 killed timeout=no elapsed=0.56s
+leela: mutant 243/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:827 BoolOp:Or tests=53 timeout=107.1s
+leela: mutant 243/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:827 BoolOp:Or tests=53 killed timeout=no elapsed=0.34s
+leela: mutant 244/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:827 Compare:Is tests=53 timeout=107.1s
+leela: mutant 244/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:827 Compare:Is tests=53 killed timeout=no elapsed=0.35s
+leela: mutant 245/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:828 Compare:Lt tests=46 timeout=96.9s
+leela: mutant 245/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:828 Compare:Lt tests=46 killed timeout=no elapsed=0.70s
+leela: mutant 246/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:828 Compare:Gt tests=46 timeout=96.9s
+leela: mutant 246/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:828 Compare:Gt tests=46 killed timeout=no elapsed=0.35s
+leela: mutant 247/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:832 UnaryOp:_remove tests=52 timeout=106.8s
+leela: mutant 247/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:832 UnaryOp:_remove tests=52 killed timeout=no elapsed=0.41s
+leela: mutant 248/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:915 UnaryOp:_remove tests=10 timeout=5.0s
+leela: mutant 248/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:915 UnaryOp:_remove tests=10 killed timeout=no elapsed=0.16s
+leela: mutant 249/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:918 Compare:NotEq tests=10 timeout=5.0s
+leela: mutant 249/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:918 Compare:NotEq tests=10 killed timeout=no elapsed=0.15s
+leela: mutant 250/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:922 BoolOp:Or tests=10 timeout=5.0s
+leela: mutant 250/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:922 BoolOp:Or tests=10 killed timeout=no elapsed=0.15s
+leela: mutant 251/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:922 Compare:NotIn tests=10 timeout=5.0s
+leela: mutant 251/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:922 Compare:NotIn tests=10 killed timeout=no elapsed=0.16s
+leela: mutant 252/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:923 Compare:Eq tests=2 timeout=5.0s
+leela: mutant 252/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:923 Compare:Eq tests=2 killed timeout=no elapsed=0.16s
+leela: mutant 253/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:930 BoolOp:And tests=10 timeout=5.0s
+leela: mutant 253/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:930 BoolOp:And tests=10 killed timeout=no elapsed=0.18s
+leela: mutant 254/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:930 Compare:IsNot tests=10 timeout=5.0s
+leela: mutant 254/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:930 Compare:IsNot tests=10 killed timeout=no elapsed=0.19s
+leela: mutant 255/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:930 Compare:In tests=10 timeout=5.0s
+leela: mutant 255/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:930 Compare:In tests=10 killed timeout=no elapsed=0.17s
+leela: mutant 256/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:944 Compare:NotEq tests=8 timeout=5.0s
+leela: mutant 256/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:944 Compare:NotEq tests=8 killed timeout=no elapsed=0.15s
+leela: mutant 257/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:945 Compare:IsNot tests=8 timeout=5.0s
+leela: mutant 257/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:945 Compare:IsNot tests=8 killed timeout=no elapsed=0.17s
+leela: mutant 258/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:950 Compare:NotEq tests=8 timeout=5.0s
+leela: mutant 258/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:950 Compare:NotEq tests=8 killed timeout=no elapsed=0.16s
+leela: mutant 259/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:954 Compare:In tests=7 timeout=5.0s
+leela: mutant 259/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:954 Compare:In tests=7 killed timeout=no elapsed=0.15s
+leela: mutant 260/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:964 BinOp:Sub tests=7 timeout=5.0s
+leela: mutant 260/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:964 BinOp:Sub tests=7 killed timeout=no elapsed=0.16s
+leela: mutant 261/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:964 BinOp:Mult tests=7 timeout=5.0s
+leela: mutant 261/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:964 BinOp:Mult tests=7 killed timeout=no elapsed=0.16s
+leela: mutant 262/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:964 BinOp:FloorDiv tests=7 timeout=5.0s
+leela: mutant 262/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:964 BinOp:FloorDiv tests=7 killed timeout=no elapsed=0.18s
+leela: mutant 263/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:969 UnaryOp:_remove tests=72 timeout=110.7s
+leela: mutant 263/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:969 UnaryOp:_remove tests=72 killed timeout=no elapsed=0.17s
+leela: mutant 264/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:986 Compare:Is tests=7 timeout=5.0s
+leela: mutant 264/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:986 Compare:Is tests=7 killed timeout=no elapsed=0.74s
+leela: mutant 265/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:988 BoolOp:Or tests=18 timeout=6.4s
+leela: mutant 265/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:988 BoolOp:Or tests=18 killed timeout=no elapsed=2.81s
+leela: mutant 266/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:988 Compare:Is tests=18 timeout=6.4s
+leela: mutant 266/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:988 Compare:Is tests=18 killed timeout=no elapsed=2.86s
+leela: mutant 267/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:988 Compare:NotIn tests=18 timeout=6.4s
+leela: mutant 267/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:988 Compare:NotIn tests=18 killed timeout=no elapsed=2.80s
+leela: mutant 268/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:990 Compare:Eq tests=8 timeout=5.0s
+leela: mutant 268/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:990 Compare:Eq tests=8 killed timeout=no elapsed=0.23s
+leela: mutant 269/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1028 Compare:NotEq tests=9 timeout=5.0s
+leela: mutant 269/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1028 Compare:NotEq tests=9 killed timeout=no elapsed=0.41s
+leela: mutant 270/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1032 Compare:Is tests=9 timeout=5.0s
+leela: mutant 270/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1032 Compare:Is tests=9 killed timeout=no elapsed=0.44s
+leela: mutant 271/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1035 BoolOp:And tests=9 timeout=5.0s
+leela: mutant 271/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1035 BoolOp:And tests=9 killed timeout=no elapsed=1.16s
+leela: mutant 272/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1035 Compare:IsNot tests=9 timeout=5.0s
+leela: mutant 272/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1035 Compare:IsNot tests=9 killed timeout=no elapsed=0.64s
+leela: mutant 273/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1035 Compare:In tests=9 timeout=5.0s
+leela: mutant 273/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1035 Compare:In tests=9 killed timeout=no elapsed=0.70s
+leela: mutant 274/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1042 Compare:Eq tests=7 timeout=5.0s
+leela: mutant 274/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1042 Compare:Eq tests=7 killed timeout=no elapsed=0.45s
+leela: mutant 275/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1044 Compare:IsNot tests=7 timeout=5.0s
+leela: mutant 275/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1044 Compare:IsNot tests=7 killed timeout=no elapsed=0.40s
+leela: mutant 276/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1046 Compare:NotEq tests=6 timeout=5.0s
+leela: mutant 276/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1046 Compare:NotEq tests=6 killed timeout=no elapsed=0.43s
+leela: mutant 277/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1048 Compare:In tests=6 timeout=5.0s
+leela: mutant 277/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1048 Compare:In tests=6 killed timeout=no elapsed=0.40s
+leela: mutant 278/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1050 Compare:In tests=5 timeout=5.0s
+leela: mutant 278/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1050 Compare:In tests=5 killed timeout=no elapsed=0.40s
+leela: mutant 279/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1054 BinOp:Sub tests=5 timeout=5.0s
+leela: mutant 279/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1054 BinOp:Sub tests=5 killed timeout=no elapsed=0.65s
+leela: mutant 280/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1054 BinOp:Mult tests=5 timeout=5.0s
+leela: mutant 280/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1054 BinOp:Mult tests=5 killed timeout=no elapsed=0.40s
+leela: mutant 281/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1054 BinOp:FloorDiv tests=5 timeout=5.0s
+leela: mutant 281/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1054 BinOp:FloorDiv tests=5 killed timeout=no elapsed=0.39s
+leela: mutant 282/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1080 BoolOp:Or tests=8 timeout=5.0s
+leela: mutant 282/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1080 BoolOp:Or tests=8 killed timeout=no elapsed=0.15s
+leela: mutant 283/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1080 Compare:NotEq tests=8 timeout=5.0s
+leela: mutant 283/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1080 Compare:NotEq tests=8 killed timeout=no elapsed=0.14s
+leela: mutant 284/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1080 Compare:NotEq tests=8 timeout=5.0s
+leela: mutant 284/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1080 Compare:NotEq tests=8 killed timeout=no elapsed=0.44s
+leela: mutant 285/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1107 BoolOp:And tests=13 timeout=5.0s
+leela: mutant 285/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1107 BoolOp:And tests=13 killed timeout=no elapsed=0.15s
+leela: mutant 286/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1107 Compare:IsNot tests=13 timeout=5.0s
+leela: mutant 286/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1107 Compare:IsNot tests=13 killed timeout=no elapsed=0.15s
+leela: mutant 287/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1107 UnaryOp:_remove tests=13 timeout=5.0s
+leela: mutant 287/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1107 UnaryOp:_remove tests=13 killed timeout=no elapsed=0.15s
+leela: mutant 288/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1108 Return:None tests=3 timeout=5.0s
+leela: mutant 288/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1108 Return:None tests=3 killed timeout=no elapsed=0.15s
+leela: mutant 289/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1130 Return:None tests=1 timeout=5.0s
+leela: mutant 289/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1130 Return:None tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 290/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1131 Compare:NotEq tests=9 timeout=5.0s
+leela: mutant 290/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1131 Compare:NotEq tests=9 killed timeout=no elapsed=0.16s
+leela: mutant 291/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1132 Return:None tests=1 timeout=5.0s
+leela: mutant 291/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1132 Return:None tests=1 killed timeout=no elapsed=0.16s
+leela: mutant 292/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1140 Compare:Gt tests=1 timeout=5.0s
+leela: mutant 292/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1140 Compare:Gt tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 293/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1140 Compare:Lt tests=1 timeout=5.0s
+leela: mutant 293/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1140 Compare:Lt tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 294/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1142 Return:None tests=8 timeout=5.0s
+leela: mutant 294/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1142 Return:None tests=8 killed timeout=no elapsed=0.16s
+leela: mutant 295/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1145 Return:None tests=72 timeout=110.7s
+leela: mutant 295/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1145 Return:None tests=72 killed timeout=no elapsed=0.17s
+leela: mutant 296/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1149 Compare:Is tests=129 timeout=145.8s
+leela: mutant 296/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1149 Compare:Is tests=129 killed timeout=no elapsed=0.29s
+leela: mutant 297/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1153 BinOp:Mult tests=51 timeout=30.0s
+leela: mutant 297/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1153 BinOp:Mult tests=51 killed timeout=no elapsed=0.18s
+leela: mutant 298/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1153 BinOp:FloorDiv tests=51 timeout=30.0s
+leela: mutant 298/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1153 BinOp:FloorDiv tests=51 killed timeout=no elapsed=0.18s
+leela: mutant 299/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1157 Return:None tests=129 timeout=145.8s
+leela: mutant 299/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1157 Return:None tests=129 killed timeout=no elapsed=0.24s
+leela: mutant 300/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1183 Compare:Is tests=6 timeout=13.3s
+leela: mutant 300/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1183 Compare:Is tests=6 killed timeout=no elapsed=0.36s
+leela: mutant 301/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1193 UnaryOp:_remove tests=14 timeout=25.1s
+leela: mutant 301/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1193 UnaryOp:_remove tests=14 killed timeout=no elapsed=0.19s
+leela: mutant 302/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1197 BoolOp:Or tests=4 timeout=5.0s
+leela: mutant 302/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1197 BoolOp:Or tests=4 killed timeout=no elapsed=0.18s
+leela: mutant 303/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1198 BoolOp:And tests=4 timeout=5.0s
+leela: mutant 303/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1198 BoolOp:And tests=4 killed timeout=no elapsed=0.17s
+leela: mutant 304/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1203 Compare:NotEq tests=13 timeout=24.7s
+leela: mutation heartbeat 303/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1203 Compare:NotEq tests=13 timeout=24.7s elapsed=0s
+leela: mutant 304/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1203 Compare:NotEq tests=13 killed timeout=no elapsed=0.48s
+leela: mutant 305/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1203 BinOp:FloorDiv tests=13 timeout=24.7s
+leela: mutant 305/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1203 BinOp:FloorDiv tests=13 killed timeout=no elapsed=0.40s
+leela: mutant 306/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1370 Compare:IsNot tests=20 timeout=5.0s
+leela: mutant 306/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1370 Compare:IsNot tests=20 killed timeout=no elapsed=0.15s
+leela: mutant 307/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1371 BoolOp:And tests=20 timeout=5.0s
+leela: mutant 307/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1371 BoolOp:And tests=20 killed timeout=no elapsed=0.15s
+leela: mutant 308/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1371 UnaryOp:_remove tests=20 timeout=5.0s
+leela: mutant 308/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1371 UnaryOp:_remove tests=20 killed timeout=no elapsed=0.16s
+leela: mutant 309/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1371 Compare:In tests=20 timeout=5.0s
+leela: mutant 309/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1371 Compare:In tests=20 killed timeout=no elapsed=0.16s
+leela: mutant 310/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1376 Compare:NotEq tests=20 timeout=5.0s
+leela: mutant 310/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1376 Compare:NotEq tests=20 killed timeout=no elapsed=0.16s
+leela: mutant 311/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1377 Return:negate_expr tests=18 timeout=5.0s
+leela: mutant 311/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1377 Return:negate_expr tests=18 killed timeout=no elapsed=0.19s
+leela: mutant 312/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1379 Return:negate_expr tests=2 timeout=5.0s
+leela: mutant 312/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1379 Return:negate_expr tests=2 killed timeout=no elapsed=0.15s
+leela: mutant 313/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1384 UnaryOp:_remove tests=22 timeout=5.0s
+leela: mutant 313/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1384 UnaryOp:_remove tests=22 killed timeout=no elapsed=0.15s
+leela: mutant 314/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1387 Return:None tests=2 timeout=5.0s
+leela: mutant 314/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1387 Return:None tests=2 killed timeout=no elapsed=0.14s
+leela: mutant 315/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1389 UnaryOp:_remove tests=2 timeout=5.0s
+leela: mutant 315/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1389 UnaryOp:_remove tests=2 killed timeout=no elapsed=0.14s
+leela: mutant 316/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1388 BinOp:Mult tests=1 timeout=5.0s
+leela: mutant 316/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1388 BinOp:Mult tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 317/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1388 BinOp:FloorDiv tests=1 timeout=5.0s
+leela: mutant 317/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1388 BinOp:FloorDiv tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 318/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 Return:None tests=18 timeout=5.0s
+leela: mutant 318/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 Return:None tests=18 killed timeout=no elapsed=0.19s
+leela: mutant 319/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:Mult tests=18 timeout=5.0s
+leela: mutant 319/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:Mult tests=18 killed timeout=no elapsed=0.16s
+leela: mutant 320/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:FloorDiv tests=18 timeout=5.0s
+leela: mutant 320/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:FloorDiv tests=18 killed timeout=no elapsed=0.19s
+leela: mutant 321/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:Mult tests=18 timeout=5.0s
+leela: mutant 321/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:Mult tests=18 killed timeout=no elapsed=0.16s
+leela: mutant 322/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:FloorDiv tests=18 timeout=5.0s
+leela: mutant 322/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1392 BinOp:FloorDiv tests=18 killed timeout=no elapsed=0.15s
+leela: mutant 323/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1412 Return:negate tests=1 timeout=5.0s
+leela: mutant 323/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1412 Return:negate tests=1 killed timeout=no elapsed=0.18s
+leela: mutant 324/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1414 UnaryOp:_remove tests=17 timeout=5.0s
+leela: mutant 324/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1414 UnaryOp:_remove tests=17 killed timeout=no elapsed=0.18s
+leela: mutant 325/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1419 Return:negate tests=1 timeout=5.0s
+leela: mutant 325/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1419 Return:negate tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 326/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1426 BoolOp:And tests=16 timeout=5.0s
+leela: mutant 326/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1426 BoolOp:And tests=16 killed timeout=no elapsed=0.17s
+leela: mutant 327/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1427 BoolOp:Or tests=16 timeout=5.0s
+leela: mutant 327/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1427 BoolOp:Or tests=16 killed timeout=no elapsed=0.22s
+leela: mutant 328/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1427 Compare:GtE tests=16 timeout=5.0s
+leela: mutant 328/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1427 Compare:GtE tests=16 killed timeout=no elapsed=0.21s
+leela: mutant 329/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1427 Compare:LtE tests=16 timeout=5.0s
+leela: mutant 329/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1427 Compare:LtE tests=16 killed timeout=no elapsed=0.17s
+leela: mutant 330/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1442 BoolOp:Or tests=16 timeout=5.0s
+leela: mutant 330/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1442 BoolOp:Or tests=16 killed timeout=no elapsed=0.21s
+leela: mutant 331/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1442 Compare:GtE tests=16 timeout=5.0s
+leela: mutant 331/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1442 Compare:GtE tests=16 killed timeout=no elapsed=0.21s
+leela: mutant 332/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1442 Compare:LtE tests=16 timeout=5.0s
+leela: mutant 332/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1442 Compare:LtE tests=16 killed timeout=no elapsed=0.16s
+leela: mutant 333/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1477 UnaryOp:UAdd tests=2 timeout=5.0s
+leela: mutant 333/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1477 UnaryOp:UAdd tests=2 killed timeout=no elapsed=0.15s
+leela: mutant 334/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1482 UnaryOp:UAdd tests=3 timeout=5.0s
+leela: mutant 334/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1482 UnaryOp:UAdd tests=3 killed timeout=no elapsed=0.15s
+leela: mutant 335/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1498 BoolOp:Or tests=9 timeout=5.0s
+leela: mutant 335/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1498 BoolOp:Or tests=9 killed timeout=no elapsed=0.18s
+leela: mutant 336/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1502 BoolOp:Or tests=9 timeout=5.0s
+leela: mutant 336/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1502 BoolOp:Or tests=9 killed timeout=no elapsed=0.17s
+leela: mutant 337/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1509 UnaryOp:UAdd tests=2 timeout=5.0s
+leela: mutant 337/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1509 UnaryOp:UAdd tests=2 killed timeout=no elapsed=0.16s
+leela: mutant 338/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1517 Compare:NotEq tests=1 timeout=5.0s
+leela: mutant 338/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1517 Compare:NotEq tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 339/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1536 Compare:GtE tests=2 timeout=5.0s
+leela: mutant 339/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1536 Compare:GtE tests=2 killed timeout=no elapsed=0.15s
+leela: mutant 340/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1536 Compare:LtE tests=2 timeout=5.0s
+leela: mutant 340/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1536 Compare:LtE tests=2 killed timeout=no elapsed=0.15s
+leela: mutant 341/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1537 BinOp:Add tests=1 timeout=5.0s
+leela: mutant 341/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1537 BinOp:Add tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 342/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1537 BinOp:Mult tests=1 timeout=5.0s
+leela: mutant 342/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1537 BinOp:Mult tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 343/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1544 Compare:GtE tests=2 timeout=5.0s
+leela: mutant 343/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1544 Compare:GtE tests=2 killed timeout=no elapsed=0.16s
+leela: mutant 344/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1544 Compare:LtE tests=2 timeout=5.0s
+leela: mutant 344/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1544 Compare:LtE tests=2 killed timeout=no elapsed=0.15s
+leela: mutant 345/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1545 BinOp:Add tests=1 timeout=5.0s
+leela: mutant 345/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1545 BinOp:Add tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 346/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1545 BinOp:Mult tests=1 timeout=5.0s
+leela: mutant 346/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1545 BinOp:Mult tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 347/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 Return:negate_expr tests=16 timeout=5.0s
+leela: mutant 347/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 Return:negate_expr tests=16 killed timeout=no elapsed=0.17s
+leela: mutant 348/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 BoolOp:Or tests=16 timeout=5.0s
+leela: mutant 348/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 BoolOp:Or tests=16 killed timeout=no elapsed=0.17s
+leela: mutant 349/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 Compare:NotEq tests=16 timeout=5.0s
+leela: mutant 349/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 Compare:NotEq tests=16 killed timeout=no elapsed=0.16s
+leela: mutant 350/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 Compare:NotEq tests=16 timeout=5.0s
+leela: mutant 350/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1547 Compare:NotEq tests=16 killed timeout=no elapsed=0.19s
+leela: mutant 351/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1553 UnaryOp:_remove tests=1 timeout=5.0s
+leela: mutant 351/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1553 UnaryOp:_remove tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 352/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1555 Return:negate tests=1 timeout=5.0s
+leela: mutant 352/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1555 Return:negate tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 353/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1568 Compare:NotEq tests=1 timeout=5.0s
+leela: mutant 353/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/daemon.py:1568 Compare:NotEq tests=1 killed timeout=no elapsed=0.15s
+leela: mutant 354/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:69 BinOp:Sub tests=140 timeout=286.7s
+leela: mutant 354/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:69 BinOp:Sub tests=140 killed timeout=no elapsed=0.57s
+leela: mutant 355/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:69 BinOp:Mult tests=140 timeout=286.7s
+leela: mutant 355/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:69 BinOp:Mult tests=140 killed timeout=no elapsed=0.79s
+leela: mutant 356/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:77 UnaryOp:UAdd tests=129 timeout=279.2s
+leela: mutation heartbeat 355/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:77 UnaryOp:UAdd tests=129 timeout=279.2s elapsed=20s
+leela: mutation heartbeat 355/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:77 UnaryOp:UAdd tests=129 timeout=279.2s elapsed=50s
+leela: mutant 356/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:77 UnaryOp:UAdd tests=129 killed timeout=no elapsed=73.25s
+leela: mutant 357/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:78 Return:None tests=129 timeout=279.2s
+leela: mutant 357/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:78 Return:None tests=129 killed timeout=no elapsed=0.39s
+leela: mutant 358/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:82 UnaryOp:UAdd tests=16 timeout=31.3s
+leela: mutation heartbeat 357/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:82 UnaryOp:UAdd tests=16 timeout=31.3s elapsed=7s
+leela: mutant 358/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:82 UnaryOp:UAdd tests=16 killed timeout=no elapsed=13.15s
+leela: mutant 359/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:83 Return:None tests=17 timeout=31.3s
+leela: mutant 359/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:83 Return:None tests=17 killed timeout=no elapsed=0.97s
+leela: mutant 360/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:98 UnaryOp:_remove tests=142 timeout=286.8s
+leela: mutant 360/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:98 UnaryOp:_remove tests=142 killed timeout=no elapsed=0.95s
+leela: mutant 361/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:128 Compare:Is tests=67 timeout=137.3s
+leela: mutant 361/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:128 Compare:Is tests=67 killed timeout=no elapsed=0.50s
+leela: mutant 362/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:135 BoolOp:Or tests=67 timeout=137.3s
+leela: mutant 362/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:135 BoolOp:Or tests=67 killed timeout=no elapsed=6.08s
+leela: mutant 363/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:135 Compare:Eq tests=67 timeout=137.3s
+leela: mutant 363/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:135 Compare:Eq tests=67 killed timeout=no elapsed=6.70s
+leela: mutant 364/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:135 Compare:Eq tests=67 timeout=137.3s
+leela: mutant 364/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:135 Compare:Eq tests=67 killed timeout=no elapsed=6.50s
+leela: mutant 365/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:141 Compare:NotIn tests=49 timeout=124.2s
+leela: mutant 365/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:141 Compare:NotIn tests=49 killed timeout=no elapsed=0.54s
+leela: mutant 366/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:142 Return:None tests=1 timeout=5.0s
+leela: mutant 366/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:142 Return:None tests=1 killed timeout=no elapsed=0.16s
+leela: mutant 367/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:143 Compare:Is tests=48 timeout=124.2s
+leela: mutant 367/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:143 Compare:Is tests=48 killed timeout=no elapsed=0.22s
+leela: mutant 368/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:144 Return:None tests=1 timeout=5.0s
+leela: mutant 368/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:144 Return:None tests=1 killed timeout=no elapsed=0.13s
+leela: mutant 369/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:148 Compare:Is tests=47 timeout=124.1s
+leela: mutant 369/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:148 Compare:Is tests=47 killed timeout=no elapsed=0.19s
+leela: mutant 370/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:155 BinOp:Sub tests=47 timeout=124.1s
+leela: mutant 370/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:155 BinOp:Sub tests=47 killed timeout=no elapsed=0.20s
+leela: mutant 371/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:155 BinOp:Mult tests=47 timeout=124.1s
+leela: mutant 371/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:155 BinOp:Mult tests=47 killed timeout=no elapsed=0.19s
+leela: mutant 372/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:155 BinOp:FloorDiv tests=47 timeout=124.1s
+leela: mutation heartbeat 371/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:155 BinOp:FloorDiv tests=47 timeout=124.1s elapsed=0s
+leela: mutant 372/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:155 BinOp:FloorDiv tests=47 killed timeout=no elapsed=0.19s
+leela: mutant 373/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:156 BoolOp:And tests=47 timeout=124.1s
+leela: mutant 373/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:156 BoolOp:And tests=47 killed timeout=no elapsed=0.20s
+leela: mutant 374/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:156 Compare:IsNot tests=47 timeout=124.1s
+leela: mutant 374/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:156 Compare:IsNot tests=47 killed timeout=no elapsed=0.19s
+leela: mutant 375/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:156 Compare:IsNot tests=47 timeout=124.1s
+leela: mutant 375/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:156 Compare:IsNot tests=47 killed timeout=no elapsed=0.19s
+leela: mutant 376/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:160 Compare:NotEq tests=45 timeout=123.7s
+leela: mutant 376/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:160 Compare:NotEq tests=45 killed timeout=no elapsed=0.20s
+leela: mutant 377/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:160 BinOp:Add tests=45 timeout=123.7s
+leela: mutant 377/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:160 BinOp:Add tests=45 killed timeout=no elapsed=0.19s
+leela: mutant 378/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:160 BinOp:Mult tests=45 timeout=123.7s
+leela: mutant 378/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:160 BinOp:Mult tests=45 killed timeout=no elapsed=0.19s
+leela: mutant 379/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:162 BoolOp:And tests=45 timeout=123.7s
+leela: mutant 379/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:162 BoolOp:And tests=45 killed timeout=no elapsed=0.20s
+leela: mutant 380/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:163 Compare:Eq tests=47 timeout=124.1s
+leela: mutant 380/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:163 Compare:Eq tests=47 killed timeout=no elapsed=0.19s
+leela: mutant 381/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:164 Return:expr tests=4 timeout=13.2s
+leela: mutant 381/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:164 Return:expr tests=4 killed timeout=no elapsed=0.14s
+leela: mutant 382/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:167 Return:None tests=10 timeout=37.0s
+leela: mutant 382/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:167 Return:None tests=10 killed timeout=no elapsed=4.81s
+leela: mutant 383/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:168 Compare:Eq tests=43 timeout=122.1s
+leela: mutant 383/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:168 Compare:Eq tests=43 killed timeout=no elapsed=0.19s
+leela: mutant 384/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:169 Return:expr tests=1 timeout=5.0s
+leela: mutant 384/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:169 Return:expr tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 385/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:170 Return:None tests=42 timeout=122.0s
+leela: mutant 385/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:170 Return:None tests=42 killed timeout=no elapsed=0.20s
+leela: mutant 386/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:173 Compare:NotIn tests=58 timeout=135.2s
+leela: mutant 386/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:173 Compare:NotIn tests=58 killed timeout=no elapsed=0.19s
+leela: mutant 387/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:174 Return:None tests=1 timeout=17.1s
+leela: mutant 387/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:174 Return:None tests=1 killed timeout=no elapsed=3.35s
+leela: mutant 388/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:181 BoolOp:Or tests=57 timeout=128.7s
+leela: mutant 388/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:181 BoolOp:Or tests=57 killed timeout=no elapsed=0.19s
+leela: mutant 389/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:183 Compare:NotIn tests=38 timeout=92.4s
+leela: mutant 389/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:183 Compare:NotIn tests=38 killed timeout=no elapsed=5.29s
+leela: mutant 390/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:186 Return:expr tests=5 timeout=6.7s
+leela: mutant 390/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:186 Return:expr tests=5 killed timeout=no elapsed=0.14s
+leela: mutant 391/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:187 BoolOp:Or tests=57 timeout=128.7s
+leela: mutant 391/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:187 BoolOp:Or tests=57 killed timeout=no elapsed=0.20s
+leela: mutant 392/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:188 BoolOp:Or tests=16 timeout=52.7s
+leela: mutant 392/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:188 BoolOp:Or tests=16 killed timeout=no elapsed=0.15s
+leela: mutant 393/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:188 Compare:NotEq tests=16 timeout=52.7s
+leela: mutant 393/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:188 Compare:NotEq tests=16 killed timeout=no elapsed=0.14s
+leela: mutant 394/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:195 Return:expr tests=2 timeout=5.0s
+leela: mutant 394/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:195 Return:expr tests=2 killed timeout=no elapsed=0.14s
+leela: mutant 395/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:198 BoolOp:And tests=3 timeout=5.0s
+leela: mutant 395/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:198 BoolOp:And tests=3 killed timeout=no elapsed=0.14s
+leela: mutant 396/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:198 UnaryOp:_remove tests=3 timeout=5.0s
+leela: mutant 396/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:198 UnaryOp:_remove tests=3 killed timeout=no elapsed=0.14s
+leela: mutant 397/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:198 UnaryOp:_remove tests=3 timeout=5.0s
+leela: mutant 397/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:198 UnaryOp:_remove tests=3 killed timeout=no elapsed=0.20s
+leela: mutant 398/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:202 Return:expr tests=1 timeout=5.0s
+leela: mutant 398/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:202 Return:expr tests=1 killed timeout=no elapsed=0.13s
+leela: mutant 399/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:205 Compare:IsNot tests=2 timeout=5.0s
+leela: mutant 399/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:205 Compare:IsNot tests=2 killed timeout=no elapsed=0.16s
+leela: mutant 400/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:207 Return:expr tests=1 timeout=5.0s
+leela: mutant 400/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:207 Return:expr tests=1 killed timeout=no elapsed=0.17s
+leela: mutant 401/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:215 BinOp:Add tests=8 timeout=23.9s
+leela: mutant 401/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:215 BinOp:Add tests=8 killed timeout=no elapsed=0.18s
+leela: mutant 402/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:215 BinOp:Mult tests=8 timeout=23.9s
+leela: mutant 402/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:215 BinOp:Mult tests=8 killed timeout=no elapsed=0.18s
+leela: mutant 403/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:217 BoolOp:And tests=8 timeout=23.9s
+leela: mutant 403/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:217 BoolOp:And tests=8 killed timeout=no elapsed=0.18s
+leela: mutant 404/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:218 BinOp:Mult tests=8 timeout=23.9s
+leela: mutant 404/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:218 BinOp:Mult tests=8 killed timeout=no elapsed=0.19s
+leela: mutant 405/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:218 BinOp:FloorDiv tests=8 timeout=23.9s
+leela: mutant 405/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:218 BinOp:FloorDiv tests=8 killed timeout=no elapsed=0.20s
+leela: mutant 406/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:220 BoolOp:Or tests=8 timeout=23.9s
+leela: mutant 406/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:220 BoolOp:Or tests=8 killed timeout=no elapsed=0.18s
+leela: mutant 407/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:220 Compare:Eq tests=8 timeout=23.9s
+leela: mutant 407/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:220 Compare:Eq tests=8 killed timeout=no elapsed=0.19s
+leela: mutant 408/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:222 Return:expr tests=1 timeout=5.0s
+leela: mutant 408/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:222 Return:expr tests=1 killed timeout=no elapsed=0.13s
+leela: mutant 409/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:228 BinOp:Sub tests=7 timeout=23.8s
+leela: mutant 409/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:228 BinOp:Sub tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 410/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:228 BinOp:Mult tests=7 timeout=23.8s
+leela: mutant 410/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:228 BinOp:Mult tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 411/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:228 BinOp:FloorDiv tests=7 timeout=23.8s
+leela: mutant 411/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:228 BinOp:FloorDiv tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 412/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:233 BinOp:Mult tests=7 timeout=23.8s
+leela: mutant 412/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:233 BinOp:Mult tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 413/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:233 BinOp:FloorDiv tests=7 timeout=23.8s
+leela: mutant 413/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:233 BinOp:FloorDiv tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 414/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:234 BinOp:Mult tests=7 timeout=23.8s
+leela: mutant 414/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:234 BinOp:Mult tests=7 killed timeout=no elapsed=0.18s
+leela: mutant 415/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:234 BinOp:FloorDiv tests=7 timeout=23.8s
+leela: mutant 415/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:234 BinOp:FloorDiv tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 416/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:235 BoolOp:Or tests=7 timeout=23.8s
+leela: mutant 416/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:235 BoolOp:Or tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 417/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:235 UnaryOp:_remove tests=7 timeout=23.8s
+leela: mutant 417/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:235 UnaryOp:_remove tests=7 killed timeout=no elapsed=0.19s
+leela: mutant 418/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:235 UnaryOp:_remove tests=7 timeout=23.8s
+leela: mutant 418/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:235 UnaryOp:_remove tests=7 killed timeout=no elapsed=0.17s
+leela: mutant 419/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:237 Return:expr tests=1 timeout=5.0s
+leela: mutant 419/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:237 Return:expr tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 420/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:244 Compare:NotIn tests=46 timeout=124.0s
+leela: mutant 420/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:244 Compare:NotIn tests=46 killed timeout=no elapsed=0.19s
+leela: mutant 421/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:246 Return:expr tests=4 timeout=13.2s
+leela: mutant 421/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:246 Return:expr tests=4 killed timeout=no elapsed=0.14s
+leela: mutant 422/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:248 Compare:IsNot tests=44 timeout=123.9s
+leela: mutant 422/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:248 Compare:IsNot tests=44 killed timeout=no elapsed=0.19s
+leela: mutant 423/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:250 Return:expr tests=2 timeout=13.1s
+leela: mutant 423/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:250 Return:expr tests=2 killed timeout=no elapsed=0.14s
+leela: mutant 424/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:256 Compare:NotEq tests=37 timeout=99.2s
+leela: mutant 424/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:256 Compare:NotEq tests=37 killed timeout=no elapsed=5.86s
+leela: mutant 425/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:258 BinOp:Mult tests=6 timeout=23.8s
+leela: mutant 425/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:258 BinOp:Mult tests=6 killed timeout=no elapsed=0.14s
+leela: mutant 426/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:258 BinOp:FloorDiv tests=6 timeout=23.8s
+leela: mutant 426/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:258 BinOp:FloorDiv tests=6 killed timeout=no elapsed=0.14s
+leela: mutant 427/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:259 BinOp:Mult tests=6 timeout=23.8s
+leela: mutant 427/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:259 BinOp:Mult tests=6 killed timeout=no elapsed=0.15s
+leela: mutant 428/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:259 BinOp:FloorDiv tests=6 timeout=23.8s
+leela: mutant 428/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:259 BinOp:FloorDiv tests=6 killed timeout=no elapsed=0.14s
+leela: mutant 429/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:261 Return:None tests=44 timeout=110.6s
+leela: mutant 429/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:261 Return:None tests=44 killed timeout=no elapsed=0.20s
+leela: mutant 430/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:264 Return:expr tests=2 timeout=7.8s
+leela: mutant 430/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:264 Return:expr tests=2 killed timeout=no elapsed=0.77s
+leela: mutant 431/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:267 BoolOp:And tests=58 timeout=135.2s
+leela: mutant 431/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:267 BoolOp:And tests=58 killed timeout=no elapsed=0.19s
+leela: mutant 432/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:268 Compare:NotIn tests=58 timeout=135.2s
+leela: mutant 432/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:268 Compare:NotIn tests=58 killed timeout=no elapsed=0.20s
+leela: mutant 433/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:269 Return:None tests=38 timeout=131.7s
+leela: mutation heartbeat 432/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:269 Return:None tests=38 timeout=131.7s elapsed=0s
+leela: mutant 433/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:269 Return:None tests=38 killed timeout=no elapsed=5.29s
+leela: mutant 434/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:272 Return:None tests=58 timeout=135.2s
+leela: mutant 434/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:272 Return:None tests=58 killed timeout=no elapsed=5.56s
+leela: mutant 435/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:282 BoolOp:And tests=51 timeout=134.0s
+leela: mutant 435/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:282 BoolOp:And tests=51 killed timeout=no elapsed=0.20s
+leela: mutant 436/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:283 Compare:IsNot tests=51 timeout=134.0s
+leela: mutant 436/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:283 Compare:IsNot tests=51 killed timeout=no elapsed=0.20s
+leela: mutant 437/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:284 Return:expr tests=10 timeout=25.0s
+leela: mutant 437/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:284 Return:expr tests=10 killed timeout=no elapsed=0.18s
+leela: mutant 438/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:285 Return:None tests=41 timeout=110.0s
+leela: mutant 438/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:285 Return:None tests=41 killed timeout=no elapsed=0.19s
+leela: mutant 439/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:285 Compare:NotEq tests=41 timeout=110.0s
+leela: mutant 439/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:285 Compare:NotEq tests=41 killed timeout=no elapsed=0.19s
+leela: mutant 440/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:288 Compare:NotIn tests=59 timeout=135.2s
+leela: mutant 440/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:288 Compare:NotIn tests=59 killed timeout=no elapsed=0.20s
+leela: mutant 441/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:289 Return:None tests=50 timeout=133.9s
+leela: mutant 441/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:289 Return:None tests=50 killed timeout=no elapsed=5.32s
+leela: mutant 442/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:292 Return:None tests=59 timeout=135.2s
+leela: mutant 442/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:292 Return:None tests=59 killed timeout=no elapsed=0.20s
+leela: mutant 443/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:295 BoolOp:And tests=59 timeout=135.2s
+leela: mutant 443/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:295 BoolOp:And tests=59 killed timeout=no elapsed=6.09s
+leela: mutant 444/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:295 Compare:IsNot tests=59 timeout=135.2s
+leela: mutant 444/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:295 Compare:IsNot tests=59 killed timeout=no elapsed=0.21s
+leela: mutant 445/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:295 UnaryOp:_remove tests=59 timeout=135.2s
+leela: mutant 445/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:295 UnaryOp:_remove tests=59 killed timeout=no elapsed=0.20s
+leela: mutant 446/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:296 Return:expr tests=1 timeout=7.4s
+leela: mutant 446/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:296 Return:expr tests=1 killed timeout=no elapsed=0.21s
+leela: mutant 447/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:300 BoolOp:And tests=27 timeout=72.9s
+leela: mutant 447/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:300 BoolOp:And tests=27 killed timeout=no elapsed=0.19s
+leela: mutant 448/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:300 UnaryOp:_remove tests=27 timeout=72.9s
+leela: mutant 448/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:300 UnaryOp:_remove tests=27 killed timeout=no elapsed=0.19s
+leela: mutant 449/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:300 UnaryOp:_remove tests=27 timeout=72.9s
+leela: mutant 449/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:300 UnaryOp:_remove tests=27 killed timeout=no elapsed=0.19s
+leela: mutant 450/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:301 Return:expr tests=2 timeout=12.8s
+leela: mutant 450/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:301 Return:expr tests=2 killed timeout=no elapsed=0.17s
+leela: mutant 451/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:308 BinOp:Mult tests=31 timeout=63.3s
+leela: mutant 451/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:308 BinOp:Mult tests=31 killed timeout=no elapsed=0.22s
+leela: mutant 452/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:308 BinOp:FloorDiv tests=31 timeout=63.3s
+leela: mutant 452/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:308 BinOp:FloorDiv tests=31 killed timeout=no elapsed=0.22s
+leela: mutant 453/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:313 BinOp:Mult tests=57 timeout=135.1s
+leela: mutant 453/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:313 BinOp:Mult tests=57 killed timeout=no elapsed=0.19s
+leela: mutant 454/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:313 BinOp:FloorDiv tests=57 timeout=135.1s
+leela: mutant 454/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:313 BinOp:FloorDiv tests=57 killed timeout=no elapsed=0.20s
+leela: mutant 455/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:316 Compare:NotEq tests=57 timeout=135.1s
+leela: mutation heartbeat 454/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:316 Compare:NotEq tests=57 timeout=135.1s elapsed=4s
+leela: mutant 455/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:316 Compare:NotEq tests=57 killed timeout=no elapsed=21.34s
+leela: mutant 456/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:320 Compare:NotIn tests=57 timeout=135.1s
+leela: mutant 456/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:320 Compare:NotIn tests=57 killed timeout=no elapsed=0.22s
+leela: mutant 457/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:324 Compare:IsNot tests=57 timeout=135.1s
+leela: mutant 457/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:324 Compare:IsNot tests=57 killed timeout=no elapsed=0.22s
+leela: mutant 458/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:325 Return:expr tests=14 timeout=25.6s
+leela: mutant 458/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:325 Return:expr tests=14 killed timeout=no elapsed=0.20s
+leela: mutant 459/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:326 BinOp:Add tests=43 timeout=110.6s
+leela: mutant 459/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:326 BinOp:Add tests=43 killed timeout=no elapsed=0.25s
+leela: mutant 460/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:326 BinOp:Mult tests=43 timeout=110.6s
+leela: mutant 460/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:326 BinOp:Mult tests=43 killed timeout=no elapsed=0.27s
+leela: mutant 461/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:327 Return:None tests=43 timeout=110.6s
+leela: mutant 461/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:327 Return:None tests=43 killed timeout=no elapsed=0.26s
+leela: mutant 462/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:329 Return:expr tests=1 timeout=5.0s
+leela: mutant 462/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:329 Return:expr tests=1 killed timeout=no elapsed=0.19s
+leela: mutant 463/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:333 Compare:IsNot tests=58 timeout=135.2s
+leela: mutant 463/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:333 Compare:IsNot tests=58 killed timeout=no elapsed=0.24s
+leela: mutant 464/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:334 Return:expr tests=16 timeout=25.7s
+leela: mutant 464/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:334 Return:expr tests=16 killed timeout=no elapsed=0.22s
+leela: mutant 465/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:340 Return:None tests=41 timeout=110.4s
+leela: mutant 465/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:340 Return:None tests=41 killed timeout=no elapsed=6.48s
+leela: mutant 466/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:342 Return:expr tests=1 timeout=5.0s
+leela: mutant 466/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:342 Return:expr tests=1 killed timeout=no elapsed=0.14s
+leela: mutant 467/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:350 Return:None tests=67 timeout=137.3s
+leela: mutant 467/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:350 Return:None tests=67 killed timeout=no elapsed=0.50s
+leela: mutant 468/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:386 Compare:Is tests=136 timeout=286.7s
+leela: mutant 468/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:386 Compare:Is tests=136 killed timeout=no elapsed=0.65s
+leela: mutant 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:393 Compare:Is tests=135 timeout=286.7s
+leela: mutant 469/1324 /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:393 Compare:Is tests=135 killed timeout=no elapsed=0.39s
+leela: mutant 470/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=3s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=33s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=63s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=93s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=123s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=153s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=183s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=213s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=243s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=273s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=303s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=334s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=364s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=394s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=424s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=454s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=484s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=515s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=545s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=575s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=605s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=635s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=665s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=695s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=725s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=755s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=785s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=815s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=845s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=876s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=906s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=936s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=966s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=996s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1026s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1056s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1086s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1116s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1146s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1176s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1206s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1237s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1267s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1297s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1327s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1357s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1387s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1417s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1447s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1477s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1508s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1538s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1568s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1598s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1628s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1658s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1688s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1718s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1748s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1778s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1809s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1839s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1869s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1899s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1929s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1959s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=1989s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2019s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2049s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2079s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2109s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2139s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2169s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2199s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2229s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2259s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2289s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2320s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2350s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2380s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2410s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2440s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2470s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2500s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2530s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2560s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2590s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2620s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2650s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2680s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2710s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2740s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2770s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2800s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2830s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2860s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2890s
+leela: mutation heartbeat 469/1324 mutant /private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/engine.py:415 Compare:Is tests=135 timeout=286.7s elapsed=2920s

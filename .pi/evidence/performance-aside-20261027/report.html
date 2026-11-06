@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Numba &amp; Leela — short performance report</title>
+<style>
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.6; }
+body { max-width: 820px; margin: 48px auto; padding: 0 24px 48px; }
+h1 { line-height: 1.15; letter-spacing: -.035em; font-size: 2.5rem; margin-bottom: .4em; }
+h2 { font-size: 1.25rem; margin-top: 2em; }
+.subtitle { opacity: .7; }
+.summary { border-left: 4px solid #799df4; background: light-dark(#f0f5ff, #1b263a); padding: 16px 20px; margin: 24px 0; }
+code { font-size: .9em; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid #8886; }
+th { width: 58%; font-weight: 500; }
+a { color: light-dark(#2459ad, #9ebcff); }
+footer { margin-top: 32px; border-top: 1px solid #8886; padding-top: 16px; font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Could Numba make Leela faster?</h1>
+<p class="subtitle">Short assessment · Source inspection and existing run logs, not a CPU profile or Numba benchmark.</p>
+<div class="summary"><strong>Bottom line:</strong> potentially, but not as a drop-in. There is confirmed repeated AST work worth investigating. We have not yet measured its runtime share or demonstrated any Numba speedup. <strong>Profile first; try doing less work before compiling it faster.</strong></div>
+
+<h2>What is confirmed</h2>
+<ul>
+<li><strong>Repeated tree work:</strong> each mutated module load in <code>MutatingLoader.exec_module</code> performs <code>parse → traverse/mutate → fix locations → compile</code>.</li>
+<li><strong>Not a ready-made Numba kernel:</strong> this operates on Python <code>ast.AST</code> objects through a dynamic visitor. Numba can accelerate typed tree/graph algorithms, but this machinery would need adaptation—perhaps a compact typed representation—and conversion/JIT costs would need to pay for themselves.</li>
+<li><strong>Session timings are broad:</strong> they include module eviction, pytest collection, plugins, fixtures, imports/AST work, test bodies and cleanup. Leela already has selection/preparation optimisations; this is not a claim that nothing is cached.</li>
+</ul>
+
+<h2>What the saved run tells us</h2>
+<p>The historical, interrupted 24 October self-check—not the currently running validation—recorded:</p>
+<table aria-label="Historical partial-run measurements">
+<tbody>
+<tr><th scope="row">Completed mutant-session timing records</th><td>1,266</td></tr>
+<tr><th scope="row">Whole-attempt wall time</th><td>10,510 seconds (~2h 55m)</td></tr>
+<tr><th scope="row">Sum of reported mutant-session times</th><td>10,096.65 seconds (~96% of wall time)</td></tr>
+<tr><th scope="row">Median reported session time</th><td>0.22 seconds</td></tr>
+</tbody>
+</table>
+<p><strong>Interpretation:</strong> the median is much lower than the mean (~8 seconds), indicating a long tail of expensive sessions. About 40% of reported session time was for mutants <em>targeting</em> <code>type_extractor.py</code>, and 21% for <code>runner.py</code>. Those are promising investigation groups, <strong>not function-level CPU hotspots</strong>.</p>
+<p>Likewise, “96% inside pytest sessions” does <strong>not</strong> mean “96% in test bodies” or rule out expensive tree processing. Self-mutation tests also exercise Leela and mypy; another application's workload may differ.</p>
+
+<h2>Recommended next step</h2>
+<ol>
+<li><strong>Measure phases:</strong> separate parsing, traversal, location fixing and compilation from collection, fixtures, test bodies and cleanup. Compare cold/warm runs on a small representative workload.</li>
+<li><strong>Compare avoiding work:</strong> investigate parse/compiled-code caching and indexed mutation paths while preserving isolation between mutants. Do not assume AST copying is cheaper than parsing.</li>
+<li><strong>Then consider Numba:</strong> prototype only if a substantial CPU-bound, Numba-compatible kernel remains. Measure end-to-end time, including conversion and JIT startup.</li>
+</ol>
+<p><strong>No Numba installation, performance implementation or new profiling campaign was performed for this assessment.</strong> The existing benchmark mode runs four complete configurations; it is not the lightweight phase profile needed here.</p>
+</main>
+<footer>
+<strong>Evidence:</strong>
+<a href="file:///Users/mng/Projects/pytest-leela/.pi/evidence/performance-aside-20261027/findings.md">Detailed findings and limitations</a> ·
+<a href="file:///private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/import_hook.py">import_hook.py</a> (<code>MutatingLoader.exec_module</code>, lines 289–293) ·
+<a href="file:///private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/runner.py">runner.py</a> (<code>InnerSession.run</code>)<br>
+Timing source: task checkout <code>.pi/evidence/current-ci-selfcheck/attempt2/native.stdout</code>; SHA-256 <code>6d888b1fba37e7a34129d242394ed7bf92bcc77ff12cf103a0f5e8689baa8c77</code>. Local static report; no remote assets or scripts.
+</footer>
+</body>
+</html>

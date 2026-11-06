@@ -419,7 +419,7 @@ def describe_MutantApplier():
                 replacement_op="swap_branches",
             )
             applier = MutantApplier(mutant)
-            new_tree = applier.visit(tree)
+            applier.visit(tree)
             assert applier.applied is False
 
         def it_does_not_apply_binop_mutant_to_ifexp():
@@ -621,7 +621,7 @@ def describe_MutantApplier():
                 replacement_op="broaden",
             )
             applier = MutantApplier(mutant)
-            new_tree = applier.visit(tree)
+            applier.visit(tree)
             assert applier.applied is False
 
         def it_does_not_apply_except_mutant_to_other_node():
@@ -993,7 +993,7 @@ def describe_Return_mutations():
             replacement_op="negate_expr",
         )
         applier = MutantApplier(mutant)
-        new_tree = applier.visit(tree)
+        applier.visit(tree)
         # negate_expr has guard `and node.value is not None` — None constant IS
         # not Python None, it's ast.Constant(value=None), so the guard allows it.
         # But for a bare `return` with no value, it would not apply.
@@ -1171,7 +1171,7 @@ def describe_node_type_discrimination():
             replacement_op="TotallyFake",
         )
         applier = MutantApplier(mutant)
-        new_tree = applier.visit(tree)
+        applier.visit(tree)
         assert applier.applied is False
 
 

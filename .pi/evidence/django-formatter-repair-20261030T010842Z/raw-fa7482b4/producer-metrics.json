@@ -1,0 +1,207 @@
+{
+  "classification": "disposable affected-producer source metric",
+  "target": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+  "producer": {
+    "name": "_django_project",
+    "lines": [
+      313,
+      396
+    ]
+  },
+  "pytestExit": 0,
+  "node": "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process",
+  "statementAstNodes": 17,
+  "statementNodesLineObserved": 15,
+  "unobservedStatementNodes": [
+    {
+      "type": "FunctionDef",
+      "line": 313,
+      "end": 396
+    },
+    {
+      "type": "Expr",
+      "line": 314,
+      "end": 323
+    }
+  ],
+  "branchAstNodes": 0,
+  "lineHits": [
+    325,
+    326,
+    327,
+    328,
+    335,
+    336,
+    337,
+    356,
+    357,
+    358,
+    365,
+    366,
+    368,
+    369,
+    374,
+    375,
+    381,
+    382,
+    385,
+    386,
+    387,
+    391,
+    392,
+    393,
+    394,
+    396,
+    400,
+    401,
+    456,
+    457,
+    458,
+    475,
+    477,
+    478,
+    479,
+    480,
+    481,
+    483,
+    484,
+    485,
+    486,
+    493,
+    494
+  ],
+  "coverageTestTimes": {
+    "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process": 1.7305561249995662
+  },
+  "coverageMap": {
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:358": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:477": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:480": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:486": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:483": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:382": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:327": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:385": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:391": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:394": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:458": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:336": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:400": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:479": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:357": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:366": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:485": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:369": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:375": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:494": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:381": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:387": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:326": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:396": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:335": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:393": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:457": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:356": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:475": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:481": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:365": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:478": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:484": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:368": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:493": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:374": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:386": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:325": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:328": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:392": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:337": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:456": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ],
+    "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py:401": [
+      "tests/leela/describe_end_to_end.py::describe_django_project::it_imports_models_admin_and_references_once_per_process"
+    ]
+  }
+}

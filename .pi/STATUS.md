@@ -1,0 +1,3 @@
+# Timeout recovery checkpoint — finite proof complete, overall OPEN
+
+R=/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z. Current .pi/strict-path-proof-20261031T011730Z/RESULTS.md. Oneindependentread-onlyreviewACCEPT; parent13boundedpathchecksPASS, sourcesunchanged. Product28/28mappedstmt14/14conditional; test91/91stmt/26conditionalgapsafter2explicitmapperprojectiondefects. Fullaggregate/final/historygatesnotcomplete. Exactnext existingstartupfailuretestonly+exceptiondispatchmetadata; no moreprobesqueued/activewriter/reviewer. Old24/1/11+invariant3/3permodepreserved;3originalsmissing/no backuplead/no waiver. CanonicalownerHEAD/patch/indexprotected. No provider/publication/commit. Read R/.pi/STATUS.md forauthoritativefullstate.

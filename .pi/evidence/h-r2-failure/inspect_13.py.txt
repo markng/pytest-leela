@@ -1,0 +1,1 @@
+import json;d=json.load(open(".pi/evidence/final-denominators.json"));print([(p,v["line_denominator"],v["statement_denominator"],v["branch_denominator"],v["missing_lines"],v["missing_branches"],[s for s in v["ast_statements"] if not s["covered"]]) for p,v in d.items()])

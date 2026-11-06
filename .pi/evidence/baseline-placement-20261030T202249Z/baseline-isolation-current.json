@@ -1,0 +1,404 @@
+{
+  "artifacts": {
+    "diagnostic": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/trace_plugin.py",
+    "diagnosticSha256": "ed4d031a95773018853068c1b6acafde15d6248d7229e9553e4ee819d4f8580a",
+    "rawHashManifest": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/raw.sha256"
+  },
+  "diagnosis": {
+    "cause": "When pytester basetemp is under repository R, pytest 9.1.1 searches upward, adopts R/pyproject.toml and rootpath R. Coverage node-id normalization then emits an R-relative selected id beginning .pi/... while the isolated worker cwd is the generated project. The worker passes that .pi/... selector to pytest.main from the generated cwd; collection is empty and exit status is USAGE_ERROR (4). With the otherwise matched basetemp outside R, nested rootpath and cwd are the generated project, selector is test_calc.py::test_double, baseline call passes, and the node passes.",
+    "classification": "proven diagnostic placement cause; not a product defect",
+    "prescription": "Keep diagnostic pytester basetemp/output outside R; bridge only raw evidence/manifests back into .pi. Do not add root/config flags or change product/tests for this artifact-placement failure.",
+    "productChangeRequired": false
+  },
+  "environment": {
+    "django": "6.1.2",
+    "executable": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/env313/bin/python",
+    "pytest": "9.1.1",
+    "python": "3.13.11"
+  },
+  "externalPlacement": {
+    "basetemp": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp",
+    "protocol": [
+      {
+        "args": [
+          "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+          "-q",
+          "-s",
+          "--basetemp=/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+        "exitstatus": 0,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol/pytest-protocol-1783-0.json",
+        "inipath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/pyproject.toml",
+        "items": [
+          {
+            "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+          }
+        ],
+        "pid": 1783,
+        "reports": [
+          {
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "outcome": "passed",
+            "phase": "setup"
+          },
+          {
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "outcome": "passed",
+            "phase": "call"
+          },
+          {
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "outcome": "passed",
+            "phase": "teardown"
+          }
+        ],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+      },
+      {
+        "args": [
+          "--tb=no",
+          "-q",
+          "--no-header",
+          "--override-ini=addopts=",
+          "-p",
+          "no:leela",
+          "-p",
+          "no:leela-benchmark",
+          "--capture=sys",
+          "test_calc.py::test_double"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+        "exitstatus": 0,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol/pytest-protocol-1785-0.json",
+        "inipath": null,
+        "items": [
+          {
+            "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+            "nodeid": "test_calc.py::test_double",
+            "path": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0/test_calc.py",
+            "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+          }
+        ],
+        "pid": 1785,
+        "reports": [
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "setup"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "call"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "teardown"
+          }
+        ],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+      },
+      {
+        "args": [
+          "--tb=no",
+          "-q",
+          "--no-header",
+          "--override-ini=addopts=",
+          "-p",
+          "no:leela",
+          "-p",
+          "no:leela-benchmark",
+          "--capture=sys",
+          "test_calc.py::test_double"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+        "exitstatus": 0,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol/pytest-protocol-1785-1.json",
+        "inipath": null,
+        "items": [
+          {
+            "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+            "nodeid": "test_calc.py::test_double",
+            "path": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0/test_calc.py",
+            "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+          }
+        ],
+        "pid": 1785,
+        "reports": [
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "setup"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "call"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "teardown"
+          }
+        ],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+      },
+      {
+        "args": [
+          "--tb=no",
+          "-q",
+          "--no-header",
+          "--override-ini=addopts=",
+          "-p",
+          "no:leela",
+          "-p",
+          "no:leela-benchmark",
+          "--capture=sys",
+          "-x",
+          "test_calc.py::test_double"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+        "exitstatus": 1,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol/pytest-protocol-1789-0.json",
+        "inipath": null,
+        "items": [
+          {
+            "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+            "nodeid": "test_calc.py::test_double",
+            "path": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0/test_calc.py",
+            "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+          }
+        ],
+        "pid": 1789,
+        "reports": [
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "setup"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "failed",
+            "phase": "call"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "teardown"
+          }
+        ],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+      },
+      {
+        "args": [
+          "--tb=no",
+          "-q",
+          "--no-header",
+          "--override-ini=addopts=",
+          "-p",
+          "no:leela",
+          "-p",
+          "no:leela-benchmark",
+          "--capture=sys",
+          "-x",
+          "test_calc.py::test_double"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+        "exitstatus": 1,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol/pytest-protocol-1791-0.json",
+        "inipath": null,
+        "items": [
+          {
+            "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+            "nodeid": "test_calc.py::test_double",
+            "path": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0/test_calc.py",
+            "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+          }
+        ],
+        "pid": 1791,
+        "reports": [
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "setup"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "failed",
+            "phase": "call"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "teardown"
+          }
+        ],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+      },
+      {
+        "args": [
+          "--tb=no",
+          "-q",
+          "--no-header",
+          "--override-ini=addopts=",
+          "-p",
+          "no:leela",
+          "-p",
+          "no:leela-benchmark",
+          "--capture=sys",
+          "-x",
+          "test_calc.py::test_double"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+        "exitstatus": 1,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol/pytest-protocol-1793-0.json",
+        "inipath": null,
+        "items": [
+          {
+            "cwd": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0",
+            "nodeid": "test_calc.py::test_double",
+            "path": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0/test_calc.py",
+            "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+          }
+        ],
+        "pid": 1793,
+        "reports": [
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "setup"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "failed",
+            "phase": "call"
+          },
+          {
+            "nodeid": "test_calc.py::test_double",
+            "outcome": "passed",
+            "phase": "teardown"
+          }
+        ],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/runtime-20261029/fresh-baseline-20261030T201541Z/basetemp/it_kills_every_mutant_and_passes0"
+      }
+    ],
+    "wrapperExit": 0
+  },
+  "failedAttempt": {
+    "classification": "diagnostic infrastructure path resolution",
+    "detail": "First invocation used identical run_check bytes from .pi/recovered-helpers; its relative parents[2] resolved /Users/mng/Projects/pytest-leela-recovery, so the guard source was not found. Retained guard.log. Retried with identical SHA at its verified original .pi/evidence/timeout-enforcement-fix location, where parents[2] resolves R."
+  },
+  "guard": {
+    "growthLimitKiB": 512000,
+    "limitSeconds": 120,
+    "minimumFreeBytes": 1073741824,
+    "ownedProcessesRemaining": false,
+    "resourceGuardSha256": "917ad76e62d9d3ce4a34ea3a6efdec49d93328110e83a2c2c0790e5ca6cf5263",
+    "stopObserved": false,
+    "wrapper": ".pi/evidence/timeout-enforcement-fix/run_check.py",
+    "wrapperSha256": "7432a1eb977da1cdc83a5ce09e587c2ec03ec2ca9fbd75a64adbcb9f828a4e1e"
+  },
+  "head": "b1bb565883c75356be1a493c64084607d5769f3f",
+  "node": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+  "remaining": [
+    "No T2 generated/native/expanded/substrate closure attempted.",
+    "No broad suite/gates/review/T4 recovery attempted.",
+    "Prior 34 producer CALL jobs were not rerun."
+  ],
+  "scope": "one existing node baseline isolation only",
+  "sourceRoot": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+  "underRepositoryMatchedControl": {
+    "basetemp": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp",
+    "protocol": [
+      {
+        "args": [
+          "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+          "-q",
+          "-s",
+          "--basetemp=/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+        "exitstatus": 1,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol-original-placement/pytest-protocol-2059-0.json",
+        "inipath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/pyproject.toml",
+        "items": [
+          {
+            "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z",
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "path": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/tests/leela/describe_end_to_end.py",
+            "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+          }
+        ],
+        "pid": 2059,
+        "reports": [
+          {
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "outcome": "passed",
+            "phase": "setup"
+          },
+          {
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "outcome": "failed",
+            "phase": "call"
+          },
+          {
+            "nodeid": "tests/leela/describe_end_to_end.py::describe_clean_project::it_kills_every_mutant_and_passes",
+            "outcome": "passed",
+            "phase": "teardown"
+          }
+        ],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+      },
+      {
+        "args": [
+          "--tb=no",
+          "-q",
+          "--no-header",
+          "--override-ini=addopts=",
+          "-p",
+          "no:leela",
+          "-p",
+          "no:leela-benchmark",
+          "--capture=sys",
+          ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0/test_calc.py::test_double"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0",
+        "exitstatus": 4,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol-original-placement/pytest-protocol-2060-0.json",
+        "inipath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/pyproject.toml",
+        "items": [],
+        "pid": 2060,
+        "reports": [],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+      },
+      {
+        "args": [
+          "--tb=no",
+          "-q",
+          "--no-header",
+          "--override-ini=addopts=",
+          "-p",
+          "no:leela",
+          "-p",
+          "no:leela-benchmark",
+          "--capture=sys",
+          ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0/test_calc.py::test_double"
+        ],
+        "cwd": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/.pi/baseline-isolation/fresh-baseline-20261030T201541Z/under-r-basetemp/it_kills_every_mutant_and_passes0",
+        "exitstatus": 0,
+        "file": ".pi/baseline-isolation/fresh-baseline-20261030T201541Z/protocol-original-placement/pytest-protocol-2060-1.json",
+        "inipath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z/pyproject.toml",
+        "items": [],
+        "pid": 2060,
+        "reports": [],
+        "rootpath": "/Users/mng/Projects/pytest-leela-recovery/timeout-20261029T162630Z"
+      }
+    ],
+    "wrapperExit": 1
+  }
+}

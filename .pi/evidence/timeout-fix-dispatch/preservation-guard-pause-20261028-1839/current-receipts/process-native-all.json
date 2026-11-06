@@ -1,0 +1,2297 @@
+[
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 35,
+        "col_offset": 15,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 0
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 35,
+          "col_offset": 15,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 0
+      },
+      "killed": true,
+      "tests_run": 5,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "time_seconds": 5.404514041729271,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+        "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+        "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+        "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_ipc_write_failure_is_not_deadline",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 36,
+        "col_offset": 15,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 1
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 36,
+          "col_offset": 15,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 1
+      },
+      "killed": true,
+      "tests_run": 5,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "time_seconds": 5.378105582669377,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+        "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+        "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+        "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_ipc_write_failure_is_not_deadline",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 37,
+        "col_offset": 15,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 2
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 37,
+          "col_offset": 15,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 2
+      },
+      "killed": true,
+      "tests_run": 5,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "time_seconds": 5.368988874834031,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+        "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+        "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+        "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_ipc_write_failure_is_not_deadline",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 43,
+        "col_offset": 8,
+        "node_type": "ExceptHandler",
+        "original_op": "typed_broadest",
+        "inferred_type": null
+      },
+      "replacement_op": "body_to_raise",
+      "mutant_id": 3
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 43,
+          "col_offset": 8,
+          "node_type": "ExceptHandler",
+          "original_op": "typed_broadest",
+          "inferred_type": null
+        },
+        "replacement_op": "body_to_raise",
+        "mutant_id": 3
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_process_ipc_write_failure_is_not_deadline",
+      "time_seconds": 0.31950595788657665,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_process_ipc_write_failure_is_not_deadline"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_process_ipc_write_failure_is_not_deadline"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_process_ipc_write_failure_is_not_deadline"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 47,
+        "col_offset": 19,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Sub",
+      "mutant_id": 4
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 47,
+          "col_offset": 19,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Sub",
+        "mutant_id": 4
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "time_seconds": 0.33389087533578277,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_start_failure_does_not_start_ipc",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 47,
+        "col_offset": 19,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Mult",
+      "mutant_id": 5
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 47,
+          "col_offset": 19,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 5
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "time_seconds": 0.3028267086483538,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_start_failure_does_not_start_ipc",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 47,
+        "col_offset": 19,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Div",
+      "mutant_id": 6
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 47,
+          "col_offset": 19,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Div",
+        "mutant_id": 6
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "time_seconds": 0.31577716721221805,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_start_failure_does_not_start_ipc",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 60,
+        "col_offset": 57,
+        "node_type": "BinOp",
+        "original_op": "Sub",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Add",
+      "mutant_id": 7
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 60,
+          "col_offset": 57,
+          "node_type": "BinOp",
+          "original_op": "Sub",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Add",
+        "mutant_id": 7
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "time_seconds": 0.31906004110351205,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 60,
+        "col_offset": 57,
+        "node_type": "BinOp",
+        "original_op": "Sub",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Mult",
+      "mutant_id": 8
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 60,
+          "col_offset": 57,
+          "node_type": "BinOp",
+          "original_op": "Sub",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 8
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "time_seconds": 0.3025025832466781,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_a_process_delivers_ipc_exception_without_timeout",
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 61,
+        "col_offset": 12,
+        "node_type": "ExceptHandler",
+        "original_op": "typed",
+        "inferred_type": null
+      },
+      "replacement_op": "broaden",
+      "mutant_id": 9
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 61,
+          "col_offset": 12,
+          "node_type": "ExceptHandler",
+          "original_op": "typed",
+          "inferred_type": null
+        },
+        "replacement_op": "broaden",
+        "mutant_id": 9
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "time_seconds": 0.3752148333005607,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 61,
+        "col_offset": 12,
+        "node_type": "ExceptHandler",
+        "original_op": "typed",
+        "inferred_type": null
+      },
+      "replacement_op": "body_to_raise",
+      "mutant_id": 10
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 61,
+          "col_offset": 12,
+          "node_type": "ExceptHandler",
+          "original_op": "typed",
+          "inferred_type": null
+        },
+        "replacement_op": "body_to_raise",
+        "mutant_id": 10
+      },
+      "killed": true,
+      "tests_run": 3,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "time_seconds": 5.382289292290807,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+        "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+        "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_queue_failure_is_not_reclassified_timeout",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 65,
+        "col_offset": 15,
+        "node_type": "UnaryOp",
+        "original_op": "Not",
+        "inferred_type": null
+      },
+      "replacement_op": "_remove",
+      "mutant_id": 11
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 65,
+          "col_offset": 15,
+          "node_type": "UnaryOp",
+          "original_op": "Not",
+          "inferred_type": null
+        },
+        "replacement_op": "_remove",
+        "mutant_id": 11
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "time_seconds": 0.3027000408619642,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 67,
+        "col_offset": 12,
+        "node_type": "Return",
+        "original_op": "expr",
+        "inferred_type": "bytes"
+      },
+      "replacement_op": "None",
+      "mutant_id": 12
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 67,
+          "col_offset": 12,
+          "node_type": "Return",
+          "original_op": "expr",
+          "inferred_type": "bytes"
+        },
+        "replacement_op": "None",
+        "mutant_id": 12
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "time_seconds": 0.2993540419265628,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_deadline_arithmetic_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 79,
+        "col_offset": 15,
+        "node_type": "Compare",
+        "original_op": "Eq",
+        "inferred_type": "int"
+      },
+      "replacement_op": "NotEq",
+      "mutant_id": 13
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 79,
+          "col_offset": 15,
+          "node_type": "Compare",
+          "original_op": "Eq",
+          "inferred_type": "int"
+        },
+        "replacement_op": "NotEq",
+        "mutant_id": 13
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members",
+      "time_seconds": 0.30333225009962916,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 81,
+        "col_offset": 8,
+        "node_type": "Return",
+        "original_op": "expr",
+        "inferred_type": "bool"
+      },
+      "replacement_op": "negate_expr",
+      "mutant_id": 14
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 81,
+          "col_offset": 8,
+          "node_type": "Return",
+          "original_op": "expr",
+          "inferred_type": "bool"
+        },
+        "replacement_op": "negate_expr",
+        "mutant_id": 14
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members",
+      "time_seconds": 0.3035470419563353,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 81,
+        "col_offset": 15,
+        "node_type": "BoolOp",
+        "original_op": "And",
+        "inferred_type": "bool"
+      },
+      "replacement_op": "Or",
+      "mutant_id": 15
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 81,
+          "col_offset": 15,
+          "node_type": "BoolOp",
+          "original_op": "And",
+          "inferred_type": "bool"
+        },
+        "replacement_op": "Or",
+        "mutant_id": 15
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members",
+      "time_seconds": 0.30420287465676665,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_group_exited_rejects_live_or_missing_members",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 85,
+        "col_offset": 11,
+        "node_type": "Compare",
+        "original_op": "Is",
+        "inferred_type": null
+      },
+      "replacement_op": "IsNot",
+      "mutant_id": 16
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 85,
+          "col_offset": 11,
+          "node_type": "Compare",
+          "original_op": "Is",
+          "inferred_type": null
+        },
+        "replacement_op": "IsNot",
+        "mutant_id": 16
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "time_seconds": 0.32879037503153086,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_uses_owned_group_before_wait",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_delayed_ipc_does_not_resignal_reaped_pid",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_start_failure_does_not_start_ipc",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 92,
+        "col_offset": 12,
+        "node_type": "ExceptHandler",
+        "original_op": "typed",
+        "inferred_type": null
+      },
+      "replacement_op": "broaden",
+      "mutant_id": 17
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 92,
+          "col_offset": 12,
+          "node_type": "ExceptHandler",
+          "original_op": "typed",
+          "inferred_type": null
+        },
+        "replacement_op": "broaden",
+        "mutant_id": 17
+      },
+      "killed": true,
+      "tests_run": 2,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "time_seconds": 0.3105780421756208,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 92,
+        "col_offset": 12,
+        "node_type": "ExceptHandler",
+        "original_op": "typed",
+        "inferred_type": null
+      },
+      "replacement_op": "body_to_raise",
+      "mutant_id": 18
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 92,
+          "col_offset": 12,
+          "node_type": "ExceptHandler",
+          "original_op": "typed",
+          "inferred_type": null
+        },
+        "replacement_op": "body_to_raise",
+        "mutant_id": 18
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "time_seconds": 0.32120987493544817,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 94,
+        "col_offset": 12,
+        "node_type": "ExceptHandler",
+        "original_op": "typed",
+        "inferred_type": null
+      },
+      "replacement_op": "broaden",
+      "mutant_id": 19
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 94,
+          "col_offset": 12,
+          "node_type": "ExceptHandler",
+          "original_op": "typed",
+          "inferred_type": null
+        },
+        "replacement_op": "broaden",
+        "mutant_id": 19
+      },
+      "killed": true,
+      "tests_run": 3,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "time_seconds": 0.33054570760577917,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+        "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+        "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 94,
+        "col_offset": 12,
+        "node_type": "ExceptHandler",
+        "original_op": "typed",
+        "inferred_type": null
+      },
+      "replacement_op": "body_to_raise",
+      "mutant_id": 20
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 94,
+          "col_offset": 12,
+          "node_type": "ExceptHandler",
+          "original_op": "typed",
+          "inferred_type": null
+        },
+        "replacement_op": "body_to_raise",
+        "mutant_id": 20
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "time_seconds": 0.755479124840349,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+        "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+        "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 97,
+        "col_offset": 19,
+        "node_type": "BoolOp",
+        "original_op": "Or",
+        "inferred_type": "bool"
+      },
+      "replacement_op": "And",
+      "mutant_id": 21
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 97,
+          "col_offset": 19,
+          "node_type": "BoolOp",
+          "original_op": "Or",
+          "inferred_type": "bool"
+        },
+        "replacement_op": "And",
+        "mutant_id": 21
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "time_seconds": 0.33989774994552135,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 97,
+        "col_offset": 19,
+        "node_type": "Compare",
+        "original_op": "NotEq",
+        "inferred_type": "str"
+      },
+      "replacement_op": "Eq",
+      "mutant_id": 22
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 97,
+          "col_offset": 19,
+          "node_type": "Compare",
+          "original_op": "NotEq",
+          "inferred_type": "str"
+        },
+        "replacement_op": "Eq",
+        "mutant_id": 22
+      },
+      "killed": true,
+      "tests_run": 2,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "time_seconds": 0.7562489160336554,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 97,
+        "col_offset": 47,
+        "node_type": "UnaryOp",
+        "original_op": "Not",
+        "inferred_type": null
+      },
+      "replacement_op": "_remove",
+      "mutant_id": 23
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 97,
+          "col_offset": 47,
+          "node_type": "UnaryOp",
+          "original_op": "Not",
+          "inferred_type": null
+        },
+        "replacement_op": "_remove",
+        "mutant_id": 23
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "time_seconds": 0.3052921248599887,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 107,
+        "col_offset": 19,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 24
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 107,
+          "col_offset": 19,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 24
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "time_seconds": 0.30981258302927017,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_uses_owned_group_before_wait",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_delayed_ipc_does_not_resignal_reaped_pid",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 111,
+        "col_offset": 23,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 25
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 111,
+          "col_offset": 23,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 25
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "time_seconds": 0.3158277911134064,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_uses_owned_group_before_wait",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 112,
+        "col_offset": 23,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 26
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 112,
+          "col_offset": 23,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 26
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "time_seconds": 0.31076354067772627,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error0]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_only_accepts_missing_group[error1]",
+      "tests/leela/describe_timeout_process.py::test_a_process_cleanup_uses_owned_group_before_wait",
+      "tests/leela/describe_timeout_process.py::test_a_process_closes_pipes_and_reaps_after_permission_failure",
+      "tests/leela/describe_timeout_process.py::test_a_process_zombie_exception_does_not_hide_other_os_errors",
+      "tests/leela/describe_timeout_process.py::test_process_cancellation_reaps_before_propagating",
+      "tests/leela/describe_timeout_process.py::test_process_crash_is_not_a_test_failure",
+      "tests/leela/describe_timeout_process.py::test_process_preserves_parent_environment_and_cwd",
+      "tests/leela/describe_timeout_process.py::test_process_reports_bootstrap_crash_without_a_verdict",
+      "tests/leela/describe_timeout_process.py::test_process_returns_completed_evidence_and_reaps",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[DirectTestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 121,
+        "col_offset": 11,
+        "node_type": "Compare",
+        "original_op": "NotEq",
+        "inferred_type": "str"
+      },
+      "replacement_op": "Eq",
+      "mutant_id": 27
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 121,
+          "col_offset": 11,
+          "node_type": "Compare",
+          "original_op": "NotEq",
+          "inferred_type": "str"
+        },
+        "replacement_op": "Eq",
+        "mutant_id": 27
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "time_seconds": 0.3887592921964824,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "tests/leela/describe_timeout_process.py::test_guarded_process_rejects_unsupported_platform_before_start",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 124,
+        "col_offset": 30,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Sub",
+      "mutant_id": 28
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 124,
+          "col_offset": 30,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Sub",
+        "mutant_id": 28
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "time_seconds": 0.3581154583953321,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 124,
+        "col_offset": 30,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Mult",
+      "mutant_id": 29
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 124,
+          "col_offset": 30,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 29
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "time_seconds": 0.3079945840872824,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 124,
+        "col_offset": 30,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "float"
+      },
+      "replacement_op": "Div",
+      "mutant_id": 30
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 124,
+          "col_offset": 30,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "float"
+        },
+        "replacement_op": "Div",
+        "mutant_id": 30
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "time_seconds": 0.3015660410746932,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 129,
+        "col_offset": 12,
+        "node_type": "Return",
+        "original_op": "expr",
+        "inferred_type": "bytes"
+      },
+      "replacement_op": "None",
+      "mutant_id": 31
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 129,
+          "col_offset": 12,
+          "node_type": "Return",
+          "original_op": "expr",
+          "inferred_type": "bytes"
+        },
+        "replacement_op": "None",
+        "mutant_id": 31
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "time_seconds": 0.31061104079708457,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guarded_request_carries_absolute_deadline",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 133,
+        "col_offset": 12,
+        "node_type": "Return",
+        "original_op": "expr",
+        "inferred_type": "bytes"
+      },
+      "replacement_op": "None",
+      "mutant_id": 32
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 133,
+          "col_offset": 12,
+          "node_type": "Return",
+          "original_op": "expr",
+          "inferred_type": "bytes"
+        },
+        "replacement_op": "None",
+        "mutant_id": 32
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "time_seconds": 0.29840749967843294,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 143,
+        "col_offset": 15,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 33
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 143,
+          "col_offset": 15,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 33
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "time_seconds": 0.2977494169026613,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 144,
+        "col_offset": 15,
+        "node_type": "Compare",
+        "original_op": "IsNot",
+        "inferred_type": null
+      },
+      "replacement_op": "Is",
+      "mutant_id": 34
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 144,
+          "col_offset": 15,
+          "node_type": "Compare",
+          "original_op": "IsNot",
+          "inferred_type": null
+        },
+        "replacement_op": "Is",
+        "mutant_id": 34
+      },
+      "killed": true,
+      "tests_run": 1,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "time_seconds": 0.3151732496917248,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 146,
+        "col_offset": 23,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "int"
+      },
+      "replacement_op": "Sub",
+      "mutant_id": 35
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 146,
+          "col_offset": 23,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "int"
+        },
+        "replacement_op": "Sub",
+        "mutant_id": 35
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "time_seconds": 0.31775529216974974,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 146,
+        "col_offset": 23,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "int"
+      },
+      "replacement_op": "Mult",
+      "mutant_id": 36
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 146,
+          "col_offset": 23,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "int"
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 36
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "time_seconds": 0.3113536252640188,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 146,
+        "col_offset": 23,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "int"
+      },
+      "replacement_op": "FloorDiv",
+      "mutant_id": 37
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 146,
+          "col_offset": 23,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "int"
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 37
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "time_seconds": 0.3674664171412587,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 146,
+        "col_offset": 23,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "int"
+      },
+      "replacement_op": "Sub",
+      "mutant_id": 38
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 146,
+          "col_offset": 23,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "int"
+        },
+        "replacement_op": "Sub",
+        "mutant_id": 38
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "time_seconds": 0.34221399994567037,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 146,
+        "col_offset": 23,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "int"
+      },
+      "replacement_op": "Mult",
+      "mutant_id": 39
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 146,
+          "col_offset": 23,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "int"
+        },
+        "replacement_op": "Mult",
+        "mutant_id": 39
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "time_seconds": 0.35531483264639974,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 146,
+        "col_offset": 23,
+        "node_type": "BinOp",
+        "original_op": "Add",
+        "inferred_type": "int"
+      },
+      "replacement_op": "FloorDiv",
+      "mutant_id": 40
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 146,
+          "col_offset": 23,
+          "node_type": "BinOp",
+          "original_op": "Add",
+          "inferred_type": "int"
+        },
+        "replacement_op": "FloorDiv",
+        "mutant_id": 40
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "time_seconds": 0.30893204221501946,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 150,
+        "col_offset": 22,
+        "node_type": "Compare",
+        "original_op": "NotIn",
+        "inferred_type": null
+      },
+      "replacement_op": "In",
+      "mutant_id": 41
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 150,
+          "col_offset": 22,
+          "node_type": "Compare",
+          "original_op": "NotIn",
+          "inferred_type": null
+        },
+        "replacement_op": "In",
+        "mutant_id": 41
+      },
+      "killed": true,
+      "tests_run": 3,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "time_seconds": 0.31216024979949,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 151,
+        "col_offset": 23,
+        "node_type": "UnaryOp",
+        "original_op": "Not",
+        "inferred_type": null
+      },
+      "replacement_op": "_remove",
+      "mutant_id": 42
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 151,
+          "col_offset": 23,
+          "node_type": "UnaryOp",
+          "original_op": "Not",
+          "inferred_type": null
+        },
+        "replacement_op": "_remove",
+        "mutant_id": 42
+      },
+      "killed": true,
+      "tests_run": 3,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "time_seconds": 0.3052015001885593,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  },
+  {
+    "mutant": {
+      "point": {
+        "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+        "module_name": "pytest_leela._timeout_process",
+        "lineno": 151,
+        "col_offset": 58,
+        "node_type": "BinOp",
+        "original_op": "Sub",
+        "inferred_type": null
+      },
+      "replacement_op": "Add",
+      "mutant_id": 43
+    },
+    "result": {
+      "mutant": {
+        "point": {
+          "file_path": "/private/tmp/pi-leela-responsive-watch-20261022/src/pytest_leela/_timeout_process.py",
+          "module_name": "pytest_leela._timeout_process",
+          "lineno": 151,
+          "col_offset": 58,
+          "node_type": "BinOp",
+          "original_op": "Sub",
+          "inferred_type": null
+        },
+        "replacement_op": "Add",
+        "mutant_id": 43
+      },
+      "killed": true,
+      "tests_run": 4,
+      "killing_test": "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "time_seconds": 0.31372120790183544,
+      "test_ids_run": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "killing_tests": [
+        "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation"
+      ],
+      "error": null
+    },
+    "selected": [
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error0]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_cleanup_retries_only_actual_timeout[wait_error1]",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_eof_stops_reading_before_retry",
+      "tests/leela/describe_timeout_process.py::test_a_guardian_transport_deadline_before_process_activation",
+      "tests/leela/describe_timeout_process.py::test_guardian_deadline_envelope_has_specific_exception",
+      "tests/leela/describe_timeout_process.py::test_guardian_empty_response_is_prompt_protocol_error",
+      "tests/leela/describe_timeout_process.py::test_guardian_nonzero_exit_after_response_is_not_success",
+      "tests/leela/describe_timeout_process.py::test_guardian_worker_failure_envelope_is_runner_error",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-crash]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-return]",
+      "tests/leela/describe_timeout_process.py::test_process_stops_owned_descendants[TestProcess-timeout]"
+    ]
+  }
+]

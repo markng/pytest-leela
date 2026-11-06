@@ -1,0 +1,4 @@
+p='capture.sh'; s=open(p).read(); s=s.replace("printf 'project: %s\\nindex: %s\\n' \"$P\" \"$IDX\"\ncat src/calc.py", "printf 'project: %s\\nindex: %s\\n' \"$P\" \"$IDX\"\ncat src/calc.py\nprintf '\\n[preparation: fresh synthetic fixture]\\n'\nsleep 2")
+s=s.replace('echo "[actual old completion pending] $OLD"; mark OLD-DONE-PENDING', 'echo "[actual old completion pending] $OLD"; mark OLD-DONE-PENDING\nsleep 4')
+s=s.replace("echo '[actual current status]'; cat \"$BASE/status-current.json\"; mark CURRENT-PENDING-0", "echo '[actual current status]'; cat \"$BASE/status-current.json\"; mark CURRENT-PENDING-0\nsleep 4")
+open(p,'w').write(s)

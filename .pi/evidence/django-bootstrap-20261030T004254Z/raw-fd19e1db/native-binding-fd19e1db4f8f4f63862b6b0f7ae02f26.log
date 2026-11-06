@@ -1,0 +1,1 @@
+{"childPid": 24737, "cleanPid": 24735, "job": "8e31acb7a9c540419550566913d2ec0e", "killingTests": ["tests/test_shop.py::test_registry_and_identity_hold"], "mutantId": 1, "operator": "Sub", "status": "killed"}
