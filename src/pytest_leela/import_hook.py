@@ -251,7 +251,7 @@ class MutatingLoader(importlib.abc.Loader):
     def __init__(
         self,
         source: str,
-        mutant: Mutant,
+        mutant: Mutant | None,
         filename: str,
         import_errors: list[str] | None = None,
     ) -> None:
@@ -280,9 +280,9 @@ class MutatingLoader(importlib.abc.Loader):
                 module.__name__, self, origin=self.filename
             )
         tree = ast.parse(self.source, filename=self.filename)
-        applier = MutantApplier(self.mutant)
-        tree = applier.visit(tree)
-        ast.fix_missing_locations(tree)
+        if self.mutant is not None:
+            tree = MutantApplier(self.mutant).visit(tree)
+            ast.fix_missing_locations(tree)
         code = compile(tree, self.filename, "exec")
         try:
             exec(code, module.__dict__)
@@ -323,9 +323,10 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
     ) -> importlib.machinery.ModuleSpec | None:
         if fullname in self.target_modules:
             filename = self._module_to_file.get(fullname, f"<mutated:{fullname}>")
+            owns_mutant = fullname == self.mutant.point.module_name
             loader = MutatingLoader(
                 self.target_modules[fullname],
-                self.mutant,
+                self.mutant if owns_mutant else None,
                 filename,
                 self.import_errors,
             )
