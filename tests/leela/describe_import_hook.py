@@ -1203,6 +1203,36 @@ def describe_MutatingFinder():
         assert spec is not None
         assert spec.origin == "/real/path/mymod.py"
 
+    def it_mutates_only_the_mutants_own_module_at_shared_coordinates():
+        point = MutationPoint(
+            file_path="leela_same_coord_a.py",
+            module_name="leela_same_coord_a",
+            lineno=1,
+            col_offset=8,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type=None,
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = install_hook(
+            {
+                "leela_same_coord_a": "VALUE = 2 + 3\n",
+                "leela_same_coord_b": "VALUE = 20 + 30\n",
+            },
+            mutant,
+        )
+        try:
+            mutated = importlib.import_module("leela_same_coord_a")
+            other = importlib.import_module("leela_same_coord_b")
+        finally:
+            remove_hook(finder)
+            sys.modules.pop("leela_same_coord_a", None)
+            sys.modules.pop("leela_same_coord_b", None)
+        assert mutated.VALUE == -1
+        assert other.VALUE == 50
+        assert other.__file__ == "<mutated:leela_same_coord_b>"
+        assert finder.import_errors == []
+
 
 def describe_MutatingLoader():
     def it_create_module_returns_none():
