@@ -16,9 +16,11 @@ from collections.abc import Callable
 
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.coverage_tracker import collect_coverage
+from pytest_leela.fast_feedback import removal_descendants
 from pytest_leela.git_diff import changed_lines
 from pytest_leela.models import (
     CoverageMap,
+    DeferredMutant,
     EnrichmentStats,
     Mutant,
     MutantResult,
@@ -125,6 +127,7 @@ class Engine:
         test_node_ids: list[str] | None = None,
         pre_coverage_map: CoverageMap | None = None,
         on_progress: Callable[[MutationProgress], None] | None = None,
+        fast_feedback: bool = False,
     ) -> RunResult:
         start = time.monotonic()
 
@@ -210,6 +213,24 @@ class Engine:
             for mutant in all_mutants
         ]
 
+        descendants = (
+            removal_descendants(all_mutants, target_sources, module_to_file)
+            if fast_feedback else {}
+        )
+        if descendants:
+            # Candidate IDs index their original plan. A parent must exercise
+            # the known tests of itself and every child it might defer.
+            for parent, children in list(descendants.items()):
+                test_groups = [mutant_test_ids[i] for i in (parent, *children)]
+                if all(test_groups):
+                    mutant_test_ids[parent] = sorted(
+                        {test for group in test_groups for test in group or []}
+                    )
+                else:
+                    # An unknown selection still runs normally; it is not
+                    # evidence that every selected descendant test ran.
+                    del descendants[parent]
+
         # 9. Prove the tests pass with no mutation applied, through the same
         # in-process path every mutant uses.  Otherwise a test that fails
         # for an unrelated reason would score every mutant as killed.
@@ -221,18 +242,34 @@ class Engine:
 
         # 10. Run each mutant
         results: list[MutantResult] = []
-        for mutant, test_ids in zip(all_mutants, mutant_test_ids):
+        deferred: list[DeferredMutant] = []
+        blocked: dict[int, Mutant] = {}
+        schedule = list(zip(all_mutants, mutant_test_ids))
+        if descendants:
+            schedule.sort(key=lambda entry: entry[0].mutant_id not in descendants)
+        for mutant, test_ids in schedule:
             # Check memory limits
             if limits is not None and not is_memory_ok(limits):
                 if on_progress is not None:
                     on_progress(
-                        MutationProgress("memory limit", len(results), runnable, total_pruned)
+                        MutationProgress(
+                            "memory limit", len(results), runnable, total_pruned,
+                            deferred=len(deferred),
+                        )
                     )
                 break
 
+            survivor = blocked.get(mutant.mutant_id)
+            if survivor is not None:
+                deferred.append(DeferredMutant(mutant, survivor))
+                continue
+
             if on_progress is not None:
                 on_progress(
-                    MutationProgress("mutation", len(results), runnable, total_pruned, mutant)
+                    MutationProgress(
+                        "mutation", len(results), runnable, total_pruned,
+                        mutant, len(deferred),
+                    )
                 )
             result = run_tests_for_mutant(
                 mutant,
@@ -245,9 +282,24 @@ class Engine:
                 scope=scope,
             )
             results.append(result)
+            if (
+                mutant.mutant_id in descendants
+                and result.status == "survived"
+                and result.activated
+                and result.tests_run > 0
+                and test_ids
+                and set(test_ids) <= set(result.test_ids_run)
+            ):
+                for child in descendants[mutant.mutant_id]:
+                    blocked[child] = mutant
         else:
             if on_progress is not None:
-                on_progress(MutationProgress("done", len(results), runnable, total_pruned))
+                on_progress(
+                    MutationProgress(
+                        "done", len(results), runnable, total_pruned,
+                        deferred=len(deferred),
+                    )
+                )
 
         wall_time = time.monotonic() - start
 
@@ -264,6 +316,7 @@ class Engine:
             },
             enrichment_stats=total_enrichment_stats,
             diff_base=diff_base,
+            deferred=deferred,
         )
 
     @staticmethod

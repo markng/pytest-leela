@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 
-from pytest_leela.models import MutantResult, RunResult
+from pytest_leela.models import Mutant, MutantResult, RunResult
 
 
 def _op_display(original: str, replacement: str) -> str:
@@ -142,9 +142,28 @@ def format_terminal_report(result: RunResult) -> str:
 
     lines.append("")
 
+    if result.deferred:
+        lines.append(
+            f"INCOMPLETE: {len(result.deferred)} deferred (not tested or scored); "
+            "use --leela-full to run every mutant."
+        )
+        for item in result.deferred:
+            mutant, parent = item.mutant, item.after_survivor
+            lines.append(
+                f"  DEFERRED #{mutant.mutant_id} {_location(mutant)}: "
+                f"{item.reason} (#{parent.mutant_id} {_location(parent)})"
+            )
+
+    unrun = (
+        result.total_mutants - result.mutants_pruned - result.mutants_tested - len(result.deferred)
+    )
+    if unrun > 0:
+        lines.append(f"INCOMPLETE: {unrun} remaining runnable mutants not run.")
+
     # Overall summary
+    label = "Overall" if result.complete else "Overall (tested mutants only)"
     lines.append(
-        f"Overall: {result.killed}/{result.mutants_scored} killed "
+        f"{label}: {result.killed}/{result.mutants_scored} killed "
         f"({result.mutation_score:.1f}%) in {result.wall_time_seconds:.1f}s"
     )
     if result.errors:
@@ -163,6 +182,37 @@ def format_terminal_report(result: RunResult) -> str:
     return "\n".join(lines)
 
 
+def _location(mutant: Mutant) -> str:
+    point = mutant.point
+    return (
+        f"{point.file_path}:{point.lineno}:{point.col_offset} "
+        f"{point.node_type} {_op_display(point.original_op, mutant.replacement_op)}"
+    )
+
+
+def _deferred_report_data(result: RunResult) -> list[dict[str, object]]:
+    def identify(mutant: Mutant) -> dict[str, object]:
+        point = mutant.point
+        return {
+            "id": mutant.mutant_id,
+            "file": point.file_path,
+            "line": point.lineno,
+            "column": point.col_offset,
+            "node_type": point.node_type,
+            "original": point.original_op,
+            "replacement": mutant.replacement_op,
+        }
+
+    return [
+        {
+            **identify(item.mutant),
+            "reason": item.reason,
+            "after_survivor": identify(item.after_survivor),
+        }
+        for item in result.deferred
+    ]
+
+
 def format_json_report(result: RunResult) -> str:
     """Format a JSON mutation testing report."""
     data = {
@@ -170,6 +220,9 @@ def format_json_report(result: RunResult) -> str:
         "total_mutants": result.total_mutants,
         "mutants_tested": result.mutants_tested,
         "mutants_pruned": result.mutants_pruned,
+        "complete": result.complete,
+        "mutants_deferred": len(result.deferred),
+        "deferred_mutants": _deferred_report_data(result),
         "killed": result.killed,
         "survived": len(result.survived),
         "errors": len(result.errors),

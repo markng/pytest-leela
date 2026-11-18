@@ -66,6 +66,7 @@ class MutationProgress:
     runnable: int
     pruned: int
     active: Mutant | None = None
+    deferred: int = 0
 
 
 @dataclass
@@ -83,6 +84,7 @@ class MutantResult:
     # tests, or inconclusive failure after zero or positive call counts).
     # Errors are excluded from the score; set only when ``killed`` is False.
     error: str | None = None
+    activated: bool = False  # Survivor applied and executed its target module cleanly
 
     def __post_init__(self) -> None:
         if self.killed and self.error is not None:
@@ -117,6 +119,15 @@ class CoverageMap:
         self.line_to_tests[key].add(test_id)
 
 
+@dataclass(frozen=True)
+class DeferredMutant:
+    """An unrun candidate, not a kill or a survival."""
+
+    mutant: Mutant
+    after_survivor: Mutant
+    reason: str = "enclosing return removal survived"
+
+
 @dataclass
 class RunResult:
     """Complete result of a mutation testing run."""
@@ -131,6 +142,12 @@ class RunResult:
     target_sources: dict[str, str] = field(default_factory=dict)  # file_path -> source
     enrichment_stats: EnrichmentStats = field(default_factory=EnrichmentStats)
     diff_base: str | None = None  # --diff ref that was active, or None for full run
+
+    deferred: list[DeferredMutant] = field(default_factory=list)
+
+    @property
+    def complete(self) -> bool:
+        return not self.deferred and self.mutants_tested + self.mutants_pruned == self.total_mutants
 
     @property
     def killed(self) -> int:

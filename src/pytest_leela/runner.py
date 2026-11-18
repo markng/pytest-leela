@@ -755,6 +755,12 @@ class InnerSession:
             time_seconds=self.elapsed,
             test_ids_run=test_ids_run,
             killing_tests=[],
+            activated=(
+                self.exit_code == pytest.ExitCode.OK
+                and not self.import_errors
+                and self.finder is not None
+                and self.finder.applied_modules == {mutant.point.module_name}
+            ),
         )
 
 

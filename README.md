@@ -39,6 +39,16 @@ pytest --leela
 
 After the normal pytest run, Leela reports its baseline check and prints a progress line before each mutant, with the active location and completed/runnable count. Pruned mutants are listed separately.
 
+Fast feedback is on by default in the CLI. Leela can test an enclosing return removal before mutations in the expression it removes. If the real removal survives after running the explicitly selected tests for itself and its descendants, Leela may defer mutations strictly inside that expression while continuing elsewhere. Unknown test selections do not trigger deferral. Deferred mutants are not tested, scored, killed, or counted as type-pruned. Their identities and reason appear in the reports, and any deferral makes the run incomplete and exit nonzero; descendants can behave differently from the removal.
+
+For an exhaustive run with the same mutant candidates and no deferral:
+
+```bash
+pytest --leela-full
+```
+
+Direct `Engine.run()` calls (including benchmarks) remain exhaustive unless they explicitly opt in with `fast_feedback=True`.
+
 When no `--target` is given, pytest-leela auto-discovers source files:
 
 1. Looks for a `target/` or `src/` directory (in that order) and mutates all `.py` files inside it
