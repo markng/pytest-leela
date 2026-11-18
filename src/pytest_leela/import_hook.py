@@ -263,6 +263,7 @@ class MutatingLoader(importlib.abc.Loader):
         # mutant from an unrelated collection error.
         self.import_errors: list[str] = [] if import_errors is None else import_errors
         self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
+        self._applied_modules: set[str] = set()
 
     def create_module(self, spec: importlib.machinery.ModuleSpec) -> None:
         return None
@@ -291,6 +292,8 @@ class MutatingLoader(importlib.abc.Loader):
             self._import_failures.append((module.__name__, fingerprint, diagnostic))
             self.import_errors.append(f"{module.__name__}: {diagnostic}")
             raise
+        if applier.applied:
+            self._applied_modules.add(module.__name__)
 
 
 class MutatingFinder(importlib.abc.MetaPathFinder):
@@ -308,6 +311,7 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         # MutatingLoader.import_errors).
         self.import_errors: list[str] = []
         self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
+        self.applied_modules: set[str] = set()
         self._module_to_file: dict[str, str] = {}
         for mod_name in target_modules:
             self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
@@ -330,6 +334,7 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
                 self.import_errors,
             )
             loader._import_failures = self._import_failures
+            loader._applied_modules = self.applied_modules
             return importlib.machinery.ModuleSpec(fullname, loader, origin=filename)
         return None
 

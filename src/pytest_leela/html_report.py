@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pytest_leela.models import RunResult
-from pytest_leela.output import _op_display
+from pytest_leela.output import _deferred_report_data, _op_display
 
 
 def _format_test_name(test_id: str) -> str:
@@ -271,12 +271,15 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
             "total_mutants": result.total_mutants,
             "mutants_tested": result.mutants_tested,
             "mutants_pruned": result.mutants_pruned,
+            "complete": result.complete,
+            "mutants_deferred": len(result.deferred),
             "killed": result.killed,
             "survived": len(result.survived),
             "errors": len(result.errors),
             "mutation_score": round(result.mutation_score, 2),
             "wall_time_seconds": result.wall_time_seconds,
         },
+        "deferred_mutants": _deferred_report_data(result),
         "files": files,
         "survived_index": survived_index,
         "test_sources": _extract_test_sources(result),
@@ -800,6 +803,10 @@ html, body {{
     <button class="hdr-btn" id="btn-list" title="Survivor list (l)">View List</button>
     <span class="hdr-help">n/p: next/prev &middot; l: list &middot; Esc: close</span>
 </div>
+<details id="deferred-results" hidden>
+    <summary></summary>
+    <ul></ul>
+</details>
 <!-- Main layout -->
 <div id="main">
     <div id="sidebar">
@@ -964,8 +971,22 @@ window.LEELA_DATA = {json_data};
     function renderHeader() {{
         var scoreVal = summary.mutation_score;
         var badge = document.getElementById("score-badge");
-        badge.textContent = scoreVal.toFixed(1) + "%";
-        badge.className = "score-badge " + scoreClass(scoreVal);
+        badge.textContent = summary.complete ? scoreVal.toFixed(1) + "%" : "Incomplete";
+        badge.className = summary.complete ? "score-badge " + scoreClass(scoreVal) : "score-badge";
+        if (summary.mutants_deferred > 0) {{
+            var details = document.getElementById("deferred-results");
+            details.hidden = false;
+            details.querySelector("summary").textContent =
+                summary.mutants_deferred + " deferred (not tested or scored); rerun with --leela-full";
+            var items = details.querySelector("ul");
+            D.deferred_mutants.forEach(function(m) {{
+                var item = document.createElement("li");
+                item.textContent = "#" + m.id + " " + m.file + ":" + m.line + ":" + m.column +
+                    " " + m.original + " → " + m.replacement + ": " + m.reason +
+                    " (#" + m.after_survivor.id + ")";
+                items.appendChild(item);
+            }});
+        }}
         var sc = document.getElementById("survived-count");
         sc.textContent = summary.survived + " survived";
         if (summary.survived === 0) sc.style.color = "#a6e3a1";

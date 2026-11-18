@@ -51,6 +51,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--leela", action="store_true", default=False, help="Enable mutation testing"
     )
     group.addoption(
+        "--leela-full", action="store_true", default=False,
+        help="Run all Leela candidates without fast-feedback deferral",
+    )
+    group.addoption(
         "--diff", default=None, help="Only mutate files changed since this git ref"
     )
     group.addoption(
@@ -76,8 +80,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    if config.getoption("leela", default=False) or config.getoption(
-        "leela_html", default=None
+    if (
+        config.getoption("leela", default=False)
+        or config.getoption("leela_html", default=None)
+        or config.getoption("leela_full", default=False)
     ):
         config.pluginmanager.register(LeelaPlugin(config), "leela-plugin")
     elif config.getoption("leela_benchmark", default=False):
@@ -274,10 +280,12 @@ class LeelaPlugin:
                 f"{progress.completed}/{progress.runnable} runnable mutants completed"
                 f"; {progress.pruned} pruned"
             )
+            if progress.deferred:
+                counts += f"; {progress.deferred} deferred"
             if progress.active is not None:
                 point = progress.active.point
                 detail = (
-                    f"testing mutant {progress.completed + 1}/{progress.runnable} "
+                    f"testing mutant {progress.completed + progress.deferred + 1}/{progress.runnable} "
                     f"{point.module_name}:{point.lineno}:{point.col_offset} "
                     f"{point.original_op} -> {progress.active.replacement_op}"
                 )
@@ -285,7 +293,7 @@ class LeelaPlugin:
                 detail = {
                     "baseline": "checking baseline",
                     "memory limit": "stopped at memory limit",
-                    "done": "finished",
+                    "done": "finished (partial)" if progress.deferred else "finished",
                 }[progress.phase]
             write_progress(f"{detail} ({counts})")
 
@@ -300,6 +308,7 @@ class LeelaPlugin:
                     diff_base=diff_base,
                     pre_coverage_map=pre_coverage_map,
                     on_progress=report_progress,
+                    fast_feedback=not bool(self.config.getoption("leela_full", default=False)),
                 )
         except BaselineFailure as exc:
             message = f"\nleela: aborted: {exc}\n"
@@ -323,5 +332,9 @@ class LeelaPlugin:
 
             generate_html_report(result, html_path)
 
-        if result.survived or (result.errors and leela_config.fail_on_error):
+        if (
+            not result.complete
+            or result.survived
+            or (result.errors and leela_config.fail_on_error)
+        ):
             session.exitstatus = 1
