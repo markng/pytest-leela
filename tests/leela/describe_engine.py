@@ -1050,18 +1050,28 @@ def describe_Engine_baseline_source_freshness():
         if changed_input == "test":
             cache = next(cache.parent.glob("test_fresh.*-pytest-*.pyc"))
         raw = cache.read_bytes()
-        flags, timestamp, size = struct.unpack("<III", raw[4:16])
+        (flags,) = struct.unpack("<I", raw[4:8])
         before = changed.stat()
-        assert flags == 0
-        assert timestamp == int(before.st_mtime) & 0xFFFFFFFF
-        assert size == before.st_size
+        # Pytest's assertion rewriter can use checked-hash bytecode. Ordinary
+        # imports and older pytest versions use timestamp and size instead.
+        checked_hash = changed_input == "test" and flags == 0b11
+        if checked_hash:
+            assert raw[8:16] == importlib.util.source_hash(changed.read_bytes())
+        else:
+            assert flags == 0
+            timestamp, size = struct.unpack("<II", raw[8:16])
+            assert timestamp == int(before.st_mtime) & 0xFFFFFFFF
+            assert size == before.st_size
+
         changed.write_text(changed.read_text().replace(old, new))
         os.utime(changed, ns=(before.st_atime_ns, before.st_mtime_ns))
-        assert changed.stat().st_size == size
+        assert changed.stat().st_size == before.st_size
         assert changed.stat().st_mtime_ns == before.st_mtime_ns
+        if checked_hash:
+            assert raw[8:16] != importlib.util.source_hash(changed.read_bytes())
         print(
             f"freshness input={changed_input} selected={selected} cache={cache} "
-            f"flags={flags} timestamp={timestamp} size={size} mtime_ns={before.st_mtime_ns}"
+            f"flags={flags} size={before.st_size} mtime_ns={before.st_mtime_ns}"
         )
         with patch(
             "pytest_leela.engine.run_tests_for_mutant", wraps=run_tests_for_mutant
