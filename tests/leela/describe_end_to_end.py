@@ -1,7 +1,11 @@
 """End-to-end: ``pytest --leela`` in a subprocess against throwaway projects."""
 
 import importlib
+import re
 import textwrap
+from datetime import UTC, datetime
+
+import pytest
 
 _DOUBLE = "def double(x):\n    return x * 2\n"
 _DOUBLE_TEST = (
@@ -301,6 +305,41 @@ def describe_clean_project():
 
         assert result.ret == 0
         result.stdout.fnmatch_lines(["Overall: *killed (100.0%)*"])
+
+
+def describe_mutation_progress():
+    @pytest.mark.parametrize("without_terminal", [False, True])
+    def it_emits_one_outer_progress_sequence_into_a_pipe(pytester, without_terminal):
+        pytester.makepyfile(calc=_DOUBLE, test_calc=_DOUBLE_TEST)
+        extra = ("-p", "no:terminal") if without_terminal else ("-q",)
+
+        result = _leela(pytester, "--capture=sys", *extra)
+
+        assert result.ret == 0
+        lines = [line for line in result.stdout.lines if line.startswith("leela:")]
+        messages = []
+        for line in lines:
+            matched = re.fullmatch(
+                r"leela: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+)",
+                line,
+            )
+            assert matched is not None, line
+            assert datetime.fromisoformat(matched[1]).tzinfo is UTC
+            messages.append(matched[2])
+
+        assert messages[0] == "finding runnable mutants"
+        assert messages[1].startswith("checking baseline (0/")
+        started = [message for message in messages if message.startswith("testing mutant ")]
+        assert started
+        total = len(started)
+        for index, line in enumerate(started, start=1):
+            assert line.startswith(f"testing mutant {index}/{total} calc:2:")
+            assert f"({index - 1}/{total} runnable mutants completed; " in line
+        assert re.fullmatch(
+            rf"finished \({total}/{total} runnable mutants completed; \d+ pruned\)",
+            messages[-1],
+        )
+        assert len(lines) == total + 3
 
 
 _LOGGED = (

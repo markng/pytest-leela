@@ -8,6 +8,7 @@ import glob as _glob
 import os
 import sys
 from collections.abc import Generator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,7 @@ from pytest_leela.config import load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import BaselineFailure, Engine
 from pytest_leela.git_diff import changed_files
+from pytest_leela.models import MutationProgress
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
@@ -250,10 +252,45 @@ class LeelaPlugin:
         tw = (
             session.config.get_terminal_writer()
             if hasattr(session.config, "get_terminal_writer")
+            and session.config.pluginmanager.hasplugin("terminalreporter")
             else None
         )
 
+        # Bind the outer output before inner pytest sessions replace sys.stdout.
+        stream = sys.stdout
+
+        def write_progress(message: str, *, leading_newline: bool = False) -> None:
+            timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            prefix = "\n" if leading_newline else ""
+            line = f"{prefix}leela: {timestamp} {message}\n"
+            if tw is not None:
+                tw.write(line, flush=True)
+            else:
+                stream.write(line)
+                stream.flush()
+
+        def report_progress(progress: MutationProgress) -> None:
+            counts = (
+                f"{progress.completed}/{progress.runnable} runnable mutants completed"
+                f"; {progress.pruned} pruned"
+            )
+            if progress.active is not None:
+                point = progress.active.point
+                detail = (
+                    f"testing mutant {progress.completed + 1}/{progress.runnable} "
+                    f"{point.module_name}:{point.lineno}:{point.col_offset} "
+                    f"{point.original_op} -> {progress.active.replacement_op}"
+                )
+            else:
+                detail = {
+                    "baseline": "checking baseline",
+                    "memory limit": "stopped at memory limit",
+                    "done": "finished",
+                }[progress.phase]
+            write_progress(f"{detail} ({counts})")
+
         engine = Engine(enabled_categories=enabled_categories)
+        write_progress("finding runnable mutants", leading_newline=True)
         try:
             with self._outer_django_db_unblocked():
                 result = engine.run(
@@ -262,6 +299,7 @@ class LeelaPlugin:
                     limits=limits,
                     diff_base=diff_base,
                     pre_coverage_map=pre_coverage_map,
+                    on_progress=report_progress,
                 )
         except BaselineFailure as exc:
             message = f"\nleela: aborted: {exc}\n"

@@ -12,6 +12,7 @@ import os
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.coverage_tracker import collect_coverage
@@ -21,6 +22,7 @@ from pytest_leela.models import (
     EnrichmentStats,
     Mutant,
     MutantResult,
+    MutationProgress,
     RunResult,
 )
 from pytest_leela.operators import build_allowed_keys, count_pruned, mutations_for
@@ -122,6 +124,7 @@ class Engine:
         diff_base: str | None = None,
         test_node_ids: list[str] | None = None,
         pre_coverage_map: CoverageMap | None = None,
+        on_progress: Callable[[MutationProgress], None] | None = None,
     ) -> RunResult:
         start = time.monotonic()
 
@@ -210,7 +213,10 @@ class Engine:
         # 9. Prove the tests pass with no mutation applied, through the same
         # in-process path every mutant uses.  Otherwise a test that fails
         # for an unrelated reason would score every mutant as killed.
+        runnable = len(all_mutants)
         if all_mutants:
+            if on_progress is not None:
+                on_progress(MutationProgress("baseline", 0, runnable, total_pruned))
             self._check_baseline(mutant_test_ids, test_dir, known_user_modules, scope)
 
         # 10. Run each mutant
@@ -218,8 +224,16 @@ class Engine:
         for mutant, test_ids in zip(all_mutants, mutant_test_ids):
             # Check memory limits
             if limits is not None and not is_memory_ok(limits):
+                if on_progress is not None:
+                    on_progress(
+                        MutationProgress("memory limit", len(results), runnable, total_pruned)
+                    )
                 break
 
+            if on_progress is not None:
+                on_progress(
+                    MutationProgress("mutation", len(results), runnable, total_pruned, mutant)
+                )
             result = run_tests_for_mutant(
                 mutant,
                 target_sources,
@@ -231,6 +245,9 @@ class Engine:
                 scope=scope,
             )
             results.append(result)
+        else:
+            if on_progress is not None:
+                on_progress(MutationProgress("done", len(results), runnable, total_pruned))
 
         wall_time = time.monotonic() - start
 

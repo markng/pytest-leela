@@ -37,6 +37,8 @@ pip install pytest-leela
 pytest --leela
 ```
 
+After the normal pytest run, Leela reports its baseline check and prints a progress line before each mutant, with the active location and completed/runnable count. Pruned mutants are listed separately.
+
 When no `--target` is given, pytest-leela auto-discovers source files:
 
 1. Looks for a `target/` or `src/` directory (in that order) and mutates all `.py` files inside it

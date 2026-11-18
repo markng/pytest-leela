@@ -1,6 +1,7 @@
 """Tests for pytest_leela.plugin — target file discovery and plugin behavior."""
 
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
@@ -1341,11 +1342,15 @@ def describe_baseline_failure_handling():
         config = _config()
         session = _session(config)
 
-        mock_report = _finish(config, session)
+        with patch("pytest_leela.plugin.datetime") as clock:
+            clock.now.return_value = datetime(2026, 11, 18, 5, 3, 2, tzinfo=UTC)
+            mock_report = _finish(config, session)
 
-        config.get_terminal_writer.return_value.write.assert_called_once_with(
-            "\nleela: aborted: boom\n"
-        )
+        clock.now.assert_called_once_with(UTC)
+        assert config.get_terminal_writer.return_value.write.call_args_list == [
+            call("\nleela: 2026-11-18T05:03:02Z finding runnable mutants\n", flush=True),
+            call("\nleela: aborted: boom\n"),
+        ]
         assert session.exitstatus == 1
         mock_report.assert_not_called()
 
