@@ -1,4 +1,4 @@
-"""Import hook for in-memory AST mutation — zero file I/O."""
+"""Import hook for in-memory AST mutation."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import ast
 import importlib
 import importlib.abc
 import importlib.machinery
+import os
 import sys
 import types
 from typing import Any
@@ -251,7 +252,7 @@ class MutatingLoader(importlib.abc.Loader):
     def __init__(
         self,
         source: str,
-        mutant: Mutant,
+        mutant: Mutant | None,
         filename: str,
         import_errors: list[str] | None = None,
     ) -> None:
@@ -280,9 +281,9 @@ class MutatingLoader(importlib.abc.Loader):
                 module.__name__, self, origin=self.filename
             )
         tree = ast.parse(self.source, filename=self.filename)
-        applier = MutantApplier(self.mutant)
-        tree = applier.visit(tree)
-        ast.fix_missing_locations(tree)
+        if self.mutant is not None:
+            tree = MutantApplier(self.mutant).visit(tree)
+            ast.fix_missing_locations(tree)
         code = compile(tree, self.filename, "exec")
         try:
             exec(code, module.__dict__)
@@ -309,8 +310,6 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         self.import_errors: list[str] = []
         self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
         self._module_to_file: dict[str, str] = {}
-        for mod_name in target_modules:
-            self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
 
     def set_file_paths(self, module_to_file: dict[str, str]) -> None:
         self._module_to_file.update(module_to_file)
@@ -322,10 +321,17 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         target: Any = None,
     ) -> importlib.machinery.ModuleSpec | None:
         if fullname in self.target_modules:
-            filename = self._module_to_file.get(fullname, f"<mutated:{fullname}>")
+            filename = self._module_to_file.get(fullname)
+            point = self.mutant.point
+            owns_mutant = fullname == point.module_name
+            if filename is None:
+                filename = f"<mutated:{fullname}>"
+            elif owns_mutant and filename != point.file_path:
+                # Two import roots can yield the same module name for different files.
+                owns_mutant = os.path.realpath(filename) == os.path.realpath(point.file_path)
             loader = MutatingLoader(
                 self.target_modules[fullname],
-                self.mutant,
+                self.mutant if owns_mutant else None,
                 filename,
                 self.import_errors,
             )
