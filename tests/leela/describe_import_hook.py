@@ -2,8 +2,12 @@
 
 import ast
 import importlib.machinery
+import importlib.util
 import sys
 import types
+from dataclasses import replace
+
+import pytest
 
 from pytest_leela.import_hook import (
     MutantApplier,
@@ -1232,6 +1236,32 @@ def describe_MutatingFinder():
         assert other.VALUE == 50
         assert other.__file__ == "<mutated:leela_same_coord_b>"
         assert finder.import_errors == []
+
+    @pytest.mark.parametrize(
+        "same_source, expected", [(False, 50), (True, -10)], ids=["shadowed", "alias"]
+    )
+    def it_checks_file_identity_when_module_names_match(tmp_path, same_source, expected):
+        from pytest_leela.import_hook import MutatingFinder
+
+        loaded_path = tmp_path / "active" / "test.py"
+        loaded_path.parent.mkdir()
+        loaded_path.write_text("VALUE = 20 + 30\n")
+        point_path = tmp_path / "test.py"
+        if same_source:
+            point_path.symlink_to(loaded_path)
+        else:
+            point_path.write_text("VALUE = 2 + 3\n")
+        point = replace(_make_point(col_offset=8), file_path=str(point_path))
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = MutatingFinder({point.module_name: loaded_path.read_text()}, mutant)
+        finder.set_file_paths({point.module_name: str(loaded_path)})
+
+        spec = finder.find_spec(point.module_name)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert module.VALUE == expected
+        assert module.__file__ == str(loaded_path)
 
 
 def describe_MutatingLoader():
