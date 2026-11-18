@@ -3,6 +3,7 @@
 import importlib
 import re
 import textwrap
+from datetime import UTC, datetime
 
 import pytest
 
@@ -316,17 +317,27 @@ def describe_mutation_progress():
 
         assert result.ret == 0
         lines = [line for line in result.stdout.lines if line.startswith("leela:")]
-        assert lines[0] == "leela: finding runnable mutants"
-        assert lines[1].startswith("leela: checking baseline (0/")
-        started = [line for line in lines if line.startswith("leela: testing mutant ")]
+        messages = []
+        for line in lines:
+            matched = re.fullmatch(
+                r"leela: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) (.+)",
+                line,
+            )
+            assert matched is not None, line
+            assert datetime.fromisoformat(matched[1]).tzinfo is UTC
+            messages.append(matched[2])
+
+        assert messages[0] == "finding runnable mutants"
+        assert messages[1].startswith("checking baseline (0/")
+        started = [message for message in messages if message.startswith("testing mutant ")]
         assert started
         total = len(started)
         for index, line in enumerate(started, start=1):
-            assert line.startswith(f"leela: testing mutant {index}/{total} calc:2:")
+            assert line.startswith(f"testing mutant {index}/{total} calc:2:")
             assert f"({index - 1}/{total} runnable mutants completed; " in line
         assert re.fullmatch(
-            rf"leela: finished \({total}/{total} runnable mutants completed; \d+ pruned\)",
-            lines[-1],
+            rf"finished \({total}/{total} runnable mutants completed; \d+ pruned\)",
+            messages[-1],
         )
         assert len(lines) == total + 3
 

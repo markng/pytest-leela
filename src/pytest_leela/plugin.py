@@ -8,6 +8,7 @@ import glob as _glob
 import os
 import sys
 from collections.abc import Generator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -256,14 +257,16 @@ class LeelaPlugin:
         )
 
         # Bind the outer output before inner pytest sessions replace sys.stdout.
-        if tw is not None:
-            def write_progress(message: str) -> None:
-                tw.write(message, flush=True)
-        else:
-            stream = sys.stdout
+        stream = sys.stdout
 
-            def write_progress(message: str) -> None:
-                stream.write(message)
+        def write_progress(message: str, *, leading_newline: bool = False) -> None:
+            timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            prefix = "\n" if leading_newline else ""
+            line = f"{prefix}leela: {timestamp} {message}\n"
+            if tw is not None:
+                tw.write(line, flush=True)
+            else:
+                stream.write(line)
                 stream.flush()
 
         def report_progress(progress: MutationProgress) -> None:
@@ -284,10 +287,10 @@ class LeelaPlugin:
                     "memory limit": "stopped at memory limit",
                     "done": "finished",
                 }[progress.phase]
-            write_progress(f"leela: {detail} ({counts})\n")
+            write_progress(f"{detail} ({counts})")
 
         engine = Engine(enabled_categories=enabled_categories)
-        write_progress("\nleela: finding runnable mutants\n")
+        write_progress("finding runnable mutants", leading_newline=True)
         try:
             with self._outer_django_db_unblocked():
                 result = engine.run(
