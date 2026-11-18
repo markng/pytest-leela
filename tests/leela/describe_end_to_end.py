@@ -1,7 +1,10 @@
 """End-to-end: ``pytest --leela`` in a subprocess against throwaway projects."""
 
 import importlib
+import re
 import textwrap
+
+import pytest
 
 _DOUBLE = "def double(x):\n    return x * 2\n"
 _DOUBLE_TEST = (
@@ -301,6 +304,31 @@ def describe_clean_project():
 
         assert result.ret == 0
         result.stdout.fnmatch_lines(["Overall: *killed (100.0%)*"])
+
+
+def describe_mutation_progress():
+    @pytest.mark.parametrize("without_terminal", [False, True])
+    def it_emits_one_outer_progress_sequence_into_a_pipe(pytester, without_terminal):
+        pytester.makepyfile(calc=_DOUBLE, test_calc=_DOUBLE_TEST)
+        extra = ("-p", "no:terminal") if without_terminal else ("-q",)
+
+        result = _leela(pytester, "--capture=sys", *extra)
+
+        assert result.ret == 0
+        lines = [line for line in result.stdout.lines if line.startswith("leela:")]
+        assert lines[0] == "leela: finding runnable mutants"
+        assert lines[1].startswith("leela: checking baseline (0/")
+        started = [line for line in lines if line.startswith("leela: testing mutant ")]
+        assert started
+        total = len(started)
+        for index, line in enumerate(started, start=1):
+            assert line.startswith(f"leela: testing mutant {index}/{total} calc:2:")
+            assert f"({index - 1}/{total} runnable mutants completed; " in line
+        assert re.fullmatch(
+            rf"leela: finished \({total}/{total} runnable mutants completed; \d+ pruned\)",
+            lines[-1],
+        )
+        assert len(lines) == total + 3
 
 
 _LOGGED = (

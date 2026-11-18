@@ -23,6 +23,7 @@ from pytest_leela.models import (
     Mutant,
     MutantResult,
     MutationPoint,
+    MutationProgress,
     RunResult,
 )
 from pytest_leela.operators import build_allowed_keys
@@ -499,6 +500,53 @@ def describe_Engine_run():
             "module-scope __file__ should not cause false-positive SURVIVED; "
             f"got survivors: {survived}"
         )
+
+
+def describe_Engine_mutation_progress():
+    def it_counts_recorded_outcomes_without_counting_pruned_or_unrun_mutants(
+        tmp_path, monkeypatch
+    ):
+        target = tmp_path / "progress_target.py"
+        target.write_text("def add(a, b):\n    return a + b\n")
+        monkeypatch.chdir(tmp_path)
+        events: list[MutationProgress] = []
+
+        def record_error(mutant, *args, **kwargs):
+            assert events[-1].active == mutant  # visible before slow test work starts
+            return MutantResult(mutant, False, 0, None, 0.0, error="probe error")
+
+        limits = ResourceLimits(max_memory_percent=90)
+        with (
+            patch.object(Engine, "_check_baseline"),
+            patch("pytest_leela.engine.apply_limits"),
+            patch("pytest_leela.engine.count_pruned", return_value=2),
+            patch("pytest_leela.engine.is_memory_ok", side_effect=[True, False]),
+            patch("pytest_leela.engine.run_tests_for_mutant", side_effect=record_error),
+        ):
+            result = Engine(use_coverage=False).run(
+                [str(target)], limits=limits, on_progress=events.append
+            )
+
+        runnable = result.total_mutants - result.mutants_pruned
+        assert runnable > 1
+        assert result.mutants_tested == len(result.errors) == 1
+        assert events == [
+            MutationProgress("baseline", 0, runnable, 2),
+            MutationProgress("mutation", 0, runnable, 2, result.results[0].mutant),
+            MutationProgress("memory limit", 1, runnable, 2),
+        ]
+
+    def it_reports_zero_without_starting_baseline_or_a_mutant(tmp_path, monkeypatch):
+        target = tmp_path / "empty_target.py"
+        target.write_text("name = 'no mutation points'\n")
+        monkeypatch.chdir(tmp_path)
+        events: list[MutationProgress] = []
+        with patch.object(Engine, "_check_baseline") as baseline:
+            result = Engine(use_coverage=False).run([str(target)], on_progress=events.append)
+
+        assert result.mutants_tested == 0
+        assert events == [MutationProgress("done", 0, 0, 0)]
+        baseline.assert_not_called()
 
 
 def describe_Engine_enabled_categories():

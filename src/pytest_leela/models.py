@@ -57,6 +57,17 @@ class Mutant:
     mutant_id: int
 
 
+@dataclass(frozen=True)
+class MutationProgress:
+    """A CLI progress snapshot; completed includes every recorded outcome."""
+
+    phase: Literal["baseline", "mutation", "memory limit", "done"]
+    completed: int
+    runnable: int
+    pruned: int
+    active: Mutant | None = None
+
+
 @dataclass
 class MutantResult:
     """Result of testing a single mutant."""

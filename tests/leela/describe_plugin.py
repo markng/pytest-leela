@@ -1343,7 +1343,7 @@ def describe_baseline_failure_handling():
 
         mock_report = _finish(config, session)
 
-        config.get_terminal_writer.return_value.write.assert_called_once_with(
+        config.get_terminal_writer.return_value.write.assert_called_with(
             "\nleela: aborted: boom\n"
         )
         assert session.exitstatus == 1
