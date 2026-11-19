@@ -378,6 +378,39 @@ def describe_LeelaPlugin():
         # should NOT have triggered early return
         mock_engine.return_value.run.assert_called_once()
 
+    def it_lists_only_the_five_slowest_completed_mutants(tmp_path):
+        from pytest_leela.models import Mutant, MutantTiming, MutationPoint
+        from pytest_leela.plugin import LeelaPlugin
+
+        config = MagicMock(rootpath=tmp_path)
+        config.getoption.side_effect = lambda key, default=None: default
+        session = MagicMock(config=config)
+        point = MutationPoint(
+            str(tmp_path / "mod.py"), "mod", 2, 4, "BinOp", "Add", None
+        )
+        elapsed = [1.0, 6.0, 2.0, 4.0, 3.0, 6.0, 5.0]
+
+        def run(*args, on_mutant_timing, **kwargs):
+            for mutant_id, seconds in enumerate(elapsed):
+                mutant = Mutant(point, "Sub", mutant_id)
+                on_mutant_timing(MutantTiming(mutant, "killed", seconds))
+            return MagicMock(survived=[], errors=[])
+
+        with (
+            patch.object(LeelaPlugin, "_resolve_target_files", return_value=[point.file_path]),
+            patch("pytest_leela.plugin.Engine") as engine,
+            patch("pytest_leela.plugin.format_terminal_report", return_value="report"),
+        ):
+            engine.return_value.run.side_effect = run
+            LeelaPlugin(config).pytest_sessionfinish(session, exitstatus=0)
+
+        writer = config.get_terminal_writer.return_value
+        lines = [c.args[0] for c in writer.write.call_args_list]
+        header = next(i for i, line in enumerate(lines) if "slowest mutants" in line)
+        assert sum("completed mutant id=" in line for line in lines) == len(elapsed)
+        ids = [line.split("id=", 1)[1].split()[0] for line in lines[header + 1 : -1]]
+        assert ids == ["1", "5", "6", "3", "4"]
+
     def it_collects_test_node_ids_from_session():
         """test_node_ids are collected from session.items (line 116).
 
