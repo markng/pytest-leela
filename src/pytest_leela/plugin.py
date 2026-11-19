@@ -9,6 +9,7 @@ import os
 import sys
 from collections.abc import Generator
 from datetime import UTC, datetime
+from heapq import nlargest
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ from pytest_leela.config import load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import BaselineFailure, Engine
 from pytest_leela.git_diff import changed_files
-from pytest_leela.models import MutationProgress
+from pytest_leela.models import MutantTiming, MutationProgress
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
@@ -289,6 +290,21 @@ class LeelaPlugin:
                 }[progress.phase]
             write_progress(f"{detail} ({counts})")
 
+        timings: list[MutantTiming] = []
+
+        def timing_detail(timing: MutantTiming) -> str:
+            mutant = timing.mutant
+            point = mutant.point
+            return (
+                f"id={mutant.mutant_id} {point.file_path!r}:{point.lineno}:{point.col_offset} "
+                f"{point.original_op} -> {mutant.replacement_op}: {timing.status} "
+                f"({timing.wall_time_seconds:.3f}s wall time)"
+            )
+
+        def report_timing(timing: MutantTiming) -> None:
+            timings.append(timing)
+            write_progress(f"completed mutant {timing_detail(timing)}")
+
         engine = Engine(enabled_categories=enabled_categories)
         write_progress("finding runnable mutants", leading_newline=True)
         try:
@@ -300,6 +316,7 @@ class LeelaPlugin:
                     diff_base=diff_base,
                     pre_coverage_map=pre_coverage_map,
                     on_progress=report_progress,
+                    on_mutant_timing=report_timing,
                 )
         except BaselineFailure as exc:
             message = f"\nleela: aborted: {exc}\n"
@@ -309,6 +326,11 @@ class LeelaPlugin:
                 print(message)
             session.exitstatus = 1
             return
+
+        if timings:
+            write_progress("slowest mutants by wall time (up to 5):")
+            for timing in nlargest(5, timings, key=lambda timing: timing.wall_time_seconds):
+                write_progress(f"  {timing_detail(timing)}")
 
         report = format_terminal_report(result)
 
