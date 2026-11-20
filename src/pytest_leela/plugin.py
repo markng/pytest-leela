@@ -213,6 +213,19 @@ class LeelaPlugin:
         with self.config.stash[blocking_manager_key].unblock():
             yield
 
+    def _concurrency_summary(self, mutants_tested: int, max_cores: int | None) -> str:
+        # The synchronous Engine loop has exactly one active mutant when any
+        # runner call completes. This says nothing about pytest's test workers.
+        mutant_peak = "1 (serial)" if mutants_tested else "0 (no mutants executed)"
+        pytest_workers = self.config.getoption("numprocesses", default=None)
+        cores_setting = "unset" if max_cores is None else str(max_cores)
+        pytest_setting = "unset" if pytest_workers is None else str(pytest_workers)
+        return (
+            f"Leela mutant concurrency (observed peak): {mutant_peak}\n"
+            "Pytest test/worker concurrency during mutation: not measured\n"
+            f"Configured only: --max-cores={cores_setting}; outer pytest -n={pytest_setting}"
+        )
+
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
             return
@@ -229,7 +242,9 @@ class LeelaPlugin:
 
         # Reuse target files resolved during pytest_sessionstart
         target_files = self._resolve_target_files(session)
+        max_cores = self.config.getoption("max_cores", default=None)
         if not target_files:
+            print(f"\n{self._concurrency_summary(0, max_cores)}")
             return
 
         # Retrieve coverage map collected during the normal test run
@@ -245,7 +260,7 @@ class LeelaPlugin:
         test_node_ids = [item.nodeid for item in session.items]
 
         limits = ResourceLimits(
-            max_cores=self.config.getoption("max_cores", default=None),
+            max_cores=max_cores,
             max_memory_percent=self.config.getoption("max_memory", default=None),
         )
 
@@ -311,6 +326,7 @@ class LeelaPlugin:
             return
 
         report = format_terminal_report(result)
+        report += f"\n{self._concurrency_summary(result.mutants_tested, limits.max_cores)}\n"
 
         if tw:
             tw.write(report)
