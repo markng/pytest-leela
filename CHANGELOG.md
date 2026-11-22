@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.10.0 — 2026-11-22
+
+### Added
+
+- Print UTC timestamps, the current mutant and completed counts while
+  mutation testing runs, including when output is piped.
+
+### Fixed
+
+- Give the mutation loader precedence over pytest's assertion rewriter
+  before initial conftests. Marked targets no longer silently test
+  unmutated code on that path; non-target assertion rewriting is unchanged.
+- Confirm mutation-caused setup, teardown, collection, or import failures
+  against an unmutated control and a repeated run. Uncertain failures are
+  errors, not kills. Terminal, JSON, and HTML reports show the evidence.
+
 ## 0.9.0 — 2026-10-14
 
 ### Fixed
