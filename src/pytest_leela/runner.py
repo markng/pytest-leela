@@ -444,6 +444,20 @@ def _inner_run_error(exit_code: int, collector: _ResultCollector) -> str | None:
     return reason
 
 
+class _PreferMutationFinder:
+    """Keep the mutant ahead of the inner pytest assertion rewriter."""
+
+    def __init__(self, finder: MutatingFinder) -> None:
+        self.finder = finder
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_load_initial_conftests(self) -> None:
+        # The inner pytest installs its rewriter before this hook. Move only
+        # our finder, leaving assertion rewriting available to other imports.
+        sys.meta_path.remove(self.finder)
+        sys.meta_path.insert(0, self.finder)
+
+
 class InnerSession:
     """One in-process pytest run against the current import state.
 
@@ -570,6 +584,8 @@ class InnerSession:
         plugins: list[Any] = [self.collector]
         if timer is not None:
             plugins.append(_TimeoutPlugin(self.timed_out))
+        if self.finder is not None:
+            plugins.append(_PreferMutationFinder(self.finder))
 
         # Run pytest in-process (suppress noisy output)
         try:

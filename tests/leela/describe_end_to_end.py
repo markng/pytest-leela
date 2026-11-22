@@ -307,6 +307,39 @@ def describe_clean_project():
         result.stdout.fnmatch_lines(["Overall: *killed (100.0%)*"])
 
 
+def describe_assertion_rewriting():
+    def it_mutates_a_target_marked_for_rewrite_before_conftest_import(pytester):
+        pytester.makeconftest(
+            "import pytest\n"
+            "pytest.register_assert_rewrite('calc', 'assert_helper')\n"
+            "import calc\n"
+        )
+        pytester.makepyfile(
+            calc=_DOUBLE,
+            assert_helper="def check():\n    assert 1 == 2\n",
+            test_calc=(
+                "import pytest\n"
+                "from assert_helper import check\n"
+                "from calc import double\n"
+                "\ndef test_double_and_rewriting():\n"
+                "    with pytest.raises(AssertionError, match='assert 1 == 2'):\n"
+                "        check()\n"
+                "    assert isinstance(double(2), int)\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        # The original and both arithmetic replacements return an int, so
+        # the latter survive only if the helper still rewrites during their run.
+        assert result.ret == 1
+        result.assert_outcomes(passed=1)
+        result.stdout.fnmatch_lines(
+            ["*line 2: * → + * SURVIVED", "*line 2: * → // * SURVIVED",
+             "Overall: 1/3 killed (33.3%)*"]
+        )
+
+
 def describe_mutation_progress():
     @pytest.mark.parametrize("without_terminal", [False, True])
     def it_emits_one_outer_progress_sequence_into_a_pipe(pytester, without_terminal):
