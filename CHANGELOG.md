@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.0 — 2026-11-23
+
+### Added
+
+- Print a UTC-stamped completion line for each mutant, with its ID,
+  location, mutation, verdict, and wall time. The duration covers the
+  whole runner call, including any control and confirmation runs. The
+  terminal summary lists up to five slowest completed mutants, including
+  when output is piped. The HTML report's per-mutant elapsed time is
+  unchanged. (#26)
+
 ## 0.10.0 — 2026-11-22
 
 ### Added
