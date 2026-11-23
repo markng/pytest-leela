@@ -1248,7 +1248,8 @@ def describe_MutatingFinder():
         loaded_path.write_text("VALUE = 20 + 30\n")
         point_path = tmp_path / "test.py"
         if same_source:
-            point_path.symlink_to(loaded_path)
+            # Exercise realpath without requiring permission to create symlinks.
+            point_path = loaded_path.parent / ".." / "active" / "test.py"
         else:
             point_path.write_text("VALUE = 2 + 3\n")
         point = replace(_make_point(col_offset=8), file_path=str(point_path))
