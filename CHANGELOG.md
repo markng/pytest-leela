@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.1 — 2026-11-23
+
+### Fixed
+
+- Apply each import-hook mutant only to its intended module and source file.
+  Separate modules at the same source coordinates no longer share a mutation
+  and can report independent results. If an import uses the same dotted name
+  but resolves to a different source file, that file is left unmutated.
+  Alternate paths to the intended file still work for the intended module. (#25)
+
 ## 0.11.0 — 2026-11-23
 
 ### Added
