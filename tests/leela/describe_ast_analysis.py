@@ -4,6 +4,32 @@ from pytest_leela.ast_analysis import find_mutation_points
 
 
 def describe_find_mutation_points():
+    def it_finds_only_bare_if_roots_and_still_visits_their_children():
+        source = (
+            "if flag:\n"
+            "    if obj.ready:\n"
+            "        count = 1 + 2\n"
+            "elif check(x == 1):\n"
+            "    pass\n"
+            "if flag and other: pass\n"
+            "if not flag: pass\n"
+            "if flag == other: pass\n"
+            "if True: pass\n"
+            "if obj[0]: pass\n"
+            "while flag: pass\n"
+            "assert obj.ready\n"
+            "values = [x for x in items if check(x)]\n"
+            "if obj.skipped: pass  # leela: skip\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        predicates = [p for p in points if p.node_type == "If"]
+        assert [(p.lineno, p.col_offset) for p in predicates] == [(1, 0), (2, 4), (4, 0)]
+        assert all(p.original_op == "condition" and p.inferred_type is None for p in predicates)
+        assert all((p.file_path, p.module_name) == ("src/demo.py", "demo") for p in predicates)
+        assert [(p.lineno, p.node_type) for p in points if p.node_type != "If"] == [
+            (3, "BinOp"), (4, "Compare"), (6, "BoolOp"), (7, "UnaryOp"), (8, "Compare"),
+        ]
+
     def it_finds_binop_nodes():
         source = "def f(x: int, y: int) -> int:\n    return x + y\n"
         points = find_mutation_points(source, "test.py", "test")

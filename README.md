@@ -154,7 +154,7 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 |---|---|---|
 | `arithmetic` | `+` `-` `*` `/` `//` `%` `**` | on |
 | `comparison` | `==` `!=` `<` `<=` `>` `>=` `is` `in` and negations | on |
-| `boolean` | `and` / `or` | on |
+| `boolean` | `and` / `or`, and negation of bare `if` / `elif` predicates (`flag`, `obj.flag`, `check()`) | on |
 | `unary` | unary `-` `+` `not` | on |
 | `return` | return values (`True`/`False`, `None`, literals, expressions) | on |
 | `bitwise` | `&` `\|` `^` `<<` `>>` | off |

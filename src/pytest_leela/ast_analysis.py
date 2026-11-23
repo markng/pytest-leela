@@ -140,6 +140,21 @@ class _MutationPointCollector(ast.NodeVisitor):
             )
         self.generic_visit(node)
 
+    def visit_If(self, node: ast.If) -> None:
+        if isinstance(node.test, (ast.Name, ast.Attribute, ast.Call)):
+            self.points.append(
+                MutationPoint(
+                    file_path=self.file_path,
+                    module_name=self.module_name,
+                    lineno=node.lineno,
+                    col_offset=node.col_offset,
+                    node_type="If",
+                    original_op="condition",
+                    inferred_type=None,
+                )
+            )
+        self.generic_visit(node)
+
     def visit_IfExp(self, node: ast.IfExp) -> None:
         self.points.append(
             MutationPoint(

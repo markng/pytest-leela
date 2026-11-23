@@ -47,6 +47,43 @@ def _make_mutant(
 
 
 def describe_MutantApplier():
+    @pytest.mark.parametrize("result", [[], [1]])
+    def it_negates_one_if_predicate_and_evaluates_it_once(result):
+        source = (
+            "if check():\n"
+            "    if flag: events.append('first')\n"
+            "else:\n"
+            "    events.append('second')\n"
+        )
+        mutant = _make_mutant(
+            node_type="If", original_op="condition", replacement_op="negate_condition"
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        predicate = tree.body[0].test
+        assert (predicate.lineno, predicate.col_offset) == (1, 3)
+        calls = []
+        events = []
+
+        def check():
+            calls.append("checked")
+            return result
+
+        exec(compile(tree, "test.py", "exec"), dict(check=check, flag=True, events=events))
+        assert calls == ["checked"]
+        assert events == (["second"] if result else ["first"])
+
+    @pytest.mark.parametrize("mismatch", [
+        {"lineno": 2}, {"col_offset": 2}, {"node_type": "Call"}, {"replacement_op": "unknown"},
+    ])
+    def it_leaves_if_unchanged_for_a_nonmatching_mutant(mismatch):
+        source = "if check(): pass\n"
+        fields = dict(node_type="If", original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
     def it_applies_binop_mutation():
         source = "x + y"
         tree = ast.parse(source, mode="eval")

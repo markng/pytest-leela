@@ -19,6 +19,58 @@ def _leela(pytester, *extra):
     )
 
 
+def describe_bare_if_predicates():
+    def it_reports_survivors_until_tests_distinguish_both_behaviors(pytester):
+        pytester.makepyfile(calc="""
+            def record(flag, config, check, events):
+                if flag:
+                    events.append('flag on')
+                else:
+                    events.append('flag off')
+                if config.enabled:
+                    events.append('enabled')
+                else:
+                    events.append('disabled')
+                if check():
+                    events.append('ready')
+                else:
+                    events.append('waiting')
+        """)
+        test = pytester.makepyfile(test_calc="""
+            from types import SimpleNamespace
+            from calc import record
+
+            def test_records_events():
+                events = []
+                record(True, SimpleNamespace(enabled=True), lambda: True, events)
+                assert len(events) == 3
+        """)
+        incomplete = _leela(pytester)
+        assert incomplete.ret == 1
+        incomplete.stdout.fnmatch_lines([
+            "*condition*negate_condition*SURVIVED*",
+            "*condition*negate_condition*SURVIVED*",
+            "*condition*negate_condition*SURVIVED*",
+            "Overall: 0/3 killed (0.0%)*",
+        ])
+
+        test.write_text(textwrap.dedent("""\
+            from types import SimpleNamespace
+            from calc import record
+
+            def test_records_events():
+                events = []
+                record(True, SimpleNamespace(enabled=True), lambda: True, events)
+                assert events == ['flag on', 'enabled', 'ready']
+                events.clear()
+                record(False, SimpleNamespace(enabled=False), lambda: False, events)
+                assert events == ['flag off', 'disabled', 'waiting']
+        """), encoding="utf-8")
+        complete = _leela(pytester)
+        assert complete.ret == 0
+        complete.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
+
+
 def describe_import_breaking_mutant():
     def it_counts_a_target_that_raises_on_import_as_killed(pytester):
         """The judge's probe: every test errors at collection, the suite is red."""
