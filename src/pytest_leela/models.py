@@ -68,6 +68,15 @@ class MutationProgress:
     active: Mutant | None = None
 
 
+@dataclass(frozen=True)
+class MutantTiming:
+    """Wall time of one complete runner call, not its reported inner elapsed time."""
+
+    mutant: Mutant
+    status: MutantStatus
+    wall_time_seconds: float
+
+
 @dataclass
 class MutantResult:
     """Result of testing a single mutant."""

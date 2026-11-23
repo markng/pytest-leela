@@ -362,17 +362,41 @@ def describe_mutation_progress():
 
         assert messages[0] == "finding runnable mutants"
         assert messages[1].startswith("checking baseline (0/")
-        started = [message for message in messages if message.startswith("testing mutant ")]
-        assert started
-        total = len(started)
-        for index, line in enumerate(started, start=1):
-            assert line.startswith(f"testing mutant {index}/{total} calc:2:")
-            assert f"({index - 1}/{total} runnable mutants completed; " in line
+        total = sum(message.startswith("testing mutant ") for message in messages)
+        assert total > 0
+        source = re.escape(repr(str(pytester.path / "calc.py")))
+        for index in range(total):
+            started, completed = messages[2 + 2 * index:4 + 2 * index]
+            match = re.fullmatch(
+                rf"testing mutant {index + 1}/{total} calc:(2:\d+) (.+) "
+                rf"\({index}/{total} runnable mutants completed; \d+ pruned\)",
+                started,
+            )
+            assert match is not None, started
+            assert re.fullmatch(
+                rf"completed mutant id={index} {source}:{match[1]} {re.escape(match[2])}: "
+                r"killed \(\d+\.\d{3}s wall time\)",
+                completed,
+            ), completed
+        finished, header, *slowest = messages[2 + 2 * total:]
         assert re.fullmatch(
             rf"finished \({total}/{total} runnable mutants completed; \d+ pruned\)",
-            messages[-1],
+            finished,
         )
-        assert len(lines) == total + 3
+        assert header == "slowest mutants by wall time (up to 5):"
+        assert len(slowest) == min(total, 5)
+
+    def it_omits_timing_lines_when_no_mutants_run(pytester):
+        pytester.makepyfile(
+            calc="ANSWER = 42", test_calc="def test_pass():\n    pass"
+        )
+
+        result = _leela(pytester)
+
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(["leela: * finished (0/0 runnable mutants completed; *)"])
+        assert "completed mutant id=" not in result.stdout.str()
+        assert "slowest mutants" not in result.stdout.str()
 
 
 _LOGGED = (

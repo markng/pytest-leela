@@ -37,7 +37,12 @@ pip install pytest-leela
 pytest --leela
 ```
 
-After the normal pytest run, Leela reports its baseline check and prints a progress line before each mutant, with the active location and completed/runnable count. Pruned mutants are listed separately.
+After the normal pytest run, Leela reports its baseline check and prints a progress line
+before each mutant, with the active location and completed/runnable count. Pruned mutants
+are listed separately. Each completed mutant also gets a verdict and wall time covering
+the whole runner call, including any control and confirmation runs. Leela lists up to five
+slowest completed mutants at the end. The per-mutant elapsed time in the HTML report is
+unchanged.
 
 When no `--target` is given, pytest-leela auto-discovers source files:
 
