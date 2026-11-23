@@ -2,8 +2,12 @@
 
 import ast
 import importlib.machinery
+import importlib.util
 import sys
 import types
+from dataclasses import replace
+
+import pytest
 
 from pytest_leela.import_hook import (
     MutantApplier,
@@ -1202,6 +1206,92 @@ def describe_MutatingFinder():
         spec = finder.find_spec("mymod")
         assert spec is not None
         assert spec.origin == "/real/path/mymod.py"
+
+    def it_mutates_only_the_mutants_own_module_at_shared_coordinates():
+        point = MutationPoint(
+            file_path="leela_same_coord_a.py",
+            module_name="leela_same_coord_a",
+            lineno=1,
+            col_offset=8,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type=None,
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = install_hook(
+            {
+                "leela_same_coord_a": "VALUE = 2 + 3\n",
+                "leela_same_coord_b": "VALUE = 20 + 30\n",
+            },
+            mutant,
+        )
+        try:
+            mutated = importlib.import_module("leela_same_coord_a")
+            other = importlib.import_module("leela_same_coord_b")
+        finally:
+            remove_hook(finder)
+            sys.modules.pop("leela_same_coord_a", None)
+            sys.modules.pop("leela_same_coord_b", None)
+        assert mutated.VALUE == -1
+        assert other.VALUE == 50
+        assert other.__file__ == "<mutated:leela_same_coord_b>"
+        assert finder.import_errors == []
+
+    @pytest.mark.parametrize(
+        "same_source, expected", [(False, 50), (True, -10)], ids=["shadowed", "alias"]
+    )
+    def it_checks_file_identity_when_module_names_match(tmp_path, same_source, expected):
+        from pytest_leela.import_hook import MutatingFinder
+
+        loaded_path = tmp_path / "active" / "test.py"
+        loaded_path.parent.mkdir()
+        loaded_path.write_text("VALUE = 20 + 30\n")
+        point_path = tmp_path / "test.py"
+        if same_source:
+            # Exercise realpath without requiring permission to create symlinks.
+            point_path = loaded_path.parent / ".." / "active" / "test.py"
+        else:
+            point_path.write_text("VALUE = 2 + 3\n")
+        point = replace(_make_point(col_offset=8), file_path=str(point_path))
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = MutatingFinder({point.module_name: loaded_path.read_text()}, mutant)
+        finder.set_file_paths({point.module_name: str(loaded_path)})
+
+        spec = finder.find_spec(point.module_name)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert module.VALUE == expected
+        assert module.__file__ == str(loaded_path)
+
+    def it_does_not_apply_a_mutant_to_a_different_name_for_the_same_file(tmp_path):
+        from pytest_leela.import_hook import MutatingFinder
+
+        source = "VALUE = 20 + 30\n"
+        source_path = tmp_path / "active" / "subject.py"
+        source_path.parent.mkdir()
+        source_path.write_text(source)
+        alias_path = source_path.parent / ".." / "active" / "subject.py"
+        assert alias_path != source_path
+        assert alias_path.resolve() == source_path.resolve()
+
+        owner, other = "leela_toy.subject", "leela_alias.subject"
+        point = replace(
+            _make_point(col_offset=8), file_path=str(source_path), module_name=owner
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = MutatingFinder({owner: source, other: source}, mutant)
+        finder.set_file_paths({owner: str(source_path), other: str(alias_path)})
+
+        def load(name):
+            spec = finder.find_spec(name)
+            assert spec is not None and spec.loader is not None
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+
+        assert load(owner).VALUE == -10
+        assert load(other).VALUE == 50
 
 
 def describe_MutatingLoader():
