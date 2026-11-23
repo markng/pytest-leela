@@ -1264,6 +1264,35 @@ def describe_MutatingFinder():
         assert module.VALUE == expected
         assert module.__file__ == str(loaded_path)
 
+    def it_does_not_apply_a_mutant_to_a_different_name_for_the_same_file(tmp_path):
+        from pytest_leela.import_hook import MutatingFinder
+
+        source = "VALUE = 20 + 30\n"
+        source_path = tmp_path / "active" / "subject.py"
+        source_path.parent.mkdir()
+        source_path.write_text(source)
+        alias_path = source_path.parent / ".." / "active" / "subject.py"
+        assert alias_path != source_path
+        assert alias_path.resolve() == source_path.resolve()
+
+        owner, other = "leela_toy.subject", "leela_alias.subject"
+        point = replace(
+            _make_point(col_offset=8), file_path=str(source_path), module_name=owner
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = MutatingFinder({owner: source, other: source}, mutant)
+        finder.set_file_paths({owner: str(source_path), other: str(alias_path)})
+
+        def load(name):
+            spec = finder.find_spec(name)
+            assert spec is not None and spec.loader is not None
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+
+        assert load(owner).VALUE == -10
+        assert load(other).VALUE == 50
+
 
 def describe_MutatingLoader():
     def it_create_module_returns_none():
