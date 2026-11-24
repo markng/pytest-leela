@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0 — 2026-11-24
+
+### Added
+
+- The opt-in `assignment` operator can replace the RHS of chained assignments
+  with `None` when all targets are names. It emits one mutant per RHS and
+  skips any mixed or destructuring targets. (#43)
+
 ## 0.14.0 — 2026-11-24
 
 ### Added
