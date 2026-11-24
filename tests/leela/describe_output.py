@@ -194,6 +194,23 @@ def describe_format_terminal_report():
         assert "Target: 0 files" in report
         assert "0/0 killed" in report
 
+    @pytest.mark.parametrize("pruned", [0, 2])
+    def it_does_not_call_existing_candidates_nothing_to_test(pruned):
+        run = RunResult(
+            target_files=["src/app.py"],
+            total_mutants=2,
+            mutants_tested=0,
+            mutants_pruned=pruned,
+            results=[],
+            wall_time_seconds=0.1,
+            diff_base="HEAD",
+        )
+        # Either the run stopped before the first mutant or all were pruned.
+        report = format_terminal_report(run)
+        assert f"2 candidates, {pruned} pruned by type analysis" in report
+        assert "Overall: 0/0 killed (0.0%) in 0.1s" in report
+        assert "nothing to test" not in report
+
     def it_shows_overall_summary():
         run = _make_run_result()
         report = format_terminal_report(run)
@@ -472,8 +489,13 @@ def describe_terminal_report_with_errors():
         assert "errors" not in report
 
     def it_shows_na_for_a_file_whose_every_mutant_errored():
-        report = format_terminal_report(_make_run_result([_make_error_result()]))
+        run = _make_run_result([_make_error_result()])
+        run.diff_base = "HEAD"
+        report = format_terminal_report(run)
         assert "0/0 killed (n/a), 1 errors" in report
+        assert "Overall: 0/0 killed (0.0%)" in report
+        assert "errored outside the tests" in report
+        assert "nothing to test" not in report
 
     def it_excludes_errors_from_the_overall_score():
         report = format_terminal_report(

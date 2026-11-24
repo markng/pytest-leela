@@ -2,6 +2,7 @@
 
 import importlib
 import re
+import subprocess
 import textwrap
 from datetime import UTC, datetime
 
@@ -17,6 +18,63 @@ def _leela(pytester, *extra):
     return pytester.runpytest_subprocess(
         "-p", "no:cacheprovider", "--leela", "--target", "calc.py", *extra
     )
+
+
+def describe_diff_score():
+    def it_distinguishes_zero_candidates_from_a_numeric_score(pytester, monkeypatch):
+        monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+        monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+        source = pytester.makepyfile(subject='''
+            """Before."""
+            import math
+
+            def is_zero(x):
+                return x == 0
+        ''')
+        pytester.makepyfile(test_subject="""
+            from subject import is_zero
+
+            def test_is_zero():
+                assert is_zero(0) is True
+                assert is_zero(1) is False
+        """)
+
+        def git(*args):
+            subprocess.run(["git", *args], cwd=pytester.path, check=True)
+
+        git("init", "-q", "--template=")
+        git("add", "subject.py", "test_subject.py")
+        git(
+            "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+            "commit", "-qm", "base",
+        )
+
+        def run_diff():
+            result = pytester.runpytest_subprocess("-q", "--leela", "--diff", "HEAD")
+            assert result.ret == pytest.ExitCode.OK
+            result.assert_outcomes(passed=1)
+            return result.stdout.str()
+
+        original = source.read_text()
+        empty = run_diff()
+        assert "leela mutation testing" not in empty
+        assert "Overall:" not in empty
+
+        source.write_text(
+            original.replace("Before", "Updated").replace(
+                "import math", "import math as mathematics"
+            )
+        )
+        zero = run_diff()
+        assert "WARNING: --diff 'HEAD' produced 0 mutants." in zero
+        assert "Mutants: 0 candidates, 0 pruned" in zero
+        assert "Overall: N/A (nothing to test)" in zero
+        assert "0/0 killed" not in zero
+
+        source.write_text(original.replace("x == 0", "x == (0)"))
+        scored = run_diff()
+        assert "WARNING: --diff" not in scored
+        assert "Overall: 2/2 killed (100.0%)" in scored
 
 
 def describe_bare_if_predicates():
