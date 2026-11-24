@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.14.0 — 2026-11-24
+
+### Added
+
+- Stream one versioned, flushed JSON Lines record per completed mutant
+  with `--leela-jsonl PATH`. Records expose stable run-local identity,
+  location, operator, verdict, and full runner wall time. (#41)
+
 ## 0.13.0 — 2026-11-24
 
 ### Added
