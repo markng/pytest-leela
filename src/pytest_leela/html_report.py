@@ -196,6 +196,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
             "error": mr.error,
             "tests_run": mr.tests_run,
             "time_seconds": mr.time_seconds,
+            "wall_time_seconds": mr.wall_time_seconds,
             "killing_test": (
                 {"display": _format_test_name(mr.killing_test), "id": mr.killing_test}
                 if mr.killing_test
@@ -1142,7 +1143,11 @@ window.LEELA_DATA = {json_data};
                 }}
                 html += '<span class="mc-desc">' + esc(m.description) + "</span>";
                 html += "</div>";
-                html += '<div class="mc-meta">' + esc(m.node_type) + " col " + m.col_offset + " &middot; " + (m.time_seconds * 1000).toFixed(0) + "ms</div>";
+                html += '<div class="mc-meta">' + esc(m.node_type) + " col " + m.col_offset + " &middot; " + (m.time_seconds * 1000).toFixed(0) + "ms inner elapsed";
+                if (typeof m.wall_time_seconds === "number") {{
+                    html += " &middot; " + (m.wall_time_seconds * 1000).toFixed(0) + "ms runner wall time";
+                }}
+                html += "</div>";
                 if (m.error) {{
                     html += '<div class="mc-error">' + esc(m.error) + "</div>";
                 }}

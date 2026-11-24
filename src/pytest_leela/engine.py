@@ -251,6 +251,7 @@ class Engine:
             )
             if on_mutant_timing is not None:
                 elapsed = time.monotonic() - mutant_start
+                result.wall_time_seconds = elapsed
                 on_mutant_timing(MutantTiming(mutant, result.status, elapsed))
             results.append(result)
         else:

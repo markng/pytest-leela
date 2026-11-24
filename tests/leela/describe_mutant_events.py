@@ -142,9 +142,11 @@ def describe_jsonl_cli():
             (0, 2),
             (1, 6),
         ]
-        for event in events:
+        for event, mutant in zip(events, file_data["mutants"], strict=True):
             seconds = event.pop("wall_time_seconds")
             assert math.isfinite(seconds) and seconds > 0
+            assert mutant["wall_time_seconds"] == seconds
+            assert 0 <= mutant["time_seconds"] <= seconds
             assert event == {
                 "schema_version": 1,
                 "mutant_id": event["mutant_id"],
