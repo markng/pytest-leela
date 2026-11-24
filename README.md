@@ -191,12 +191,13 @@ mutants. Each removes one decorator expression, leaving the other in place. In
 `--diff` mode the decorator expression's starting line must be changed.
 
 Add `"assignment"` to your operator list (or use `"all"`) to enable assignment
-RHS replacement. It changes `name = expression` or `name: Type = expression` to
-assign `None` without evaluating `expression`, preserving the name and any
-annotation. It skips literal `None`, annotation-only declarations, chained or
-unpacking assignments, attribute or subscript targets, augmented assignments,
-and assignment expressions. In `--diff` mode the RHS expression's starting line
-must be changed.
+RHS replacement. It changes `name = expression`, `a = b = expression`, or
+`name: Type = expression` to assign `None` without evaluating `expression`.
+It creates one mutant per RHS, preserving all name targets and any annotation.
+It skips literal `None`, annotation-only declarations, any assignment with an
+unpacking, attribute, or subscript target (including mixed chains), augmented
+assignments, and assignment expressions. In `--diff` mode the RHS expression's
+starting line must be changed.
 
 ### `fail_on_error`
 

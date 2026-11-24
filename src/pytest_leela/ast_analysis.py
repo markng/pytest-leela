@@ -52,15 +52,20 @@ _UNARYOP_NAMES: dict[type, str] = {
 
 
 def eligible_assignment_rhs(node: ast.Assign | ast.AnnAssign) -> ast.expr | None:
-    """Return a non-None initializer for a single name binding."""
+    """Return a non-None initializer for an assignment to names only."""
     match node:
-        case ast.Assign(targets=[ast.Name()], value=value) | ast.AnnAssign(
-            target=ast.Name(), value=value
+        case ast.Assign(targets=[ast.Name(), *rest], value=value) if all(
+            isinstance(target, ast.Name) for target in rest
         ):
-            if value is not None and not (
-                isinstance(value, ast.Constant) and value.value is None
-            ):
-                return value
+            pass
+        case ast.AnnAssign(target=ast.Name(), value=value):
+            pass
+        case _:
+            return None
+    if value is not None and not (
+        isinstance(value, ast.Constant) and value.value is None
+    ):
+        return value
     return None
 
 

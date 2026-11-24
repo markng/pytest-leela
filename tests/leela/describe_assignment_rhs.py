@@ -38,7 +38,7 @@ if (part := 4):
 """
     points = find_mutation_points(source, "subject.py", "subject")
     assert [p for p in points if p.original_op == "assignment"] == [
-        _point(), _point(1, 28, "AnnAssign"), _point(3, 4),
+        _point(), _point(1, 28, "AnnAssign"), _point(3, 4), _point(10, 8),
     ]
     assert [(p.lineno, p.col_offset, p.original_op) for p in points if p.node_type == "BinOp"] == [
         (3, 4, "Add"), (7, 8, "BitOr"),
@@ -76,6 +76,22 @@ def test_replaces_only_the_targeted_rhs_and_preserves_its_location(point, expect
     assert get_annotations(module) == {"size": str}
 
 
+def test_one_chained_mutant_preserves_all_targets_and_never_evaluates_the_rhs():
+    source = "a = b = c = (\n    rhs()\n)"
+    point, = find_mutation_points(source, "subject.py", "subject")
+    assert point == _point(2, 4)
+    tree, applied = apply_mutation(source, Mutant(point=point, replacement_op="rhs_to_none", mutant_id=1))
+    assert applied
+    assert ast.dump(tree) == ast.dump(ast.parse("a = b = c = None"))
+    assert ast.dump(tree.body[0].value, include_attributes=True) == ast.dump(
+        ast.copy_location(ast.Constant(value=None), ast.parse(source).body[0].value),
+        include_attributes=True,
+    )
+    namespace = {}
+    exec(compile(tree, "subject.py", "exec"), namespace)  # rhs is intentionally undefined
+    assert {name: namespace[name] for name in "abc"} == dict.fromkeys("abc")
+
+
 @pytest.mark.parametrize(("source", "point", "replacement"), [
     ('shade = "blue"', _point(1, 0), "rhs_to_none"),
     ('shade = "blue"', _point(2, 8), "rhs_to_none"),
@@ -84,7 +100,7 @@ def test_replaces_only_the_targeted_rhs_and_preserves_its_location(point, expect
     ('shade = None', _point(), "rhs_to_none"),
     ('shade: str', _point(1, 0, "AnnAssign"), "rhs_to_none"),
     ('shade: str = None', _point(1, 13, "AnnAssign"), "rhs_to_none"),
-    ('shade = other = 1', _point(1, 16), "rhs_to_none"),
+    ('a = b = None', _point(), "rhs_to_none"),
     ('box.shade = 1', _point(1, 12), "rhs_to_none"),
 ])
 def test_refuses_ineligible_assignments_and_nonmatching_mutants(source, point, replacement):
@@ -92,6 +108,25 @@ def test_refuses_ineligible_assignments_and_nonmatching_mutants(source, point, r
     tree, applied = apply_mutation(source, mutant)
     assert not applied
     assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+
+@pytest.mark.parametrize(("source", "col"), [
+    ("a = b = box.value = 1", 20),
+    ("a = box.value = b = 1", 20),
+    ("box.value = a = b = 1", 20),
+    ("a = box[0] = 1", 13),
+    ("box[0] = a = 1", 13),
+    ("a = (b, c) = (1, 2)", 13),
+    ("[a, *b] = c = (1, 2)", 14),
+])
+def test_never_collects_or_applies_rhs_mutations_to_chains_with_non_name_targets(source, col):
+    original = ast.parse(source)
+    assert original.body[0].value.col_offset == col
+    assert not [p for p in find_mutation_points(source, "subject.py", "subject") if p.original_op == "assignment"]
+    mutant = Mutant(point=_point(1, col), replacement_op="rhs_to_none", mutant_id=1)
+    tree, applied = apply_mutation(source, mutant)
+    assert not applied
+    assert ast.dump(tree) == ast.dump(original)
 
 
 def test_preserves_existing_mutations_nested_in_an_assignment():
