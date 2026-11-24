@@ -90,6 +90,26 @@ pytest --leela --diff main --max-cores 4 --max-memory 4096
 pytest --leela --leela-html report.html
 ```
 
+**Stream completed mutant results to a local JSON Lines file:**
+
+```bash
+pytest --leela-jsonl mutant-events.jsonl
+```
+
+This enables mutation testing and creates a new file after the normal pytest run
+passes. Use a fresh path for each invocation, distinct from any HTML report path;
+an existing file is never overwritten. Each completed mutant produces one UTF-8 JSON object and newline, flushed before
+Leela moves on. No baseline, progress, or summary records are written; a mutation run
+with no completed mutants leaves an empty file.
+
+Schema version 1 has `schema_version` (the integer `1`), `mutant_id` (Leela's
+existing run-local integer ID), `file_path` (absolute), `module_name`, `lineno`
+(one-based), `col_offset` (zero-based UTF-8 byte offset), `original_op`,
+`replacement_op`, `verdict` (`killed`, `survived`, or `error`), and
+`wall_time_seconds` (the full runner call, including any control and confirmation).
+The file is not a success marker: check pytest's exit status. A sink error aborts
+mutation testing with a diagnostic and a nonzero exit; the file may be incomplete.
+
 **Benchmark optimization layers:**
 
 ```bash
