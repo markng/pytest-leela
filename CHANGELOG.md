@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.2 — 2026-11-24
+
+### Fixed
+
+- The default `boolean` category now negates bare `if` and `elif` predicates
+  such as `flag`, `obj.flag`, and `check()`. Leela reports surviving mutations
+  when tests do not distinguish the two branch outcomes. Complex predicates
+  keep their existing operators; `while`, `assert`, and comprehension filters
+  are unchanged. (#18, #33)
+
 ## 0.11.1 — 2026-11-23
 
 ### Fixed
