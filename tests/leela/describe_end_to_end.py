@@ -237,6 +237,60 @@ def describe_bare_assert_predicates():
         complete.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
 
 
+def describe_bare_while_predicates():
+    def it_kills_the_three_bare_loop_predicates_when_tests_check_both_paths(pytester):
+        pytester.makepyfile(calc="""
+            def record_flag(flag, events):
+                while flag:
+                    events.append('entered')
+                    break
+
+            def record_attribute(obj, events):
+                while obj.enabled:
+                    events.append('entered')
+                    break
+
+            def record_call(check, events):
+                while check():
+                    events.append('entered')
+                    break
+        """)
+        pytester.makepyfile(test_calc="""
+            from types import SimpleNamespace
+            from calc import record_flag, record_attribute, record_call
+
+            import pytest
+
+            @pytest.mark.parametrize('enabled', [True, False])
+            @pytest.mark.parametrize('site', ['flag', 'attribute', 'call'])
+            def test_path(site, enabled):
+                events = []
+                checks = []
+
+                def check():
+                    checks.append('checked')
+                    return [1] if enabled else []
+
+                if site == 'flag':
+                    record_flag(enabled, events)
+                elif site == 'attribute':
+                    record_attribute(SimpleNamespace(enabled=enabled), events)
+                else:
+                    record_call(check, events)
+                    assert checks == ['checked']
+                assert events == (['entered'] if enabled else [])
+        """)
+        result = _leela(pytester, "-v")
+        assert result.ret == pytest.ExitCode.OK
+        result.assert_outcomes(passed=6)
+        result.stdout.fnmatch_lines([
+            "*calc.py*:2:4 condition -> negate_condition: killed *",
+            "*calc.py*:7:4 condition -> negate_condition: killed *",
+            "*calc.py*:12:4 condition -> negate_condition: killed *",
+            "Overall: 3/3 killed (100.0%)*",
+        ])
+
+
 def describe_import_breaking_mutant():
     def it_counts_a_target_that_raises_on_import_as_killed(pytester):
         """The judge's probe: every test errors at collection, the suite is red."""

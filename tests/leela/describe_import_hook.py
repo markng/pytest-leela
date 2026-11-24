@@ -171,6 +171,56 @@ def describe_MutantApplier():
         assert applied
         assert ast.dump(tree) == ast.dump(ast.parse("assert flag, a - b\n"))
 
+    def it_negates_one_while_test_once_per_check_without_rewriting_the_loop():
+        source = (
+            "while flag: break\n"
+            "while check():\n"
+            "    events.append('iteration')\n"
+            "else:\n"
+            "    events.append('done')\n"
+        )
+        mutant = _make_mutant(
+            lineno=2, node_type="While", original_op="condition",
+            replacement_op="negate_condition",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        expected = ast.parse(source.replace("while check()", "while not check()"))
+        assert ast.dump(tree) == ast.dump(expected)
+        assert ast.get_source_segment(source, tree.body[1].test) == "check()"
+        values = iter(([], [], [1]))
+        events = []
+
+        def check():
+            events.append("check")
+            return next(values)
+
+        exec(compile(tree, "test.py", "exec"), dict(flag=True, check=check, events=events))
+        assert events == ["check", "iteration", "check", "iteration", "check", "done"]
+
+    @pytest.mark.parametrize(("predicate", "mismatch"), [
+        ("flag", {"lineno": 2}), ("flag", {"col_offset": 6}),
+        ("flag", {"node_type": "Assert"}), ("flag", {"replacement_op": "unknown"}),
+        ("flag and other", {}), ("not flag", {}), ("flag == other", {}),
+        ("True", {}), ("obj[0]", {}),
+    ])
+    def it_leaves_while_unchanged_for_ineligible_or_nonmatching_mutants(predicate, mismatch):
+        source = f"while {predicate}: break\n"
+        fields = dict(node_type="While", original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    def it_still_applies_existing_mutations_inside_a_while_test():
+        source = "while check(a == b): break\n"
+        mutant = _make_mutant(
+            col_offset=12, node_type="Compare", original_op="Eq", replacement_op="NotEq",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse("while check(a != b): break\n"))
+
     def it_applies_binop_mutation():
         source = "x + y"
         tree = ast.parse(source, mode="eval")

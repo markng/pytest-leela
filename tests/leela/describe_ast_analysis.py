@@ -45,7 +45,7 @@ def describe_find_mutation_points():
         assert all((p.file_path, p.module_name) == ("src/demo.py", "demo") for p in predicates)
         assert [(p.lineno, p.node_type) for p in points if p.node_type != "If"] == [
             (3, "Assign"), (3, "BinOp"), (4, "Compare"), (6, "BoolOp"),
-            (7, "UnaryOp"), (8, "Compare"), (12, "Assert"), (13, "Assign"),
+            (7, "UnaryOp"), (8, "Compare"), (11, "While"), (12, "Assert"), (13, "Assign"),
         ]
 
     def it_finds_only_bare_assert_roots_and_visits_predicate_and_message_children():
@@ -76,10 +76,42 @@ def describe_find_mutation_points():
             (5, 7, "BoolOp", "And"),
             (6, 7, "UnaryOp", "Not"),
             (7, 7, "Compare", "Eq"),
+            (10, 0, "While", "condition"),
         ]
         assert all((p.file_path, p.module_name, p.inferred_type) == (
             "src/demo.py", "demo", None,
         ) for p in points)
+
+    def it_finds_only_bare_while_roots_and_visits_the_test_body_and_else():
+        source = (
+            "while flag:\n"
+            "    while obj.ready: break\n"
+            "else:\n"
+            "    count = 1 + 2\n"
+            "while check(x == 1): break\n"
+            "while flag and other: break\n"
+            "while not flag: break\n"
+            "while flag == other: break\n"
+            "while True: break\n"
+            "while obj[0]: break\n"
+            "while ignored: break  # leela: skip\n"
+            "[x for x in items if check(x)]\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.original_op, p.file_path, p.module_name, p.inferred_type)
+            for p in points if p.node_type == "While"
+        ] == [
+            (line, column, "condition", "src/demo.py", "demo", None)
+            for line, column in ((1, 0), (2, 4), (5, 0))
+        ]
+        assert [(p.lineno, p.node_type, p.original_op) for p in points if p.node_type != "While"] == [
+            (2, "Break", "break"), (4, "Assign", "assignment"), (4, "BinOp", "Add"),
+            (5, "Compare", "Eq"), (5, "Break", "break"), (6, "BoolOp", "And"),
+            (6, "Break", "break"), (7, "UnaryOp", "Not"), (7, "Break", "break"),
+            (8, "Compare", "Eq"), (8, "Break", "break"), (9, "Break", "break"),
+            (10, "Break", "break"),
+        ]
 
     def it_finds_binop_nodes():
         source = "def f(x: int, y: int) -> int:\n    return x + y\n"
