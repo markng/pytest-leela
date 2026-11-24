@@ -827,6 +827,7 @@ def describe_generate_html_report():
     def it_preserves_all_mutant_data_through_round_trip(tmp_path):
         """Verify data integrity: build, serialize, deserialize, check."""
         killed = _make_mutant_result(True, mutant_id=1, lineno=10)
+        killed.wall_time_seconds = 0.25
         survived = _make_mutant_result(False, mutant_id=2, lineno=20)
         run = _make_run_result(results=[killed, survived])
         output = str(tmp_path / "report.html")
@@ -840,6 +841,8 @@ def describe_generate_html_report():
         assert len(file_data["mutants"]) == 2
         assert file_data["mutants"][0]["killed"] is True
         assert file_data["mutants"][1]["killed"] is False
+        assert [m["time_seconds"] for m in file_data["mutants"]] == [0.05, 0.05]
+        assert [m["wall_time_seconds"] for m in file_data["mutants"]] == [0.25, None]
         assert file_data["stats"]["killed"] == 1
         assert file_data["stats"]["survived"] == 1
         assert len(data["survived_index"]) == 1

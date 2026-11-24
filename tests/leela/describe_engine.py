@@ -626,6 +626,7 @@ def describe_Engine_mutant_timing():
         assert recorded.status == status
         assert recorded.killing_test == killing_test
         assert recorded.time_seconds == inner_seconds
+        assert recorded.wall_time_seconds == wall_seconds
         assert result.wall_time_seconds == 10 + wall_seconds
         assert events == [
             MutationProgress("baseline", 0, 1, 0),

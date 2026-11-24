@@ -41,8 +41,7 @@ After the normal pytest run, Leela reports its baseline check and prints a progr
 before each mutant, with the active location and completed/runnable count. Pruned mutants
 are listed separately. Each completed mutant also gets a verdict and wall time covering
 the whole runner call, including any control and confirmation runs. Leela lists up to five
-slowest completed mutants at the end. The per-mutant elapsed time in the HTML report is
-unchanged.
+slowest completed mutants at the end.
 
 When no `--target` is given, pytest-leela auto-discovers source files:
 
@@ -89,6 +88,12 @@ pytest --leela --diff main --max-cores 4 --max-memory 4096
 ```bash
 pytest --leela --leela-html report.html
 ```
+
+The report shows both the inner attempt's elapsed time (`time_seconds`) and the full
+runner wall time (`wall_time_seconds`) for each mutant. The latter includes any
+control and confirmation runs and matches the JSON Lines measurement when both
+outputs are enabled. If a report is generated from an untimed programmatic run,
+its per-mutant wall time is `null` and the viewer shows only the inner elapsed time.
 
 **Stream completed mutant results to a local JSON Lines file:**
 
