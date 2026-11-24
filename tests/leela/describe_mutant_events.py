@@ -2,6 +2,7 @@
 
 import json
 import math
+import os
 import subprocess
 import sys
 import time
@@ -10,7 +11,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from pytest_leela import mutant_events
-from pytest_leela.models import Mutant, MutantTiming, MutationPoint
+from pytest_leela.html_report import generate_html_report
+from pytest_leela.models import Mutant, MutantTiming, MutationPoint, RunResult
 from pytest_leela.plugin import LeelaPlugin, pytest_configure
 
 
@@ -18,6 +20,17 @@ def _read_events(path):
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     assert all(line.endswith("\n") for line in lines)
     return [json.loads(line) for line in lines]
+
+
+def _empty_run_result():
+    return RunResult(
+        target_files=[],
+        total_mutants=0,
+        mutants_tested=0,
+        mutants_pruned=0,
+        results=[],
+        wall_time_seconds=0.0,
+    )
 
 
 def _wait_until_blocked(process, marker, log):
@@ -58,23 +71,40 @@ def describe_jsonl_cli():
                     deadline = time.monotonic() + 30
                     while not Path("release-second").exists():
                         if time.monotonic() >= deadline:
+                            Path("fixture-timeout").touch()
                             raise RuntimeError("test barrier timed out")
                         time.sleep(0.01)
-                assert value == 2
+                    Path("second-released").touch()
+                try:
+                    assert value == 2
+                except AssertionError:
+                    Path("second-behavior-failed").touch()
+                    raise
         """
         )
         path = pytester.path / "events.jsonl"
         log = pytester.path / "pytest.log"
         release = pytester.path / "release-second"
-        with (
-            log.open("wb") as output,
-            subprocess.Popen(
-                [sys.executable, "-m", "pytest", "-q", "--leela-jsonl", str(path)],
+        released = pytester.path / "second-released"
+        failed_behavior = pytester.path / "second-behavior-failed"
+        fixture_timeout = pytester.path / "fixture-timeout"
+        html = pytester.path / "report.html"
+        with log.open("wb") as output:
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "pytest",
+                    "-q",
+                    "--leela-jsonl",
+                    str(path),
+                    "--leela-html",
+                    str(html),
+                ],
                 cwd=pytester.path,
                 stdout=output,
                 stderr=subprocess.STDOUT,
-            ) as process,
-        ):
+            )
             try:
                 _wait_until_blocked(process, pytester.path / "second-blocked", log)
                 assert process.poll() is None
@@ -82,14 +112,30 @@ def describe_jsonl_cli():
                 assert [(event["mutant_id"], event["lineno"]) for event in early] == [
                     (0, 2)
                 ]
-            finally:
+                assert not any(
+                    marker.exists()
+                    for marker in (released, failed_behavior, fixture_timeout)
+                )
                 release.touch()
-                try:
-                    process.wait(timeout=30)
-                except subprocess.TimeoutExpired:
+                process.wait(timeout=30)
+            finally:
+                if process.poll() is None:
                     process.kill()
-                    raise
+                    process.wait(timeout=5)
         assert process.returncode == 0, log.read_text()
+        assert not fixture_timeout.exists()
+        assert released.exists() and failed_behavior.exists()
+        # A runner timeout can also count as killed. Require the actual test
+        # node IDs (not <timeout>) to be credited for the two kills.
+        report_json = html.read_text(encoding="utf-8").split("window.LEELA_DATA = ", 1)[
+            1
+        ]
+        report, _ = json.JSONDecoder().raw_decode(report_json)
+        (file_data,) = report["files"].values()
+        assert [mutant["killing_test"]["id"] for mutant in file_data["mutants"]] == [
+            "test_subject.py::test_first",
+            "test_subject.py::test_second",
+        ]
         events = _read_events(path)
         assert events[:1] == early
         assert [(event["mutant_id"], event["lineno"]) for event in events] == [
@@ -223,12 +269,13 @@ def describe_LeelaPlugin_event_sink():
         )
         assert engine.return_value.run.call_count == int(has_target)
 
-    @pytest.mark.parametrize("html_mode", ["same", "new", "existing"])
+    @pytest.mark.parametrize("html_mode", ["same", "late-link", "new", "existing"])
     def it_keeps_jsonl_separate_from_the_html_report(tmp_path, monkeypatch, html_mode):
         path = tmp_path / "events.jsonl"
         html_path = path if html_mode == "same" else tmp_path / "report.html"
+        old_content = "previous report" * 10_000
         if html_mode == "existing":
-            html_path.touch()
+            html_path.write_text(old_content, encoding="utf-8")
         config = MagicMock(rootpath=tmp_path)
         config.getoption.side_effect = lambda name, default=None: {
             "leela_jsonl": str(path),
@@ -239,33 +286,72 @@ def describe_LeelaPlugin_event_sink():
         monkeypatch.setattr(
             plugin, "_resolve_target_files", lambda _: [str(tmp_path / "subject.py")]
         )
-        engine = MagicMock()
-        engine.return_value.run.return_value = MagicMock(survived=[], errors=[])
-        monkeypatch.setattr("pytest_leela.plugin.Engine", engine)
-        monkeypatch.setattr(
-            "pytest_leela.plugin.format_terminal_report", lambda _: "report"
-        )
-        html_writer = MagicMock()
-        monkeypatch.setattr(
-            "pytest_leela.html_report.generate_html_report", html_writer
+        point = MutationPoint(
+            str(tmp_path / "subject.py"), "subject", 2, 8, "BinOp", "Add", None
         )
 
+        def run(*args, on_mutant_timing, **kwargs):
+            on_mutant_timing(MutantTiming(Mutant(point, "Sub", 8), "killed", 0.1))
+            if html_mode == "late-link":
+                # The destinations were distinct at launch; alias after a
+                # flushed record to test the actual HTML write, not a precheck.
+                html_path.hardlink_to(path)
+            return _empty_run_result()
+
+        engine = MagicMock()
+        engine.return_value.run.side_effect = run
+        monkeypatch.setattr("pytest_leela.plugin.Engine", engine)
         plugin.pytest_sessionfinish(session, exitstatus=0)
 
-        if html_mode == "same":
+        calls = config.get_terminal_writer.return_value.write.call_args_list
+        if html_mode in ("same", "late-link"):
             assert session.exitstatus == 1
-            calls = config.get_terminal_writer.return_value.write.call_args_list
             assert (
                 "aborted: JSONL and HTML outputs must use different files"
                 in calls[-1].args[0]
             )
-            engine.assert_not_called()
-            html_writer.assert_not_called()
+            assert not any("Overall:" in call.args[0] for call in calls)
+            assert html_path.read_bytes() == path.read_bytes()
         else:
             assert session.exitstatus == 0
-            engine.return_value.run.assert_called_once()
-            html_writer.assert_called_once()
-        assert path.read_bytes() == b""
+            html = html_path.read_text(encoding="utf-8")
+            assert html.rstrip().endswith("</html>")
+            assert "previous report" not in html
+        engine.return_value.run.assert_called_once()
+        assert [event["mutant_id"] for event in _read_events(path)] == [8]
+
+
+def describe_guarded_html_writer():
+    @pytest.mark.skipif(sys.platform == "win32", reason="renames an open file on POSIX")
+    def it_uses_the_checked_descriptor_without_reopening_the_path(
+        tmp_path, monkeypatch
+    ):
+        path = tmp_path / "events.jsonl"
+        html_path = tmp_path / "report.html"
+        original_html = tmp_path / "report-before-retarget.html"
+        real_truncate = os.ftruncate
+
+        def retarget_after_check(fd, length):
+            html_path.rename(original_html)
+            html_path.hardlink_to(path)
+            real_truncate(fd, length)
+
+        with path.open("x", encoding="utf-8") as events:
+            events.write("keep existing JSONL\n")
+            events.flush()
+            monkeypatch.setattr(os, "ftruncate", retarget_after_check)
+            generate_html_report(
+                _empty_run_result(), str(html_path), jsonl_fd=events.fileno()
+            )
+        assert path.read_text(encoding="utf-8") == "keep existing JSONL\n"
+        assert original_html.read_text(encoding="utf-8").rstrip().endswith("</html>")
+
+    def it_allows_a_distinct_nonregular_destination(tmp_path):
+        path = tmp_path / "events.jsonl"
+        with path.open("x", encoding="utf-8") as events:
+            generate_html_report(
+                _empty_run_result(), os.devnull, jsonl_fd=events.fileno()
+            )
 
 
 def describe_mutant_events():

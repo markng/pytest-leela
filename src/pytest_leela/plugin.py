@@ -326,10 +326,6 @@ class LeelaPlugin:
                 if not target_files:
                     return
                 html_path = self.config.getoption("leela_html", default=None)
-                if events_path is not None and html_path is not None:
-                    html_file = Path(html_path)
-                    if html_file.exists() and html_file.samefile(events_path):
-                        raise MutantEventsError("JSONL and HTML outputs must use different files")
                 engine = Engine(enabled_categories=enabled_categories)
                 write_progress("finding runnable mutants", leading_newline=True)
                 with self._outer_django_db_unblocked():
@@ -342,6 +338,10 @@ class LeelaPlugin:
                         on_progress=report_progress,
                         on_mutant_timing=report_timing,
                     )
+                if events is not None and html_path is not None:
+                    from pytest_leela.html_report import generate_html_report
+
+                    generate_html_report(result, html_path, jsonl_fd=events.fileno())
         except (BaselineFailure, MutantEventsError) as exc:
             message = f"\nleela: aborted: {exc}\n"
             if tw:
@@ -363,7 +363,7 @@ class LeelaPlugin:
         else:
             print(report)
 
-        if html_path is not None:
+        if html_path is not None and events_path is None:
             from pytest_leela.html_report import generate_html_report
 
             generate_html_report(result, html_path)
