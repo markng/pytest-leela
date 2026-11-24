@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.0 — 2026-11-24
+
+### Added
+
+- The Boolean operator category negates bare assertion predicates (names,
+  attributes, and calls). It leaves assertion messages and existing
+  compound-expression mutations intact. (#47)
+
 ## 0.16.0 — 2026-11-24
 
 ### Added
