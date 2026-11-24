@@ -45,8 +45,41 @@ def describe_find_mutation_points():
         assert all((p.file_path, p.module_name) == ("src/demo.py", "demo") for p in predicates)
         assert [(p.lineno, p.node_type) for p in points if p.node_type != "If"] == [
             (3, "Assign"), (3, "BinOp"), (4, "Compare"), (6, "BoolOp"),
-            (7, "UnaryOp"), (8, "Compare"), (13, "Assign"),
+            (7, "UnaryOp"), (8, "Compare"), (12, "Assert"), (13, "Assign"),
         ]
+
+    def it_finds_only_bare_assert_roots_and_visits_predicate_and_message_children():
+        source = (
+            "assert flag\n"
+            "if active:\n"
+            "    assert obj.ready, detail(1 + 2)\n"
+            "    assert check(value == 1)\n"
+            "assert flag and other\n"
+            "assert not flag\n"
+            "assert flag == other\n"
+            "assert True\n"
+            "assert obj[0]\n"
+            "while flag: pass\n"
+            "[x for x in items if check(x)]\n"
+            "assert ignored  # leela: skip\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.node_type, p.original_op) for p in points
+        ] == [
+            (1, 0, "Assert", "condition"),
+            (2, 0, "If", "condition"),
+            (3, 4, "Assert", "condition"),
+            (3, 29, "BinOp", "Add"),
+            (4, 4, "Assert", "condition"),
+            (4, 17, "Compare", "Eq"),
+            (5, 7, "BoolOp", "And"),
+            (6, 7, "UnaryOp", "Not"),
+            (7, 7, "Compare", "Eq"),
+        ]
+        assert all((p.file_path, p.module_name, p.inferred_type) == (
+            "src/demo.py", "demo", None,
+        ) for p in points)
 
     def it_finds_binop_nodes():
         source = "def f(x: int, y: int) -> int:\n    return x + y\n"

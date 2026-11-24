@@ -11,7 +11,7 @@ import sys
 import types
 from typing import Any
 
-from pytest_leela.ast_analysis import eligible_assignment_rhs
+from pytest_leela.ast_analysis import eligible_assignment_rhs, is_bare_predicate
 from pytest_leela.models import Mutant
 
 # AST operator classes by name
@@ -129,6 +129,18 @@ class MutantApplier(ast.NodeTransformer):
             self._matches(node)
             and self.mutant.point.node_type == "If"
             and self.mutant.replacement_op == "negate_condition"
+        ):
+            negated = ast.UnaryOp(op=ast.Not(), operand=node.test)
+            node.test = ast.copy_location(negated, node.test)
+            self.applied = True
+        return self.generic_visit(node)
+
+    def visit_Assert(self, node: ast.Assert) -> ast.AST:
+        if (
+            self._matches(node)
+            and self.mutant.point.node_type == "Assert"
+            and self.mutant.replacement_op == "negate_condition"
+            and is_bare_predicate(node.test)
         ):
             negated = ast.UnaryOp(op=ast.Not(), operand=node.test)
             node.test = ast.copy_location(negated, node.test)

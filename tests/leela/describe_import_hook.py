@@ -114,6 +114,63 @@ def describe_MutantApplier():
         assert not applied
         assert ast.dump(tree) == ast.dump(ast.parse(source))
 
+    @pytest.mark.parametrize("result", [[], [1]])
+    def it_negates_only_the_selected_assert_test_and_keeps_the_lazy_message(result):
+        source = "assert flag\nassert check(), explain()\nassert flag and other\n"
+        mutant = _make_mutant(
+            lineno=2, node_type="Assert", original_op="condition",
+            replacement_op="negate_condition",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        expected = ast.parse(source.replace("assert check()", "assert not check()"))
+        assert ast.dump(tree) == ast.dump(expected)
+        original = ast.parse(source).body[1].test
+        predicate = tree.body[1].test
+        assert ast.get_source_segment(source, predicate) == ast.get_source_segment(
+            source, original
+        ) == "check()"
+
+        calls = []
+
+        def check():
+            calls.append("predicate")
+            return result
+
+        def explain():
+            calls.append("message")
+            return "validation failed"
+
+        code = compile(tree, "test.py", "exec")
+        namespace = dict(flag=True, other=True, check=check, explain=explain)
+        if result:
+            with pytest.raises(AssertionError, match="^validation failed$"):
+                exec(code, namespace)
+            assert calls == ["predicate", "message"]
+        else:
+            exec(code, namespace)
+            assert calls == ["predicate"]
+
+    @pytest.mark.parametrize(("predicate", "mismatch"), [
+        ("flag", {"lineno": 2}), ("flag", {"col_offset": 7}),
+        ("flag", {"node_type": "If"}), ("flag", {"replacement_op": "unknown"}),
+        ("flag and other", {}), ("not flag", {}), ("flag == other", {}),
+        ("True", {}), ("obj[0]", {}),
+    ])
+    def it_leaves_assert_unchanged_for_ineligible_or_nonmatching_mutants(predicate, mismatch):
+        source = f"assert {predicate}, message()\n"
+        fields = dict(node_type="Assert", original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    def it_still_applies_existing_mutations_inside_the_assert_message():
+        source = "assert flag, a + b\n"
+        tree, applied = apply_mutation(source, _make_mutant(col_offset=13))
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse("assert flag, a - b\n"))
+
     def it_applies_binop_mutation():
         source = "x + y"
         tree = ast.parse(source, mode="eval")

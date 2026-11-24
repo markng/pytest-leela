@@ -69,6 +69,11 @@ def eligible_assignment_rhs(node: ast.Assign | ast.AnnAssign) -> ast.expr | None
     return None
 
 
+def is_bare_predicate(test: ast.expr) -> bool:
+    """Match a name, attribute access, or call at the predicate root."""
+    return isinstance(test, (ast.Name, ast.Attribute, ast.Call))
+
+
 class _MutationPointCollector(ast.NodeVisitor):
     """Walk an AST and collect all mutable nodes."""
 
@@ -196,20 +201,22 @@ class _MutationPointCollector(ast.NodeVisitor):
     visit_AsyncFunctionDef = visit_FunctionDef
     visit_ClassDef = visit_FunctionDef
 
-    def visit_If(self, node: ast.If) -> None:
-        if isinstance(node.test, (ast.Name, ast.Attribute, ast.Call)):
+    def visit_If(self, node: ast.If | ast.Assert) -> None:
+        if is_bare_predicate(node.test):
             self.points.append(
                 MutationPoint(
                     file_path=self.file_path,
                     module_name=self.module_name,
                     lineno=node.lineno,
                     col_offset=node.col_offset,
-                    node_type="If",
+                    node_type=type(node).__name__,
                     original_op="condition",
                     inferred_type=None,
                 )
             )
         self.generic_visit(node)
+
+    visit_Assert = visit_If
 
     def visit_IfExp(self, node: ast.IfExp) -> None:
         self.points.append(

@@ -176,6 +176,67 @@ def describe_bare_if_predicates():
         complete.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
 
 
+def describe_bare_assert_predicates():
+    def it_reports_native_assertion_mutants_as_survived_or_killed(pytester):
+        pytester.makepyfile(calc="""
+            def validate_flag(flag):
+                assert flag
+
+            def validate_config(config):
+                assert config.enabled, 'disabled'
+
+            def validate_check(check, explain):
+                assert check(), explain()
+        """)
+        test = pytester.makepyfile(test_calc="""
+            from types import SimpleNamespace
+            from calc import validate_flag, validate_config, validate_check
+
+            def test_exercises_validation_without_enforcing_it():
+                for validate, args in (
+                    (validate_flag, (True,)),
+                    (validate_config, (SimpleNamespace(enabled=True),)),
+                    (validate_check, (lambda: True, lambda: 'not ready')),
+                ):
+                    try:
+                        validate(*args)
+                    except AssertionError:
+                        pass
+        """)
+        incomplete = _leela(pytester)
+        assert incomplete.ret == pytest.ExitCode.TESTS_FAILED
+        incomplete.assert_outcomes(passed=1)
+        incomplete.stdout.fnmatch_lines([
+            "*line 2:*condition*negate_condition*SURVIVED*",
+            "*line 5:*condition*negate_condition*SURVIVED*",
+            "*line 8:*condition*negate_condition*SURVIVED*",
+            "Overall: 0/3 killed (0.0%)*",
+        ])
+
+        test.write_text(textwrap.dedent('''\
+            from types import SimpleNamespace
+            import pytest
+            from calc import validate_flag, validate_config, validate_check
+
+            def test_valid_values_pass_and_invalid_values_raise():
+                def never_explain():
+                    pytest.fail('message evaluated on success')
+                validate_flag(True)
+                validate_config(SimpleNamespace(enabled=True))
+                validate_check(lambda: True, never_explain)
+                with pytest.raises(AssertionError):
+                    validate_flag(False)
+                with pytest.raises(AssertionError, match='^disabled$'):
+                    validate_config(SimpleNamespace(enabled=False))
+                with pytest.raises(AssertionError, match='^not ready$'):
+                    validate_check(lambda: False, lambda: 'not ready')
+        '''), encoding="utf-8")
+        complete = _leela(pytester)
+        assert complete.ret == pytest.ExitCode.OK
+        complete.assert_outcomes(passed=1)
+        complete.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
+
+
 def describe_import_breaking_mutant():
     def it_counts_a_target_that_raises_on_import_as_killed(pytester):
         """The judge's probe: every test errors at collection, the suite is red."""
