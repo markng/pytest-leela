@@ -135,10 +135,10 @@ class MutantApplier(ast.NodeTransformer):
             self.applied = True
         return self.generic_visit(node)
 
-    def visit_Assert(self, node: ast.Assert) -> ast.AST:
+    def _visit_bare_condition(self, node: ast.Assert | ast.While) -> ast.AST:
         if (
             self._matches(node)
-            and self.mutant.point.node_type == "Assert"
+            and self.mutant.point.node_type == type(node).__name__
             and self.mutant.replacement_op == "negate_condition"
             and is_bare_predicate(node.test)
         ):
@@ -146,6 +146,9 @@ class MutantApplier(ast.NodeTransformer):
             node.test = ast.copy_location(negated, node.test)
             self.applied = True
         return self.generic_visit(node)
+
+    visit_Assert = _visit_bare_condition
+    visit_While = _visit_bare_condition
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "IfExp":

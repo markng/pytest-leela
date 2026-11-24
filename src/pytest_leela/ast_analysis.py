@@ -201,7 +201,7 @@ class _MutationPointCollector(ast.NodeVisitor):
     visit_AsyncFunctionDef = visit_FunctionDef
     visit_ClassDef = visit_FunctionDef
 
-    def visit_If(self, node: ast.If | ast.Assert) -> None:
+    def _visit_statement_condition(self, node: ast.If | ast.Assert | ast.While) -> None:
         if is_bare_predicate(node.test):
             self.points.append(
                 MutationPoint(
@@ -216,7 +216,9 @@ class _MutationPointCollector(ast.NodeVisitor):
             )
         self.generic_visit(node)
 
-    visit_Assert = visit_If
+    visit_If = _visit_statement_condition
+    visit_Assert = _visit_statement_condition
+    visit_While = _visit_statement_condition
 
     def visit_IfExp(self, node: ast.IfExp) -> None:
         self.points.append(

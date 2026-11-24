@@ -179,7 +179,7 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 |---|---|---|
 | `arithmetic` | `+` `-` `*` `/` `//` `%` `**` | on |
 | `comparison` | `==` `!=` `<` `<=` `>` `>=` `is` `in` and negations | on |
-| `boolean` | `and` / `or`, and negation of bare `if` / `elif` / `assert` predicates (`flag`, `obj.flag`, `check()`) | on |
+| `boolean` | `and` / `or`, and negation of bare `if` / `elif` / `assert` / `while` predicates (`flag`, `obj.flag`, `check()`) | on |
 | `unary` | unary `-` `+` `not` | on |
 | `return` | return values (`True`/`False`, `None`, literals, expressions) | on |
 | `bitwise` | `&` `\|` `^` `<<` `>>` | off |
@@ -195,6 +195,12 @@ Bare `assert` negation changes `assert check(), message` to
 whole-predicate mutant for `assert a and b`, `assert not a`, or `assert a == b`;
 those expressions retain their existing operator mutations. In `--diff` mode
 bare assertion negation is selected by the line containing the `assert` keyword.
+
+Bare `while` negation changes `while check():` to `while not check():`, leaving
+its body and any `else` intact. It still checks the predicate once per condition
+evaluation. A negated loop can fail to terminate; Leela's in-process timeout
+checks between tests and cannot interrupt a stuck test. In `--diff` mode this
+mutation is selected by the line containing the `while` keyword.
 
 Add `"decorator"` to your operator list (or use `"all"`) to enable decorator removal.
 For a stack like `@wrap` followed by `@suffix("!")`, Leela generates two separate
