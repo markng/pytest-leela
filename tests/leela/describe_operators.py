@@ -550,13 +550,17 @@ def describe_mutations_for_with_allowed_keys():
         muts = mutations_for(point, use_types=False, allowed_keys=keys)
         assert muts == ["Or"]
 
-    def it_enables_if_negation_in_the_default_boolean_category():
-        point = _make_point(node_type="If", original_op="condition")
-        for categories in (DEFAULT_OPERATORS, ("boolean",)):
-            keys = build_allowed_keys(categories)
-            assert mutations_for(point, use_types=True, allowed_keys=keys) == ["negate_condition"]
-        keys = build_allowed_keys(("unary", "control_flow"))
-        assert mutations_for(point, use_types=True, allowed_keys=keys) == []
+    def it_enables_bare_statement_negation_in_the_default_boolean_category():
+        for kind in ("If", "Assert"):
+            point = _make_point(node_type=kind, original_op="condition")
+            for use_types in (True, False):
+                for categories in (DEFAULT_OPERATORS, ("boolean",), ALL_OPERATORS):
+                    keys = build_allowed_keys(categories)
+                    assert mutations_for(point, use_types=use_types, allowed_keys=keys) == [
+                        "negate_condition"
+                    ]
+                keys = build_allowed_keys(("unary", "control_flow"))
+                assert mutations_for(point, use_types=use_types, allowed_keys=keys) == []
 
     def it_enables_decorator_removal_only_when_selected():
         point = _make_point(node_type="Decorator", original_op="decorator")

@@ -179,7 +179,7 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 |---|---|---|
 | `arithmetic` | `+` `-` `*` `/` `//` `%` `**` | on |
 | `comparison` | `==` `!=` `<` `<=` `>` `>=` `is` `in` and negations | on |
-| `boolean` | `and` / `or`, and negation of bare `if` / `elif` predicates (`flag`, `obj.flag`, `check()`) | on |
+| `boolean` | `and` / `or`, and negation of bare `if` / `elif` / `assert` predicates (`flag`, `obj.flag`, `check()`) | on |
 | `unary` | unary `-` `+` `not` | on |
 | `return` | return values (`True`/`False`, `None`, literals, expressions) | on |
 | `bitwise` | `&` `\|` `^` `<<` `>>` | off |
@@ -189,6 +189,12 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 | `control_flow` | `break` / `continue` swaps | off |
 | `exception` | `except` handler broadening, body-to-raise | off |
 | `decorator` | remove one decorator from a function, async function, or class | off |
+
+Bare `assert` negation changes `assert check(), message` to
+`assert not check(), message`. It leaves the message in place and adds no
+whole-predicate mutant for `assert a and b`, `assert not a`, or `assert a == b`;
+those expressions retain their existing operator mutations. In `--diff` mode
+bare assertion negation is selected by the line containing the `assert` keyword.
 
 Add `"decorator"` to your operator list (or use `"all"`) to enable decorator removal.
 For a stack like `@wrap` followed by `@suffix("!")`, Leela generates two separate

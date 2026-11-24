@@ -53,8 +53,9 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     # Assignment initializers
     ("Assign", "assignment"): ["rhs_to_none"],
     ("AnnAssign", "assignment"): ["rhs_to_none"],
-    # Bare if predicates
+    # Bare statement predicates
     ("If", "condition"): ["negate_condition"],
+    ("Assert", "condition"): ["negate_condition"],
     # Decorators
     ("Decorator", "decorator"): ["remove_decorator"],
     # IfExp (ternary)
@@ -207,6 +208,7 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
         ("BoolOp", "And"),
         ("BoolOp", "Or"),
         ("If", "condition"),
+        ("Assert", "condition"),
     },
     "unary": {
         ("UnaryOp", "USub"),
