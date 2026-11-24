@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.3 — 2026-11-24
+
+### Fixed
+
+- When `--diff` finds no mutation candidates, the terminal summary now shows
+  `N/A (nothing to test)` instead of a numeric `0/0` score. The warning,
+  exit status, JSON and HTML are unchanged. (#35)
+
 ## 0.11.2 — 2026-11-24
 
 ### Fixed
