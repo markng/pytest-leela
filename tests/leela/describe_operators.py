@@ -550,6 +550,14 @@ def describe_mutations_for_with_allowed_keys():
         muts = mutations_for(point, use_types=False, allowed_keys=keys)
         assert muts == ["Or"]
 
+    def it_enables_if_negation_in_the_default_boolean_category():
+        point = _make_point(node_type="If", original_op="condition")
+        for categories in (DEFAULT_OPERATORS, ("boolean",)):
+            keys = build_allowed_keys(categories)
+            assert mutations_for(point, use_types=True, allowed_keys=keys) == ["negate_condition"]
+        keys = build_allowed_keys(("unary", "control_flow"))
+        assert mutations_for(point, use_types=True, allowed_keys=keys) == []
+
     def it_filters_unary_operators():
         """Unary operators work when 'unary' keys are passed."""
         point = _make_point(node_type="UnaryOp", original_op="Not")

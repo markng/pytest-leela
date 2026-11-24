@@ -2,7 +2,6 @@
 
 import os
 import sys
-import tempfile
 import threading
 
 from pytest_leela.coverage_tracker import _LineTracer, collect_coverage
@@ -361,32 +360,26 @@ def describe_CoveragePlugin():
 
 
 def describe_collect_coverage():
-    def it_returns_a_coverage_map():
-        """collect_coverage returns a CoverageMap, not None.
-
-        Kills: line 95 return expr → return None.
-        """
-        # Create a minimal target file and test file in a temp dir
-        with tempfile.TemporaryDirectory() as tmpdir:
-            target_dir = os.path.join(tmpdir, "src")
-            test_dir = os.path.join(tmpdir, "tests")
-            os.makedirs(target_dir)
-            os.makedirs(test_dir)
-
-            target_file = os.path.join(target_dir, "target.py")
-            with open(target_file, "w") as f:
-                f.write("def add(a, b):\n    return a + b\n")
-
-            test_file = os.path.join(test_dir, "test_target.py")
-            with open(test_file, "w") as f:
-                f.write(
-                    "import sys\n"
-                    f"sys.path.insert(0, {target_dir!r})\n"
-                    "from target import add\n"
-                    "def test_add():\n"
-                    "    assert add(1, 2) == 3\n"
-                )
-
-            result = collect_coverage([target_file], test_dir)
-            assert isinstance(result, CoverageMap)
-            assert result is not None
+    def it_collects_coverage_only_from_the_requested_test_directory(tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir()
+        target_file = tmp_path / "coverage_target_sample.py"
+        target_file.write_text("def add(a, b):\n    return a + b\n")
+        monkeypatch.syspath_prepend(str(tmp_path))
+        (test_dir / "test_sample.py").write_text(
+            "from coverage_target_sample import add\n"
+            "def test_add():\n"
+            "    assert add(1, 2) == 3\n"
+        )
+        # If the caller's directory is omitted, pytest falls back to cwd.
+        marker = tmp_path / "unrelated-ran"
+        (tmp_path / "test_unrelated.py").write_text(
+            "from pathlib import Path\n"
+            "def test_unrelated():\n"
+            f"    Path({str(marker)!r}).touch()\n"
+        )
+        result = collect_coverage([str(target_file)], str(test_dir))
+        assert isinstance(result, CoverageMap)
+        assert result.tests_for(str(target_file), 2) == {"tests/test_sample.py::test_add"}
+        assert not marker.exists()

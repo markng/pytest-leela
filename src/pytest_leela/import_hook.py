@@ -93,6 +93,17 @@ class MutantApplier(ast.NodeTransformer):
                 self.applied = True
         return self.generic_visit(node)
 
+    def visit_If(self, node: ast.If) -> ast.AST:
+        if (
+            self._matches(node)
+            and self.mutant.point.node_type == "If"
+            and self.mutant.replacement_op == "negate_condition"
+        ):
+            negated = ast.UnaryOp(op=ast.Not(), operand=node.test)
+            node.test = ast.copy_location(negated, node.test)
+            self.applied = True
+        return self.generic_visit(node)
+
     def visit_IfExp(self, node: ast.IfExp) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "IfExp":
             replacement = self.mutant.replacement_op

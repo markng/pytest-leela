@@ -50,6 +50,8 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     ("UnaryOp", "USub"): ["UAdd"],
     ("UnaryOp", "UAdd"): ["USub"],
     ("UnaryOp", "Not"): ["_remove"],  # Remove the `not`
+    # Bare if predicates
+    ("If", "condition"): ["negate_condition"],
     # IfExp (ternary)
     ("IfExp", "ternary"): ["swap_branches", "always_true", "always_false"],
     # Break/Continue
@@ -199,6 +201,7 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
     "boolean": {
         ("BoolOp", "And"),
         ("BoolOp", "Or"),
+        ("If", "condition"),
     },
     "unary": {
         ("UnaryOp", "USub"),

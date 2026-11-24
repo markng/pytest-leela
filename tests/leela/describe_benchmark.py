@@ -221,7 +221,7 @@ def describe_BenchmarkPlugin():
                 plugin.pytest_sessionfinish(session, exitstatus=0)
             config.getoption.assert_called()
 
-        def it_constructs_test_dir_using_path_division():
+        def it_uses_the_project_test_dir_and_writes_the_report_to_the_terminal():
             """Kills: line 41 / → * and / → //.
 
             Path * str → TypeError, Path // str → TypeError.
@@ -253,6 +253,9 @@ def describe_BenchmarkPlugin():
                 call_args = MockEngine.return_value.run.call_args
                 test_dir_arg = call_args[0][1]
                 assert test_dir_arg == str(Path("/project/root") / "tests")
+                writer = config.get_terminal_writer.return_value
+                writer.write.assert_called_once()
+                assert "leela benchmark" in writer.write.call_args.args[0]
 
 
 def describe_benchmark_target_discovery():
