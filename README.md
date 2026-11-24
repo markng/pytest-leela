@@ -162,6 +162,12 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 | `ternary` | `x if cond else y` branch swaps | off |
 | `control_flow` | `break` / `continue` swaps | off |
 | `exception` | `except` handler broadening, body-to-raise | off |
+| `decorator` | remove one decorator from a function, async function, or class | off |
+
+Add `"decorator"` to your operator list (or use `"all"`) to enable decorator removal.
+For a stack like `@wrap` followed by `@suffix("!")`, Leela generates two separate
+mutants. Each removes one decorator expression, leaving the other in place. In
+`--diff` mode the decorator expression's starting line must be changed.
 
 ### `fail_on_error`
 

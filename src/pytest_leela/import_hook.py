@@ -93,6 +93,23 @@ class MutantApplier(ast.NodeTransformer):
                 self.applied = True
         return self.generic_visit(node)
 
+    def visit_FunctionDef(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+    ) -> ast.AST:
+        if (
+            self.mutant.point.node_type == "Decorator"
+            and self.mutant.replacement_op == "remove_decorator"
+        ):
+            for index, decorator in enumerate(node.decorator_list):
+                if self._matches(decorator):
+                    del node.decorator_list[index]
+                    self.applied = True
+                    break
+        return self.generic_visit(node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+    visit_ClassDef = visit_FunctionDef
+
     def visit_If(self, node: ast.If) -> ast.AST:
         if (
             self._matches(node)

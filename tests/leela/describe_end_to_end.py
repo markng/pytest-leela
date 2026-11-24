@@ -77,6 +77,53 @@ def describe_diff_score():
         assert "Overall: 2/2 killed (100.0%)" in scored
 
 
+def describe_decorator_removal():
+    def it_reports_each_removal_until_tests_check_the_combined_behavior(pytester):
+        pytester.makefile(".toml", pyproject='[tool.pytest-leela]\noperators = ["decorator"]')
+        pytester.makepyfile(calc='''
+            def wrap(fn):
+                def inner():
+                    return f"[{fn()}]"
+                return inner
+
+            def append(suffix):
+                def decorate(fn):
+                    def inner():
+                        return f"{fn()}{suffix}"
+                    return inner
+                return decorate
+
+            @wrap
+            @append("!")
+            def greet():
+                return "hi"
+        ''')
+        test = pytester.makepyfile(test_calc='''
+            from calc import greet
+
+            def test_greet():
+                assert isinstance(greet(), str)
+        ''')
+        incomplete = _leela(pytester)
+        assert incomplete.ret == pytest.ExitCode.TESTS_FAILED
+        incomplete.assert_outcomes(passed=1)
+        incomplete.stdout.fnmatch_lines([
+            "*calc.py*:13:1 decorator -> remove_decorator: survived *",
+            "*calc.py*:14:1 decorator -> remove_decorator: survived *",
+            "Overall: 0/2 killed (0.0%)*",
+        ])
+
+        test.write_text('from calc import greet\n\ndef test_greet():\n    assert greet() == "[hi!]"\n')
+        complete = _leela(pytester)
+        assert complete.ret == pytest.ExitCode.OK
+        complete.assert_outcomes(passed=1)
+        complete.stdout.fnmatch_lines([
+            "*calc.py*:13:1 decorator -> remove_decorator: killed *",
+            "*calc.py*:14:1 decorator -> remove_decorator: killed *",
+            "Overall: 2/2 killed (100.0%)*",
+        ])
+
+
 def describe_bare_if_predicates():
     def it_reports_survivors_until_tests_distinguish_both_behaviors(pytester):
         pytester.makepyfile(calc="""
