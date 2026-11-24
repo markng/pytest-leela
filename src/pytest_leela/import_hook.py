@@ -11,6 +11,7 @@ import sys
 import types
 from typing import Any
 
+from pytest_leela.ast_analysis import eligible_assignment_rhs
 from pytest_leela.models import Mutant
 
 # AST operator classes by name
@@ -84,6 +85,19 @@ class MutantApplier(ast.NodeTransformer):
                 node.op = op_class()
                 self.applied = True
         return self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign | ast.AnnAssign) -> ast.AST:
+        if (
+            self.mutant.replacement_op == "rhs_to_none"
+            and self.mutant.point.node_type == type(node).__name__
+        ):
+            rhs = eligible_assignment_rhs(node)
+            if rhs is not None and self._matches(rhs):
+                node.value = ast.copy_location(ast.Constant(value=None), rhs)
+                self.applied = True
+        return self.generic_visit(node)
+
+    visit_AnnAssign = visit_Assign
 
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "AugAssign":

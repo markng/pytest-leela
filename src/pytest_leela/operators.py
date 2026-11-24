@@ -50,6 +50,9 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     ("UnaryOp", "USub"): ["UAdd"],
     ("UnaryOp", "UAdd"): ["USub"],
     ("UnaryOp", "Not"): ["_remove"],  # Remove the `not`
+    # Assignment initializers
+    ("Assign", "assignment"): ["rhs_to_none"],
+    ("AnnAssign", "assignment"): ["rhs_to_none"],
     # Bare if predicates
     ("If", "condition"): ["negate_condition"],
     # Decorators
@@ -226,6 +229,10 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
         ("BinOp", "BitXor"),
         ("BinOp", "LShift"),
         ("BinOp", "RShift"),
+    },
+    "assignment": {
+        ("Assign", "assignment"),
+        ("AnnAssign", "assignment"),
     },
     "augmented_assign": {
         ("AugAssign", "Add"),

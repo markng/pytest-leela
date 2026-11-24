@@ -44,7 +44,8 @@ def describe_find_mutation_points():
         assert all(p.original_op == "condition" and p.inferred_type is None for p in predicates)
         assert all((p.file_path, p.module_name) == ("src/demo.py", "demo") for p in predicates)
         assert [(p.lineno, p.node_type) for p in points if p.node_type != "If"] == [
-            (3, "BinOp"), (4, "Compare"), (6, "BoolOp"), (7, "UnaryOp"), (8, "Compare"),
+            (3, "Assign"), (3, "BinOp"), (4, "Compare"), (6, "BoolOp"),
+            (7, "UnaryOp"), (8, "Compare"), (13, "Assign"),
         ]
 
     def it_finds_binop_nodes():
