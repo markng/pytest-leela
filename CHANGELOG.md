@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0 — 2026-11-24
+
+### Added
+
+- The opt-in `assignment` category replaces the RHS of a simple name
+  assignment or annotated initializer with `None`. The target and
+  annotation are preserved. Defaults are unchanged. (#39)
+
 ## 0.12.0 — 2026-11-24
 
 ### Added
