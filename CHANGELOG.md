@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 — 2026-11-24
+
+### Added
+
+- The opt-in `decorator` category removes one decorator at a time from
+  functions, async functions, or classes. Each stacked decorator has its
+  own mutant at its expression's starting line. Defaults are unchanged. (#37)
+
 ## 0.11.3 — 2026-11-24
 
 ### Fixed
