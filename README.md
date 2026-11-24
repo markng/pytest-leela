@@ -158,6 +158,7 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 | `unary` | unary `-` `+` `not` | on |
 | `return` | return values (`True`/`False`, `None`, literals, expressions) | on |
 | `bitwise` | `&` `\|` `^` `<<` `>>` | off |
+| `assignment` | replace the right-hand side of a simple name assignment with `None` | off |
 | `augmented_assign` | `+=` `-=` `*=` etc. | off |
 | `ternary` | `x if cond else y` branch swaps | off |
 | `control_flow` | `break` / `continue` swaps | off |
@@ -168,6 +169,14 @@ Add `"decorator"` to your operator list (or use `"all"`) to enable decorator rem
 For a stack like `@wrap` followed by `@suffix("!")`, Leela generates two separate
 mutants. Each removes one decorator expression, leaving the other in place. In
 `--diff` mode the decorator expression's starting line must be changed.
+
+Add `"assignment"` to your operator list (or use `"all"`) to enable assignment
+RHS replacement. It changes `name = expression` or `name: Type = expression` to
+assign `None` without evaluating `expression`, preserving the name and any
+annotation. It skips literal `None`, annotation-only declarations, chained or
+unpacking assignments, attribute or subscript targets, augmented assignments,
+and assignment expressions. In `--diff` mode the RHS expression's starting line
+must be changed.
 
 ### `fail_on_error`
 

@@ -51,6 +51,19 @@ _UNARYOP_NAMES: dict[type, str] = {
 }
 
 
+def eligible_assignment_rhs(node: ast.Assign | ast.AnnAssign) -> ast.expr | None:
+    """Return a non-None initializer for a single name binding."""
+    match node:
+        case ast.Assign(targets=[ast.Name()], value=value) | ast.AnnAssign(
+            target=ast.Name(), value=value
+        ):
+            if value is not None and not (
+                isinstance(value, ast.Constant) and value.value is None
+            ):
+                return value
+    return None
+
+
 class _MutationPointCollector(ast.NodeVisitor):
     """Walk an AST and collect all mutable nodes."""
 
@@ -123,6 +136,24 @@ class _MutationPointCollector(ast.NodeVisitor):
                 )
             )
         self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign | ast.AnnAssign) -> None:
+        rhs = eligible_assignment_rhs(node)
+        if rhs is not None:
+            self.points.append(
+                MutationPoint(
+                    file_path=self.file_path,
+                    module_name=self.module_name,
+                    lineno=rhs.lineno,
+                    col_offset=rhs.col_offset,
+                    node_type=type(node).__name__,
+                    original_op="assignment",
+                    inferred_type=None,
+                )
+            )
+        self.generic_visit(node)
+
+    visit_AnnAssign = visit_Assign
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         op_name = _BINOP_NAMES.get(type(node.op))

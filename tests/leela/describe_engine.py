@@ -539,7 +539,7 @@ def describe_Engine_mutation_progress():
 
     def it_reports_zero_without_starting_baseline_or_a_mutant(tmp_path, monkeypatch):
         target = tmp_path / "empty_target.py"
-        target.write_text("name = 'no mutation points'\n")
+        target.write_text("name = None\n")
         monkeypatch.chdir(tmp_path)
         events: list[MutationProgress] = []
         timings: list[MutantTiming] = []
@@ -1085,7 +1085,7 @@ def describe_Engine_run_baseline():
 
     def it_skips_the_baseline_when_there_are_no_mutants(tmp_path, monkeypatch):
         target = tmp_path / "bl_empty.py"
-        target.write_text("X = 1\n")
+        target.write_text("X = None\n")
         monkeypatch.chdir(tmp_path)
 
         with patch.object(Engine, "_check_baseline") as mock_baseline:
