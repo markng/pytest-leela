@@ -19,6 +19,11 @@ from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import BaselineFailure, Engine
 from pytest_leela.git_diff import changed_files
 from pytest_leela.models import MutantTiming, MutationProgress
+from pytest_leela.mutant_events import (
+    MutantEventsError,
+    open_mutant_events,
+    write_mutant_event,
+)
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
@@ -69,6 +74,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Generate interactive HTML mutation report at PATH",
     )
     group.addoption(
+        "--leela-jsonl",
+        default=None,
+        metavar="PATH",
+        help="Run mutation testing and stream completed mutants to a new JSONL file",
+    )
+    group.addoption(
         "--leela-benchmark",
         action="store_true",
         default=False,
@@ -77,8 +88,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    if config.getoption("leela", default=False) or config.getoption(
-        "leela_html", default=None
+    if (
+        config.getoption("leela", default=False)
+        or config.getoption("leela_html", default=None)
+        or config.getoption("leela_jsonl", default=None) is not None
     ):
         config.pluginmanager.register(LeelaPlugin(config), "leela-plugin")
     elif config.getoption("leela_benchmark", default=False):
@@ -230,7 +243,8 @@ class LeelaPlugin:
 
         # Reuse target files resolved during pytest_sessionstart
         target_files = self._resolve_target_files(session)
-        if not target_files:
+        events_path = self.config.getoption("leela_jsonl", default=None)
+        if not target_files and events_path is None:
             return
 
         # Retrieve coverage map collected during the normal test run
@@ -304,21 +318,31 @@ class LeelaPlugin:
         def report_timing(timing: MutantTiming) -> None:
             timings.append(timing)
             write_progress(f"completed mutant {timing_detail(timing)}")
+            if events is not None:
+                write_mutant_event(events, timing)
 
-        engine = Engine(enabled_categories=enabled_categories)
-        write_progress("finding runnable mutants", leading_newline=True)
         try:
-            with self._outer_django_db_unblocked():
-                result = engine.run(
-                    target_files,
-                    test_node_ids=test_node_ids,
-                    limits=limits,
-                    diff_base=diff_base,
-                    pre_coverage_map=pre_coverage_map,
-                    on_progress=report_progress,
-                    on_mutant_timing=report_timing,
-                )
-        except BaselineFailure as exc:
+            with open_mutant_events(events_path) as events:
+                if not target_files:
+                    return
+                html_path = self.config.getoption("leela_html", default=None)
+                if events_path is not None and html_path is not None:
+                    html_file = Path(html_path)
+                    if html_file.exists() and html_file.samefile(events_path):
+                        raise MutantEventsError("JSONL and HTML outputs must use different files")
+                engine = Engine(enabled_categories=enabled_categories)
+                write_progress("finding runnable mutants", leading_newline=True)
+                with self._outer_django_db_unblocked():
+                    result = engine.run(
+                        target_files,
+                        test_node_ids=test_node_ids,
+                        limits=limits,
+                        diff_base=diff_base,
+                        pre_coverage_map=pre_coverage_map,
+                        on_progress=report_progress,
+                        on_mutant_timing=report_timing,
+                    )
+        except (BaselineFailure, MutantEventsError) as exc:
             message = f"\nleela: aborted: {exc}\n"
             if tw:
                 tw.write(message)
@@ -339,7 +363,6 @@ class LeelaPlugin:
         else:
             print(report)
 
-        html_path = self.config.getoption("leela_html", default=None)
         if html_path is not None:
             from pytest_leela.html_report import generate_html_report
 
