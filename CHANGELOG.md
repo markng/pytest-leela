@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 — 2026-11-24
+
+### Added
+
+- Optional HTML reports show each mutant's full runner wall time alongside
+  the existing inner elapsed time. The new value includes control and
+  confirmation and matches the JSON Lines measurement. (#45)
+
 ## 0.15.0 — 2026-11-24
 
 ### Added
