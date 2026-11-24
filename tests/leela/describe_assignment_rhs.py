@@ -1,4 +1,6 @@
 import ast
+from inspect import get_annotations
+from types import ModuleType
 
 import pytest
 
@@ -66,12 +68,12 @@ def test_replaces_only_the_targeted_rhs_and_preserves_its_location(point, expect
         ast.copy_location(ast.Constant(value=None), ast.parse(source).body[index].value),
         include_attributes=True,
     )
-    namespace = {}
-    exec(compile(tree, "subject.py", "exec"), namespace)
-    assert (namespace["shade"], namespace["size"]) == (
+    module = ModuleType("subject")
+    exec(compile(tree, "subject.py", "exec"), vars(module))
+    assert (module.shade, module.size) == (
         ("blue", None) if index else (None, "small")
     )
-    assert namespace["__annotations__"] == {"size": str}
+    assert get_annotations(module) == {"size": str}
 
 
 @pytest.mark.parametrize(("source", "point", "replacement"), [
