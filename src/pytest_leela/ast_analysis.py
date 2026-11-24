@@ -140,6 +140,26 @@ class _MutationPointCollector(ast.NodeVisitor):
             )
         self.generic_visit(node)
 
+    def visit_FunctionDef(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+    ) -> None:
+        for decorator in node.decorator_list:
+            self.points.append(
+                MutationPoint(
+                    file_path=self.file_path,
+                    module_name=self.module_name,
+                    lineno=decorator.lineno,
+                    col_offset=decorator.col_offset,
+                    node_type="Decorator",
+                    original_op="decorator",
+                    inferred_type=None,
+                )
+            )
+        self.generic_visit(node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+    visit_ClassDef = visit_FunctionDef
+
     def visit_If(self, node: ast.If) -> None:
         if isinstance(node.test, (ast.Name, ast.Attribute, ast.Call)):
             self.points.append(

@@ -4,6 +4,23 @@ from pytest_leela.ast_analysis import find_mutation_points
 
 
 def describe_find_mutation_points():
+    def it_collects_each_decorator_expression_at_its_own_location():
+        source = (
+            "@wrap\n@factory()\ndef f():\n"
+            "    @wrap\n    def nested(): pass\n    return 1\n\n"
+            "@helpers.wrap\nasync def g(): pass\n\n"
+            "@factory()\n@skip  # leela: skip\nclass C: pass\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.original_op, p.file_path, p.module_name)
+            for p in points if p.node_type == "Decorator"
+        ] == [
+            (line, col, "decorator", "src/demo.py", "demo")
+            for line, col in ((1, 1), (2, 1), (4, 5), (8, 1), (11, 1))
+        ]
+        assert any(p.node_type == "Return" and p.lineno == 6 for p in points)
+
     def it_finds_only_bare_if_roots_and_still_visits_their_children():
         source = (
             "if flag:\n"

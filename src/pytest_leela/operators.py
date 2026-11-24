@@ -52,6 +52,8 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     ("UnaryOp", "Not"): ["_remove"],  # Remove the `not`
     # Bare if predicates
     ("If", "condition"): ["negate_condition"],
+    # Decorators
+    ("Decorator", "decorator"): ["remove_decorator"],
     # IfExp (ternary)
     ("IfExp", "ternary"): ["swap_branches", "always_true", "always_false"],
     # Break/Continue
@@ -241,6 +243,9 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
     },
     "ternary": {
         ("IfExp", "ternary"),
+    },
+    "decorator": {
+        ("Decorator", "decorator"),
     },
     "control_flow": {
         ("Break", "break"),

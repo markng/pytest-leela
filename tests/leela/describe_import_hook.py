@@ -47,6 +47,36 @@ def _make_mutant(
 
 
 def describe_MutantApplier():
+    @pytest.mark.parametrize("definition", ["def f():", "async def f():", "class f:"])
+    @pytest.mark.parametrize("index", [0, 1, 2])
+    def it_removes_only_the_decorator_at_the_selected_coordinates(definition, index):
+        decorators = ["@wrap", "@factory()", "@wrap"]
+        tail = [definition, "    pass", "", "@wrap", "def other(): pass"]
+        source = "\n".join(decorators + tail)
+        mutant = _make_mutant(
+            lineno=index + 1, col_offset=1, node_type="Decorator",
+            original_op="decorator", replacement_op="remove_decorator",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        expected = "\n".join(decorators[:index] + decorators[index + 1:] + tail)
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse(expected))
+
+    @pytest.mark.parametrize("mismatch", [
+        {"lineno": 2}, {"col_offset": 0}, {"node_type": "Call"},
+        {"replacement_op": "unknown"},
+    ])
+    def it_leaves_decorators_unchanged_for_a_nonmatching_mutant(mismatch):
+        source = "@wrap\ndef f(): pass\n"
+        fields = dict(
+            col_offset=1, node_type="Decorator", original_op="decorator",
+            replacement_op="remove_decorator",
+        )
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
     @pytest.mark.parametrize("result", [[], [1]])
     def it_negates_one_if_predicate_and_evaluates_it_once(result):
         source = (

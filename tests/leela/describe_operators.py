@@ -558,6 +558,16 @@ def describe_mutations_for_with_allowed_keys():
         keys = build_allowed_keys(("unary", "control_flow"))
         assert mutations_for(point, use_types=True, allowed_keys=keys) == []
 
+    def it_enables_decorator_removal_only_when_selected():
+        point = _make_point(node_type="Decorator", original_op="decorator")
+        assert mutations_for(point, allowed_keys=build_allowed_keys(("decorator",))) == [
+            "remove_decorator"
+        ]
+        assert mutations_for(point, allowed_keys=build_allowed_keys(ALL_OPERATORS)) == [
+            "remove_decorator"
+        ]
+        assert mutations_for(point, allowed_keys=build_allowed_keys(DEFAULT_OPERATORS)) == []
+
     def it_filters_unary_operators():
         """Unary operators work when 'unary' keys are passed."""
         point = _make_point(node_type="UnaryOp", original_op="Not")
