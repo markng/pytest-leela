@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.18.0 — 2026-11-24
+
+### Added
+
+- The Boolean operator category negates bare `while` predicates (names,
+  attributes, and calls), preserving the loop body, `else`, and
+  per-check evaluation. Existing timeout behavior is unchanged. (#49)
+
 ## 0.17.0 — 2026-11-24
 
 ### Added
