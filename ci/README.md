@@ -33,7 +33,10 @@ use a fresh complete workflow attempt.
 
 Artifact names are scoped to Python and current run attempt; downloads use only
 the current run. Dependency pins are reconstructed from a validated plan,
-not executed from an unchecked artifact requirements file. Runtime evidence
+not executed from an unchecked artifact requirements file. Workers/reference
+and aggregate install them into a fresh per-job venv (no system-site-packages),
+so unrelated image-preinstalled Python extras cannot silently enter the run.
+Runtime evidence
 requires byte-identical Python executable AND libpython, Python build/ABI and
 libc ABI, GIL/hash seed, exact package versions/code fingerprint and candidate
 library bytes. A missing binary/ABI identity fails explicitly. Opaque runner

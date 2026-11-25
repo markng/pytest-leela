@@ -145,8 +145,10 @@ jobs:
     - name: Install exact plan dependencies
       run: |
         python -m ci.mutations dependencies --plan _ci/plan/plan.json --output _ci/checked-requirements.txt
-        pip install -r _ci/checked-requirements.txt
-        pip install --no-deps -e .
+        python -m venv "$RUNNER_TEMP/leela-execution"
+        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install -r _ci/checked-requirements.txt
+        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install --no-deps -e .
+        echo "$RUNNER_TEMP/leela-execution/bin" >> "$GITHUB_PATH"
     - name: Run assigned full-plan mutants, inner pytest serial
       run: python -m ci.mutations run --plan _ci/plan/plan.json --index ${{ matrix.shard }} --output _ci/result/result.json
     - uses: actions/upload-artifact@v4
@@ -185,8 +187,10 @@ jobs:
     - name: Install exact plan dependencies
       run: |
         python -m ci.mutations dependencies --plan _ci/plan/plan.json --output _ci/checked-requirements.txt
-        pip install -r _ci/checked-requirements.txt
-        pip install --no-deps -e .
+        python -m venv "$RUNNER_TEMP/leela-execution"
+        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install -r _ci/checked-requirements.txt
+        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install --no-deps -e .
+        echo "$RUNNER_TEMP/leela-execution/bin" >> "$GITHUB_PATH"
     - name: Run actual same-plan serial reference
       run: python -m ci.mutations run --plan _ci/plan/plan.json --index 0 --count 1 --output _ci/serial/result.json
     - uses: actions/upload-artifact@v4
@@ -244,8 +248,10 @@ jobs:
     - name: Install exact plan dependencies
       run: |
         python -m ci.mutations dependencies --plan _ci/plan/plan.json --output _ci/checked-requirements.txt
-        pip install -r _ci/checked-requirements.txt
-        pip install --no-deps -e .
+        python -m venv "$RUNNER_TEMP/leela-execution"
+        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install -r _ci/checked-requirements.txt
+        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install --no-deps -e .
+        echo "$RUNNER_TEMP/leela-execution/bin" >> "$GITHUB_PATH"
     - name: Fail-closed exact cover and requested serial parity
       run: |
         if [ "$LEELA_SERIAL_PARITY" = true ]; then
