@@ -16,6 +16,7 @@ import re
 import statistics
 import subprocess
 import sys
+import sysconfig
 import time
 
 from ci.mutation_protocol import PLAN, RESULT, aggregate, balanced, bind, canonical, digest, load, require, validate_plan
@@ -53,8 +54,23 @@ def context():
     return {"sha": sha, "tree": git("rev-parse", "HEAD^{tree}"), "source_digest": source_digest(), "repository": os.environ.get("GITHUB_REPOSITORY", "local"), "run_id": os.environ.get("GITHUB_RUN_ID", "local"), "attempt": os.environ.get("GITHUB_RUN_ATTEMPT", "1"), "python": minor, "fixture": fixture, "serial_required": os.environ.get("LEELA_SERIAL_PARITY") == "true"}
 
 
+def environment():
+    # Provisioning labels are evidence, not executable-runtime identities.
+    # Keep differences visible; do not call them controlled OS/CPU conditions.
+    return {"image_os": os.environ.get("ImageOS"), "image_version": os.environ.get("ImageVersion"), "runner_arch": os.environ.get("RUNNER_ARCH"), "kernel": platform.release()}
+
+
 def runtime():
     import pytest_leela
+    library = sysconfig.get_config_var("LDLIBRARY")
+    directory = sysconfig.get_config_var("LIBDIR")
+    require(isinstance(library, str) and isinstance(directory, str), "shared Python runtime identity unavailable")
+    libpython = Path(directory) / library
+    require(libpython.is_file(), "shared Python runtime binary unavailable")
+    executable_sha = hashlib.sha256(Path(sys.executable).resolve().read_bytes()).hexdigest()
+    libpython_sha = hashlib.sha256(libpython.resolve().read_bytes()).hexdigest()
+    soabi = sysconfig.get_config_var("SOABI")
+    require(isinstance(soabi, str) and bool(soabi), "Python ABI identity unavailable")
     versions = {d.metadata["Name"].lower().replace("_", "-"): d.version for d in importlib.metadata.distributions()}
     # Compare executable package content, not absolute editable paths or pyc.
     code = {}
@@ -64,7 +80,7 @@ def runtime():
                 path = Path(dist.locate_file(f))
                 if path.is_file(): code[str(f)] = hashlib.sha256(path.read_bytes()).hexdigest()
     source = Path(pytest_leela.__file__).parent
-    return {"image_os": os.environ.get("ImageOS"), "image_version": os.environ.get("ImageVersion"), "runner_arch": os.environ.get("RUNNER_ARCH"), "gil_enabled": getattr(sys, "_is_gil_enabled", lambda: True)(), "python": sys.version, "platform": platform.system(), "machine": platform.machine(), "cache_tag": sys.implementation.cache_tag, "hash_seed": os.environ.get("PYTHONHASHSEED"), "packages": versions, "package_code": digest(code), "leela_code": digest({p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in source.glob("*.py")})}
+    return {"schema": "leela.python-runtime/v2", "python_executable_sha256": executable_sha, "libpython_sha256": libpython_sha, "soabi": soabi, "libc_abi": list(platform.libc_ver()), "gil_enabled": getattr(sys, "_is_gil_enabled", lambda: True)(), "python": sys.version, "platform": platform.system(), "machine": platform.machine(), "cache_tag": sys.implementation.cache_tag, "hash_seed": os.environ.get("PYTHONHASHSEED"), "packages": versions, "package_code": digest(code), "leela_code": digest({p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in source.glob("*.py")})}
 
 
 def targets(args):
@@ -145,7 +161,7 @@ def plan_command(args):
     file_priors = seed.get("file_weights", {}).get(context()["python"], {})
     weights = {digest(row["site"]): prior.get(digest(row["site"]), {}).get("seconds", statistics.median(by_file[row["site"]["file"]]) if row["site"]["file"] in by_file else file_priors.get(row["site"]["file"], 1.0)) for row in rows}
     shards, predicted = balanced(rows, weights)
-    value = bind({"schema": PLAN, "context": context(), "runtime": runtime(), "targets": files, "shard_count": 2, "mutants": rows, "shards": shards, "predicted_seconds": predicted, "weight_matches": sum(digest(r["site"]) in prior for r in rows), "weight_provenance": seed.get("provenance"), "collected_tests": ids, "pruned": prepared.total_pruned, "outer_tests_passed": True, "outer_coverage_seconds": outer_coverage_seconds, "prepare_seconds": time.monotonic() - ENTRY_START})
+    value = bind({"schema": PLAN, "context": context(), "runtime": runtime(), "environment": environment(), "targets": files, "shard_count": 2, "mutants": rows, "shards": shards, "predicted_seconds": predicted, "weight_matches": sum(digest(r["site"]) in prior for r in rows), "weight_provenance": seed.get("provenance"), "collected_tests": ids, "pruned": prepared.total_pruned, "outer_tests_passed": True, "outer_coverage_seconds": outer_coverage_seconds, "prepare_seconds": time.monotonic() - ENTRY_START})
     validate_plan(value, context()); inventory_check(value, files)
     out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
     atomic(out / "plan.json", value)
@@ -169,7 +185,10 @@ def execute_command(args):
     from pytest_leela.models import MutationPoint, Mutant
     from pytest_leela.runner import run_baseline, run_tests_for_mutant, precompute_user_modules, ProjectModuleScope
     plan = load(Path(args.plan).read_text()); validate_plan(plan, context())
-    require(runtime() == plan["runtime"], "worker dependency/runtime differs from plan")
+    observed = runtime()
+    differences = sorted(k for k in set(observed) | set(plan["runtime"]) if observed.get(k) != plan["runtime"].get(k))
+    atomic(Path(args.output).with_name("runtime-observation.json"), {"phase": "prebaseline-runtime-check", "complete": False, "plan_id": plan["plan_id"], "context": context(), "expected": plan["runtime"], "observed": observed, "different_runtime_fields": differences, "plan_environment": plan.get("environment"), "environment": environment()})
+    require(not differences, "worker executable/dependency runtime differs from plan: " + ", ".join(differences))
     inventory_check(plan, targets(args))
     require(args.count in (1, 2) and args.index in range(args.count), "invalid worker count/index")
     assigned = list(range(len(plan["mutants"]))) if args.count == 1 else plan["shards"][args.index]
@@ -193,7 +212,7 @@ def execute_command(args):
         rows.append({"id": raw["id"], "site": raw["site"], "selected_tests": raw["tests"], "actual_tests": result.test_ids_run, "tests_run": result.tests_run, "reported_inner_seconds": result.time_seconds, "control_confirmation_counts": None, "status": result.status, "timeout": "<timeout>" in result.killing_tests, "error": result.error, "killing_tests": result.killing_tests, "runner_seconds": time.monotonic() - start, "start_ns": utc, "end_ns": time.time_ns()})
         print(json.dumps({"phase": "mutant", **rows[-1]}), flush=True)
     require(source_digest() == plan["context"]["source_digest"], "source changed during execution")
-    value = {"schema": RESULT, "complete": True, "context": context(), "plan_id": plan["plan_id"], "runtime": runtime(), "shard_index": args.index, "shard_count": args.count, "baseline_passed": True, "baseline_tests_run": base.collector.total, "baseline_seconds": base.elapsed, "start_ns": ENTRY_UTC, "end_ns": time.time_ns(), "wall_seconds": time.monotonic() - ENTRY_START, "results": rows}
+    value = {"schema": RESULT, "complete": True, "context": context(), "plan_id": plan["plan_id"], "runtime": runtime(), "environment": environment(), "shard_index": args.index, "shard_count": args.count, "baseline_passed": True, "baseline_tests_run": base.collector.total, "baseline_seconds": base.elapsed, "start_ns": ENTRY_UTC, "end_ns": time.time_ns(), "wall_seconds": time.monotonic() - ENTRY_START, "results": rows}
     atomic(Path(args.output), value)
     return int(any(r["status"] != "killed" or r["timeout"] or r["error"] is not None for r in rows))
 

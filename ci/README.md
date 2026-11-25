@@ -34,8 +34,15 @@ use a fresh complete workflow attempt.
 Artifact names are scoped to Python and current run attempt; downloads use only
 the current run. Dependency pins are reconstructed from a validated plan,
 not executed from an unchecked artifact requirements file. Runtime evidence
-includes Python build, GIL state, image build, exact package versions/code
-fingerprint and candidate library bytes. Normal quality checks still run.
+requires byte-identical Python executable AND libpython, Python build/ABI and
+libc ABI, GIL/hash seed, exact package versions/code fingerprint and candidate
+library bytes. A missing binary/ABI identity fails explicitly. Opaque runner
+image/kernel labels are separately retained environment provenance, not an
+executable identity: image differences are visible in aggregate evidence and
+are NOT a claim of controlled OS/CPU performance. Every executable/dependency
+drift still refuses execution. A prebaseline runtime-observation JSON retains
+expected/observed fields on failure, marked complete:false, never a result.
+Normal quality checks still run.
 
 ## First Ubuntu locked proof
 

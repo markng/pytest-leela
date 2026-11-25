@@ -100,6 +100,12 @@ class TestProtocol:
         p, c, b, s = fixture(); b[0]["baseline_tests_run"] = 0
         with pytest.raises(ValueError): aggregate(p, b, c)
 
+    def test_environment_provenance_differs_but_runtime_drift_still_refuses(self):
+        p, c, b, s = fixture(); b[0]["environment"] = {"image_version": "other"}
+        assert aggregate(p, b, c, s)["environment_differences_from_plan"] == [0]
+        b[0]["runtime"] = {"python_executable_sha256": "foreign"}
+        with pytest.raises(ValueError): aggregate(p, b, c, s)
+
     def test_balanced_prior_site_weights_not_id_parity(self):
         p, _, _, _ = fixture(); weights = {digest(r["site"]): w for r, w in zip(p["mutants"], [8, 7, 2, 1])}
         bins, totals = balanced(p["mutants"], weights)
