@@ -110,17 +110,27 @@ def inventory_check(plan, files):
 
 def plan_command(args):
     import pytest
+    from pytest_leela.coverage_tracker import CoveragePlugin
     from pytest_leela.engine import Engine
     from pytest_leela.config import load_config
     files = targets(args); require(bool(files), "no full mutation targets")
+    coverage = CoveragePlugin(set(files))
     class Collected:
-        def pytest_collection_finish(self, session): self.ids = [i.nodeid for i in session.items]
+        def pytest_sessionstart(self, session):
+            session.config.pluginmanager.register(coverage, "leela-ci-plan-coverage")
+        def pytest_sessionfinish(self, session, exitstatus):
+            self.ids = [i.nodeid for i in session.items]
     collector = Collected(); selection_start = time.monotonic()
-    code = pytest.main(["--collect-only", "-q", "-p", "no:leela", "-p", "no:leela-benchmark"], plugins=[collector])
-    require(code == 0 and bool(getattr(collector, "ids", None)), "test collection failed/empty")
-    ids = collector.ids; selection_seconds = time.monotonic() - selection_start
+    # Match canonical --leela: coverage comes from a real passing OUTER
+    # session, then Engine.prepare cleans fixture imports before its baseline.
+    # A collect-only session followed by a second coverage run retained temp
+    # imports across coverage->baseline and failed the full unmutated gate.
+    code = pytest.main(["-q", "-p", "no:leela", "-p", "no:leela-benchmark"], plugins=[collector])
+    require(code == 0 and bool(getattr(collector, "ids", None)), "unmutated outer coverage session failed/empty")
+    ids = collector.ids; outer_coverage_seconds = time.monotonic() - selection_start
+    coverage.coverage_map.test_times = coverage.test_times
     engine = Engine(enabled_categories=load_config(Path.cwd()).operators)
-    prepared = engine.prepare(files, test_node_ids=ids)
+    prepared = engine.prepare(files, test_node_ids=ids, pre_coverage_map=coverage.coverage_map)
     rows = []
     for mutant, tests in zip(prepared.mutants, prepared.test_ids):
         require(bool(tests), "native test selection missing")
@@ -135,7 +145,7 @@ def plan_command(args):
     file_priors = seed.get("file_weights", {}).get(context()["python"], {})
     weights = {digest(row["site"]): prior.get(digest(row["site"]), {}).get("seconds", statistics.median(by_file[row["site"]["file"]]) if row["site"]["file"] in by_file else file_priors.get(row["site"]["file"], 1.0)) for row in rows}
     shards, predicted = balanced(rows, weights)
-    value = bind({"schema": PLAN, "context": context(), "runtime": runtime(), "targets": files, "shard_count": 2, "mutants": rows, "shards": shards, "predicted_seconds": predicted, "weight_matches": sum(digest(r["site"]) in prior for r in rows), "weight_provenance": seed.get("provenance"), "collected_tests": ids, "pruned": prepared.total_pruned, "selection_seconds": selection_seconds, "prepare_seconds": time.monotonic() - ENTRY_START})
+    value = bind({"schema": PLAN, "context": context(), "runtime": runtime(), "targets": files, "shard_count": 2, "mutants": rows, "shards": shards, "predicted_seconds": predicted, "weight_matches": sum(digest(r["site"]) in prior for r in rows), "weight_provenance": seed.get("provenance"), "collected_tests": ids, "pruned": prepared.total_pruned, "outer_tests_passed": True, "outer_coverage_seconds": outer_coverage_seconds, "prepare_seconds": time.monotonic() - ENTRY_START})
     validate_plan(value, context()); inventory_check(value, files)
     out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
     atomic(out / "plan.json", value)
