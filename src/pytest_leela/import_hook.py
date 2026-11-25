@@ -150,6 +150,18 @@ class MutantApplier(ast.NodeTransformer):
     visit_Assert = _visit_bare_condition
     visit_While = _visit_bare_condition
 
+    def visit_comprehension(self, node: ast.comprehension) -> ast.AST:
+        if (
+            self.mutant.point.node_type == "ComprehensionFilter"
+            and self.mutant.replacement_op == "negate_condition"
+        ):
+            for index, test in enumerate(node.ifs):
+                if self._matches(test) and is_bare_predicate(test):
+                    negated = ast.UnaryOp(op=ast.Not(), operand=test)
+                    node.ifs[index] = ast.copy_location(negated, test)
+                    self.applied = True
+        return self.generic_visit(node)
+
     def visit_IfExp(self, node: ast.IfExp) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "IfExp":
             replacement = self.mutant.replacement_op

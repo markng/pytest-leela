@@ -179,7 +179,7 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 |---|---|---|
 | `arithmetic` | `+` `-` `*` `/` `//` `%` `**` | on |
 | `comparison` | `==` `!=` `<` `<=` `>` `>=` `is` `in` and negations | on |
-| `boolean` | `and` / `or`, and negation of bare `if` / `elif` / `assert` / `while` predicates (`flag`, `obj.flag`, `check()`) | on |
+| `boolean` | `and` / `or`, and negation of bare `if` / `elif` / `assert` / `while` predicates and comprehension filters (`flag`, `obj.flag`, `check()`) | on |
 | `unary` | unary `-` `+` `not` | on |
 | `return` | return values (`True`/`False`, `None`, literals, expressions) | on |
 | `bitwise` | `&` `\|` `^` `<<` `>>` | off |
@@ -201,6 +201,13 @@ its body and any `else` intact. It still checks the predicate once per condition
 evaluation. A negated loop can fail to terminate; Leela's in-process timeout
 checks between tests and cannot interrupt a stuck test. In `--diff` mode this
 mutation is selected by the line containing the `while` keyword.
+
+Bare filter negation applies to list, set, and dict comprehensions and generator
+expressions. For example, `[x for x in items if ready(x) if x.active]` can become
+`[x for x in items if not ready(x) if x.active]`. Each mutant changes one filter
+and leaves the other filters and `for` clauses intact. Compound filters keep
+their existing operator mutations. In `--diff` mode, the filter expression's
+starting line must change, which can differ from the line containing `if`.
 
 Add `"decorator"` to your operator list (or use `"all"`) to enable decorator removal.
 For a stack like `@wrap` followed by `@suffix("!")`, Leela generates two separate

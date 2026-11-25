@@ -291,6 +291,54 @@ def describe_bare_while_predicates():
         ])
 
 
+def describe_bare_comprehension_filters():
+    def it_reports_weak_survivors_and_adequate_kills_for_all_four_forms(pytester):
+        pytester.makepyfile(calc="""
+            def as_list(values):
+                yield from [item for item in values if item]
+
+            def as_set(values):
+                yield from {item for item in values if item.enabled}
+
+            def as_dict(values, check):
+                yield from {item: item for item in values if check(item)}
+
+            def as_generator(values):
+                yield from (item for item in values if item)
+        """)
+        exercise = textwrap.dedent('''\
+            from collections import namedtuple
+            from calc import as_list, as_set, as_dict, as_generator
+
+            Item = namedtuple('Item', 'enabled')
+
+            def test_filters():
+                items = [Item(True), Item(False)]
+                listed = list(as_list([0, 1]))
+                unique = list(as_set(items))
+                keys = list(as_dict([0, 1], bool))
+                generated = list(as_generator([0, 1]))
+        ''')
+        test = pytester.makepyfile(test_calc=exercise)
+        weak = _leela(pytester)
+        assert weak.ret == pytest.ExitCode.TESTS_FAILED
+        weak.assert_outcomes(passed=1)
+        weak.stdout.fnmatch_lines([
+            *(f"*line {line}:*condition*negate_condition*SURVIVED*" for line in (2, 5, 8, 11)),
+            "Overall: 0/4 killed (0.0%)*",
+        ])
+        test.write_text(exercise + "    assert (listed, unique, keys, generated) == "
+                        "([1], [Item(True)], [1], [1])\n", encoding="utf-8")
+        strong = _leela(pytester, "-v")
+        assert strong.ret == pytest.ExitCode.OK
+        strong.assert_outcomes(passed=1)
+        strong.stdout.fnmatch_lines([
+            *(f"*calc.py*:{line}:{column} condition -> negate_condition: killed *"
+              for line, column in ((2, 43), (5, 43), (8, 49), (11, 43))),
+            "Overall: 4/4 killed (100.0%)*",
+        ])
+
+
 def describe_import_breaking_mutant():
     def it_counts_a_target_that_raises_on_import_as_killed(pytester):
         """The judge's probe: every test errors at collection, the suite is red."""
