@@ -1,268 +1,54 @@
-# Full mutation fan-out; the two original build check names remain final gates.
-name: Python package
-
+# TEMPORARY DIAGNOSTIC BRANCH ONLY. Not a merge/release/full-CI candidate.
+# PR52 remains frozen at3ec; this existing workflow ID runs one bounded probe.
+name: T44 bounded native 776 diagnostic
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
   workflow_dispatch:
-    inputs:
-      serial_parity:
-        description: Compare both shards with a real exact-plan serial execution
-        type: boolean
-        default: true
-
+permissions:
+  contents: read
+  actions: read
 jobs:
-  lockfile:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.13"
-    - name: Check uv.lock matches pyproject.toml
-      run: |
-        python -m pip install --upgrade pip "uv==0.11.19"
-        uv lock --check
-
-  pytest-floor:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: "3.12"
-    - name: Install the oldest supported pytest
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,django]" "pytest==7.0.0"
-    - name: Test with pytest
-      run: |
-        # Every warning is an error except two that pytest 7.0 itself raises:
-        # its helpconfig hookwrapper warns when a conftest fails to import
-        # (several tests do that on purpose), and on Python 3.12 its assertion
-        # rewriter uses ast.Str/ast.Num, which warn whenever a test module has
-        # no cached rewrite yet (every module on a fresh checkout).
-        pytest -W error -W "ignore::pluggy.PluggyTeardownRaisedWarning" \
-          -W "ignore::DeprecationWarning:_pytest.assertion.rewrite"
-
-  prepare:
-    name: mutation-plan (${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.13", "3.14"]
-    env:
-      LEELA_CI_PYTHON: ${{ matrix.python-version }}
-      PYTHONHASHSEED: '0'
-      LEELA_SERIAL_PARITY: ${{ github.event_name == 'workflow_dispatch' && inputs.serial_parity && 'true' || 'false' }}
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Bounded locked Ubuntu pytest and native mutation smoke
-      timeout-minutes: 5
-      env:
-        UV_PROJECT_ENVIRONMENT: ${{ runner.temp }}/leela-locked-smoke
-        UV_CACHE_DIR: ${{ runner.temp }}/leela-uv-cache
-        UV_NO_CONFIG: '1'
-        LEELA_CI_EVIDENCE_DIR: ${{ github.workspace }}/_ci/locked-smoke/native
-      run: |
-        set -euo pipefail
-        mkdir -p _ci/locked-smoke
-        python -m venv "$RUNNER_TEMP/leela-uv-tool"
-        "$RUNNER_TEMP/leela-uv-tool/bin/python" -m pip install "uv==0.11.19"
-        UV="$RUNNER_TEMP/leela-uv-tool/bin/uv"
-        "$UV" --version | tee _ci/locked-smoke/uv-version.txt
-        sha256sum uv.lock | tee _ci/locked-smoke/lock-sha256.txt
-        "$UV" sync --locked --python "$(command -v python)" --extra dev --extra django
-        "$UV" run --locked --python "$(command -v python)" --extra dev --extra django python -c 'import sys,pytest,json; print(json.dumps({"python":sys.version,"executable":sys.executable,"pytest":pytest.__version__,"pytest_file":pytest.__file__}))' | tee _ci/locked-smoke/runtime.json
-        "$UV" run --locked --python "$(command -v python)" --extra dev --extra django pytest tests/ci/test_ci_entrypoint.py -q | tee _ci/locked-smoke/pytest.log
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: leela-locked-smoke-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/locked-smoke/
-        if-no-files-found: error
-        retention-days: 7
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,django]"
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-    - name: Type-check with mypy
-      run: mypy
-    - name: Test with pytest
-      run: pytest
-    - name: Freeze full native mutation plan and baseline
-      run: python -m ci.mutations plan --seed ci/mutation-runtimes.json --output _ci/plan
-    - uses: actions/upload-artifact@v4
-      with:
-        name: leela-plan-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/plan/
-        if-no-files-found: error
-        retention-days: 7
-
-  mutations:
-    name: mutation (${{ matrix.python-version }}, ${{ matrix.shard }})
-    needs: prepare
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        python-version: ["3.13", "3.14"]
-        shard: [0, 1]
-    env:
-      LEELA_CI_PYTHON: ${{ matrix.python-version }}
-      PYTHONHASHSEED: '0'
-      LEELA_SERIAL_PARITY: ${{ github.event_name == 'workflow_dispatch' && inputs.serial_parity && 'true' || 'false' }}
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - uses: actions/download-artifact@v4
-      with:
-        name: leela-plan-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/plan
-    - name: Install exact plan dependencies
-      run: |
-        python -m ci.mutations dependencies --plan _ci/plan/plan.json --output _ci/checked-requirements.txt
-        python -m venv "$RUNNER_TEMP/leela-execution"
-        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install -r _ci/checked-requirements.txt
-        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install --no-deps -e .
-        echo "$RUNNER_TEMP/leela-execution/bin" >> "$GITHUB_PATH"
-    - name: Run assigned full-plan mutants, inner pytest serial
-      run: python -m ci.mutations run --plan _ci/plan/plan.json --index ${{ matrix.shard }} --output _ci/result/result.json
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: leela-shard-${{ matrix.python-version }}-${{ matrix.shard }}-${{ github.run_attempt }}
-        path: _ci/result/
-        if-no-files-found: error
-        retention-days: 7
-
-  serial:
-    name: mutation-serial (${{ matrix.python-version }})
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.serial_parity }}
-    needs: prepare
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.13", "3.14"]
-    env:
-      LEELA_CI_PYTHON: ${{ matrix.python-version }}
-      PYTHONHASHSEED: '0'
-      LEELA_SERIAL_PARITY: ${{ github.event_name == 'workflow_dispatch' && inputs.serial_parity && 'true' || 'false' }}
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - uses: actions/download-artifact@v4
-      with:
-        name: leela-plan-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/plan
-    - name: Install exact plan dependencies
-      run: |
-        python -m ci.mutations dependencies --plan _ci/plan/plan.json --output _ci/checked-requirements.txt
-        python -m venv "$RUNNER_TEMP/leela-execution"
-        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install -r _ci/checked-requirements.txt
-        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install --no-deps -e .
-        echo "$RUNNER_TEMP/leela-execution/bin" >> "$GITHUB_PATH"
-    - name: Run actual same-plan serial reference
-      run: python -m ci.mutations run --plan _ci/plan/plan.json --index 0 --count 1 --output _ci/serial/result.json
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: leela-serial-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/serial/
-        if-no-files-found: error
-        retention-days: 7
-
-  build:
-    # Explicitly preserve the existing required-check contract.
-    name: build (${{ matrix.python-version }})
-    if: ${{ always() }}
-    needs: [prepare, mutations, serial]
+  diagnostic:
+    name: t44-776-diagnostic-NOT-a-required-check
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.13", "3.14"]
     env:
-      LEELA_CI_PYTHON: ${{ matrix.python-version }}
       PYTHONHASHSEED: '0'
-      LEELA_SERIAL_PARITY: ${{ github.event_name == 'workflow_dispatch' && inputs.serial_parity && 'true' || 'false' }}
     steps:
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-    - uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Refuse unsuccessful prerequisite jobs
-      env:
-        PREPARE: ${{ needs.prepare.result }}
-        MUTATIONS: ${{ needs.mutations.result }}
-        SERIAL: ${{ needs.serial.result }}
-      run: |
-        test "$PREPARE" = success
-        test "$MUTATIONS" = success
-        if [ "$LEELA_SERIAL_PARITY" = true ]; then test "$SERIAL" = success; fi
-    - uses: actions/download-artifact@v4
-      with:
-        name: leela-plan-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/plan
-    - uses: actions/download-artifact@v4
-      with:
-        pattern: leela-shard-${{ matrix.python-version }}-*-${{ github.run_attempt }}
-        path: _ci/shards
-    - uses: actions/download-artifact@v4
-      if: ${{ env.LEELA_SERIAL_PARITY == 'true' }}
-      with:
-        name: leela-serial-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/serial
-    - name: Install exact plan dependencies
-      run: |
-        python -m ci.mutations dependencies --plan _ci/plan/plan.json --output _ci/checked-requirements.txt
-        python -m venv "$RUNNER_TEMP/leela-execution"
-        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install -r _ci/checked-requirements.txt
-        "$RUNNER_TEMP/leela-execution/bin/python" -m pip install --no-deps -e .
-        echo "$RUNNER_TEMP/leela-execution/bin" >> "$GITHUB_PATH"
-    - name: Fail-closed exact cover and requested serial parity
-      run: |
-        if [ "$LEELA_SERIAL_PARITY" = true ]; then
-          python -m ci.mutations aggregate --plan _ci/plan/plan.json --results _ci/shards --serial _ci/serial --output _ci/report/aggregate.json
-        else
-          python -m ci.mutations aggregate --plan _ci/plan/plan.json --results _ci/shards --output _ci/report/aggregate.json
-        fi
-    - uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: leela-aggregate-${{ matrix.python-version }}-${{ github.run_attempt }}
-        path: _ci/report/
-        if-no-files-found: error
-        retention-days: 7
+      - uses: actions/checkout@v4
+        with:
+          ref: 3ec05c436b3db0d129fc182c6f06fd82a07c8c69
+          path: frozen
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: controller
+          sparse-checkout: diagnostics
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.10'
+      - uses: actions/download-artifact@v4
+        with:
+          name: leela-plan-3.14-1
+          run-id: 45560790046
+          github-token: ${{ github.token }}
+          path: origin
+      - name: Validate immutable origin and install exact admitted pins
+        run: |
+          mkdir -p _diag
+          python controller/diagnostics/probe.py pins --plan origin/plan.json --output _diag/requirements.txt
+          python -m venv "$RUNNER_TEMP/t44-776-venv"
+          "$RUNNER_TEMP/t44-776-venv/bin/python" -m pip install -r _diag/requirements.txt
+          "$RUNNER_TEMP/t44-776-venv/bin/python" -m pip install --no-deps -e frozen
+      - name: Single-host isolated 776 replay and phase observation
+        working-directory: frozen
+        run: |
+          "$RUNNER_TEMP/t44-776-venv/bin/python" ../controller/diagnostics/probe.py run --plan ../origin/plan.json --output ../_diag/replay
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: t44-native776-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: _diag/
+          if-no-files-found: error
+          retention-days: 7
