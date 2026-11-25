@@ -8,13 +8,12 @@ import select
 import subprocess
 import sys
 import tempfile
-import unittest
 
 REPO = Path(__file__).resolve().parents[2]
 
 
-class EntryPoint(unittest.TestCase):
-    def test_real_plan_shards_serial_and_aggregate(self):
+class TestEntryPoint:
+    def test_real_plan_shards_serial_and_aggregate(self, request):
         with tempfile.TemporaryDirectory(prefix="leela-ci-entry-") as temporary:
             parent = Path(temporary); root = parent / "source"; root.mkdir()
             (root / "subject.py").write_text("def sign(x: int) -> bool:\n    return x > 0\n")
@@ -29,13 +28,13 @@ class EntryPoint(unittest.TestCase):
             prefix = [sys.executable, "-m", "ci.mutations"]
             def run(*args, ok=True, cwd=root):
                 result = subprocess.run([*prefix, *args], cwd=cwd, env=environment(cwd), capture_output=True, text=True, timeout=45)
-                if ok: self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                else: self.assertNotEqual(result.returncode, 0)
+                if ok: assert result.returncode == 0, result.stdout + result.stderr
+                else: assert result.returncode != 0
                 return result
             run("plan", "--target", "subject.py", "--output", "plan")
             plan_file = root / "plan/plan.json"; plan = json.loads(plan_file.read_text())
-            self.assertGreaterEqual(len(plan["mutants"]), 2)
-            self.assertEqual(set(sum(plan["shards"], [])), set(range(len(plan["mutants"]))))
+            assert len(plan["mutants"]) >= 2
+            assert set(sum(plan["shards"], [])) == set(range(len(plan["mutants"])))
             run("dependencies", "--plan", str(plan_file), "--output", "pins.txt")
             workspaces = []
             for name in ["w0", "w1", "serial"]:
@@ -48,14 +47,14 @@ class EntryPoint(unittest.TestCase):
                 children.append(subprocess.Popen(args, cwd=work, env=environment(work), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
             try:
                 for child in children:
-                    self.assertTrue(select.select([child.stdout], [], [], 45)[0], "fixture did not become ready")
+                    assert select.select([child.stdout], [], [], 45)[0], "fixture did not become ready"
                     ready = child.stdout.readline()
-                    self.assertEqual(json.loads(ready), {"phase": "ready"})
+                    assert json.loads(ready) == {"phase": "ready"}
                 for child in children:
                     child.stdin.write("GO\n"); child.stdin.flush()
                 for child in children:
                     out, err = child.communicate(timeout=45)
-                    self.assertEqual(child.returncode, 0, out + err)
+                    assert child.returncode == 0, out + err
             finally:
                 for child in children:
                     if child.poll() is None: child.kill(); child.wait()
@@ -66,12 +65,12 @@ class EntryPoint(unittest.TestCase):
                 shutil.copyfile(work / "out/result.json", dest / "result.json")
             run("aggregate", "--target", "subject.py", "--plan", str(plan_file), "--results", "shards", "--serial", str(serial / "out"), "--output", "aggregate.json")
             result = json.loads((root / "aggregate.json").read_text())
-            self.assertEqual(result["ids"], list(range(len(plan["mutants"]))))
-            self.assertTrue(result["serial_parity"])
-            self.assertGreater(result["actual_mutant_utc_overlap_seconds"], 0)
+            assert result["ids"] == list(range(len(plan["mutants"])))
+            assert result["serial_parity"]
+            assert result["actual_mutant_utc_overlap_seconds"] > 0
             (root / "shards/1/result.json").rename(root / "lost.json")
             run("aggregate", "--target", "subject.py", "--plan", str(plan_file), "--results", "shards", "--serial", str(serial / "out"), "--output", "must-not-exist.json", ok=False)
-            self.assertFalse((root / "must-not-exist.json").exists())
+            assert not (root / "must-not-exist.json").exists()
             # Optional retained proof for the locked Ubuntu smoke step. Do not
             # leave native verdicts only in a temporary test directory.
             evidence = os.environ.get("LEELA_CI_EVIDENCE_DIR")
@@ -83,8 +82,5 @@ class EntryPoint(unittest.TestCase):
                 for label, work in zip(["shard-0", "shard-1", "serial"], workspaces):
                     shutil.copyfile(work / "out/result.json", dest / (label + ".json"))
                 serial_result = json.loads((serial / "out/result.json").read_text())
-                proof = {"schema": "leela.locked-smoke/v1", "scope": "Real native toy fixture through actual CI entry point, NOT full release proof", "source_sha": subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip(), "lock_sha256": hashlib.sha256((REPO / "uv.lock").read_bytes()).hexdigest(), "python": sys.version, "python_executable": sys.executable, "pytest_version": pytest.__version__, "pytest_file": pytest.__file__, "test": self.id(), "platform": sys.platform, "image_os": os.environ.get("ImageOS"), "image_version": os.environ.get("ImageVersion"), "native_verdicts": [{k: r[k] for k in ["id", "site", "status", "timeout", "error", "killing_tests"]} for r in serial_result["results"]], "serial_parity": result["serial_parity"], "actual_mutant_utc_overlap_seconds": result["actual_mutant_utc_overlap_seconds"], "missing_shard_refused": True}
+                proof = {"schema": "leela.locked-smoke/v1", "scope": "Real native toy fixture through actual CI entry point, NOT full release proof", "source_sha": subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip(), "lock_sha256": hashlib.sha256((REPO / "uv.lock").read_bytes()).hexdigest(), "python": sys.version, "python_executable": sys.executable, "pytest_version": pytest.__version__, "pytest_file": pytest.__file__, "test": request.node.nodeid, "platform": sys.platform, "image_os": os.environ.get("ImageOS"), "image_version": os.environ.get("ImageVersion"), "native_verdicts": [{k: r[k] for k in ["id", "site", "status", "timeout", "error", "killing_tests"]} for r in serial_result["results"]], "serial_parity": result["serial_parity"], "actual_mutant_utc_overlap_seconds": result["actual_mutant_utc_overlap_seconds"], "missing_shard_refused": True}
                 (dest / "proof.json").write_text(json.dumps(proof, indent=2) + "\n")
-
-
-if __name__ == "__main__": unittest.main()
