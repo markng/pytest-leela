@@ -119,7 +119,9 @@ def catalog(files):
 
 
 def inventory_check(plan, files):
+    from pytest_leela.engine import _module_name_from_path
     require(plan["targets"] == files, "partial/foreign target set")
+    require(plan["modules"] == sorted(_module_name_from_path(str(Path(f).resolve())) for f in files), "partial/foreign native module scope")
     actual = [{k: row[k] for k in ("id", "site", "point", "replacement")} for row in plan["mutants"]]
     require(actual == catalog(files), "plan omitted/changed a canonical mutant")
 
@@ -161,7 +163,7 @@ def plan_command(args):
     file_priors = seed.get("file_weights", {}).get(context()["python"], {})
     weights = {digest(row["site"]): prior.get(digest(row["site"]), {}).get("seconds", statistics.median(by_file[row["site"]["file"]]) if row["site"]["file"] in by_file else file_priors.get(row["site"]["file"], 1.0)) for row in rows}
     shards, predicted = balanced(rows, weights)
-    value = bind({"schema": PLAN, "context": context(), "runtime": runtime(), "environment": environment(), "targets": files, "shard_count": 2, "mutants": rows, "shards": shards, "predicted_seconds": predicted, "weight_matches": sum(digest(r["site"]) in prior for r in rows), "weight_provenance": seed.get("provenance"), "collected_tests": ids, "pruned": prepared.total_pruned, "outer_tests_passed": True, "outer_coverage_seconds": outer_coverage_seconds, "prepare_seconds": time.monotonic() - ENTRY_START})
+    value = bind({"schema": PLAN, "context": context(), "runtime": runtime(), "environment": environment(), "targets": files, "modules": sorted(prepared.target_sources), "shard_count": 2, "mutants": rows, "shards": shards, "predicted_seconds": predicted, "weight_matches": sum(digest(r["site"]) in prior for r in rows), "weight_provenance": seed.get("provenance"), "collected_tests": ids, "pruned": prepared.total_pruned, "outer_tests_passed": True, "outer_coverage_seconds": outer_coverage_seconds, "prepare_seconds": time.monotonic() - ENTRY_START})
     validate_plan(value, context()); inventory_check(value, files)
     out = Path(args.output); out.mkdir(parents=True, exist_ok=True)
     atomic(out / "plan.json", value)
@@ -183,6 +185,7 @@ def dependencies_command(args):
 
 def execute_command(args):
     from pytest_leela.models import MutationPoint, Mutant
+    from pytest_leela.engine import _module_name_from_path
     from pytest_leela.runner import run_baseline, run_tests_for_mutant, precompute_user_modules, ProjectModuleScope
     plan = load(Path(args.plan).read_text()); validate_plan(plan, context())
     observed = runtime()
@@ -190,6 +193,11 @@ def execute_command(args):
     atomic(Path(args.output).with_name("runtime-observation.json"), {"phase": "prebaseline-runtime-check", "complete": False, "plan_id": plan["plan_id"], "context": context(), "expected": plan["runtime"], "observed": observed, "different_runtime_fields": differences, "plan_environment": plan.get("environment"), "environment": environment()})
     require(not differences, "worker executable/dependency runtime differs from plan: " + ", ".join(differences))
     inventory_check(plan, targets(args))
+    # Canonical Engine.run supplies ALL frozen targets for every mutant.
+    # Target-set-dependent module reload behavior must not become single-file.
+    module_to_file = {_module_name_from_path(str(Path(f).resolve())): str(Path(f).resolve()) for f in plan["targets"]}
+    target_sources = {name: Path(path).read_text() for name, path in module_to_file.items()}
+    require(sorted(target_sources) == plan["modules"], "native runner target scope drift")
     require(args.count in (1, 2) and args.index in range(args.count), "invalid worker count/index")
     assigned = list(range(len(plan["mutants"]))) if args.count == 1 else plan["shards"][args.index]
     # Work in canonical plan order; balance assignment, never reorder pytest.
@@ -208,11 +216,12 @@ def execute_command(args):
         require(path.is_relative_to(Path.cwd().resolve()), "foreign source path")
         point["file_path"] = str(path); mutant = Mutant(MutationPoint(**point), raw["replacement"], raw["id"])
         start = time.monotonic(); utc = time.time_ns()
-        result = run_tests_for_mutant(mutant, {mutant.point.module_name: path.read_text()}, {mutant.point.module_name: str(path)}, test_ids=raw["tests"], known_user_modules=known, scope=scope, test_times=raw["test_times"])
+        require(module_to_file.get(mutant.point.module_name) == str(path), "mutant module/file mismatch")
+        result = run_tests_for_mutant(mutant, target_sources, module_to_file, test_ids=raw["tests"], known_user_modules=known, scope=scope, test_times=raw["test_times"])
         rows.append({"id": raw["id"], "site": raw["site"], "selected_tests": raw["tests"], "actual_tests": result.test_ids_run, "tests_run": result.tests_run, "reported_inner_seconds": result.time_seconds, "control_confirmation_counts": None, "status": result.status, "timeout": "<timeout>" in result.killing_tests, "error": result.error, "killing_tests": result.killing_tests, "runner_seconds": time.monotonic() - start, "start_ns": utc, "end_ns": time.time_ns()})
         print(json.dumps({"phase": "mutant", **rows[-1]}), flush=True)
     require(source_digest() == plan["context"]["source_digest"], "source changed during execution")
-    value = {"schema": RESULT, "complete": True, "context": context(), "plan_id": plan["plan_id"], "runtime": runtime(), "environment": environment(), "shard_index": args.index, "shard_count": args.count, "baseline_passed": True, "baseline_tests_run": base.collector.total, "baseline_seconds": base.elapsed, "start_ns": ENTRY_UTC, "end_ns": time.time_ns(), "wall_seconds": time.monotonic() - ENTRY_START, "results": rows}
+    value = {"schema": RESULT, "complete": True, "context": context(), "plan_id": plan["plan_id"], "runtime": runtime(), "environment": environment(), "modules": sorted(target_sources), "shard_index": args.index, "shard_count": args.count, "baseline_passed": True, "baseline_tests_run": base.collector.total, "baseline_seconds": base.elapsed, "start_ns": ENTRY_UTC, "end_ns": time.time_ns(), "wall_seconds": time.monotonic() - ENTRY_START, "results": rows}
     atomic(Path(args.output), value)
     return int(any(r["status"] != "killed" or r["timeout"] or r["error"] is not None for r in rows))
 

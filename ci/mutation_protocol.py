@@ -55,6 +55,8 @@ def validate_plan(plan: Mapping[str, Any], context: Mapping[str, Any]) -> None:
     require(plan.get("context") == context, "source/run/attempt/Python context mismatch")
     require(plan.get("plan_id") == digest({k: v for k, v in plan.items() if k != "plan_id"}), "plan digest mismatch")
     require(plan.get("shard_count") == 2, "exactly two CI shards required")
+    modules = plan.get("modules")
+    require(isinstance(modules, list) and bool(modules) and all(isinstance(m, str) and m for m in modules) and modules == sorted(set(modules)), "missing/duplicate native target module scope")
     rows = plan.get("mutants")
     require(isinstance(rows, list) and bool(rows), "empty/missing mutation plan")
     ids = [r.get("id") for r in rows]
@@ -98,6 +100,7 @@ def validate_result(bundle: Mapping[str, Any], plan: Mapping[str, Any], index: i
     require(bundle.get("shard_index") == index and type(bundle.get("shard_index")) is int, "wrong shard index")
     require(bundle.get("shard_count") == count and type(bundle.get("shard_count")) is int, "wrong shard count")
     require(bundle.get("runtime") == plan.get("runtime") and bool(bundle.get("runtime")), "runtime drift")
+    require(bundle.get("modules") == plan["modules"], "native target-set scope drift")
     require(bundle.get("baseline_passed") is True and integer(bundle.get("baseline_tests_run"), 1), "unproven baseline")
     require(integer(bundle.get("start_ns"), 1) and integer(bundle.get("end_ns"), 1), "missing execution interval")
     require(bundle["end_ns"] >= bundle["start_ns"] and finite(bundle.get("wall_seconds")), "invalid interval")

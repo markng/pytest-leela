@@ -9,10 +9,10 @@ from ci.mutation_protocol import PLAN, RESULT, aggregate, balanced, bind, digest
 def fixture():
     context = {"sha": "a" * 40, "run_id": "1", "attempt": "1", "python": "3.13"}
     rows = [{"id": i, "site": {"file": "subject.py", "line": i + 1, "column": 0, "original": "Lt", "replacement": "Gt"}, "tests": [f"test_subject.py::test_{i}"], "test_times": {f"test_subject.py::test_{i}": 0.1}} for i in range(4)]
-    plan = bind({"schema": PLAN, "context": context, "runtime": {"python": "3.13.5", "packages": {"pytest": "9.0.3"}}, "shard_count": 2, "mutants": rows, "shards": [[0, 2], [1, 3]]})
+    plan = bind({"schema": PLAN, "context": context, "runtime": {"python": "3.13.5", "packages": {"pytest": "9.0.3"}}, "shard_count": 2, "modules": ["subject"], "mutants": rows, "shards": [[0, 2], [1, 3]]})
     def result(index, count=2):
         ids = list(range(4)) if count == 1 else plan["shards"][index]
-        return {"schema": RESULT, "complete": True, "context": context, "plan_id": plan["plan_id"], "runtime": plan["runtime"], "shard_index": index, "shard_count": count, "baseline_passed": True, "baseline_tests_run": 4, "start_ns": 100, "end_ns": 200, "wall_seconds": 0.1, "results": [{"id": i, "site": rows[i]["site"], "selected_tests": rows[i]["tests"], "actual_tests": list(rows[i]["tests"]), "status": "killed", "timeout": False, "error": None, "killing_tests": rows[i]["tests"], "runner_seconds": 0.01, "start_ns": 100 + ids.index(i) * 20, "end_ns": 115 + ids.index(i) * 20} for i in ids]}
+        return {"schema": RESULT, "complete": True, "context": context, "plan_id": plan["plan_id"], "runtime": plan["runtime"], "modules": ["subject"], "shard_index": index, "shard_count": count, "baseline_passed": True, "baseline_tests_run": 4, "start_ns": 100, "end_ns": 200, "wall_seconds": 0.1, "results": [{"id": i, "site": rows[i]["site"], "selected_tests": rows[i]["tests"], "actual_tests": list(rows[i]["tests"]), "status": "killed", "timeout": False, "error": None, "killing_tests": rows[i]["tests"], "runner_seconds": 0.01, "start_ns": 100 + ids.index(i) * 20, "end_ns": 115 + ids.index(i) * 20} for i in ids]}
     return plan, context, [result(0), result(1)], result(0, 1)
 
 
@@ -105,6 +105,11 @@ class TestProtocol:
         assert aggregate(p, b, c, s)["environment_differences_from_plan"] == [0]
         b[0]["runtime"] = {"python_executable_sha256": "foreign"}
         with pytest.raises(ValueError): aggregate(p, b, c, s)
+
+    def test_full_native_target_scope_is_required_even_with_complete_ids(self):
+        for modules in [[], ["foreign"], ["subject", "foreign"]]:
+            p, c, b, s = fixture(); b[0]["modules"] = modules
+            with pytest.raises(ValueError): aggregate(p, b, c, s)
 
     def test_balanced_prior_site_weights_not_id_parity(self):
         p, _, _, _ = fixture(); weights = {digest(r["site"]): w for r, w in zip(p["mutants"], [8, 7, 2, 1])}

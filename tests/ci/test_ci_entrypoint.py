@@ -16,6 +16,7 @@ class TestEntryPoint:
     def test_real_plan_shards_serial_and_aggregate(self, request):
         with tempfile.TemporaryDirectory(prefix="leela-ci-entry-") as temporary:
             parent = Path(temporary); root = parent / "source"; root.mkdir()
+            (root / "fanout_context.py").write_text("MARKER = object()\n")
             (root / "subject.py").write_text("def sign(x: int) -> bool:\n    return x > 0\n")
             (root / "test_subject.py").write_text("from subject import sign\ndef test_sign():\n    for x in [-1, 0, 1]:\n        assert sign(x) == (x > 0)\n")
             public = {k: os.environ[k] for k in ["PATH", "LANG", "LC_ALL", "SYSTEMROOT"] if k in os.environ}
@@ -24,15 +25,18 @@ class TestEntryPoint:
                 return public | {"HOME": str(cwd / "home"), "TMPDIR": str(cwd / "tmp"), "PYTHONPATH": str(REPO), "LEELA_CI_FIXTURE": "1", "LEELA_SERIAL_PARITY": "true", "PYTHONHASHSEED": "0", "PYTHONDONTWRITEBYTECODE": "1"}
             def git(*args):
                 subprocess.run(["git", "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "-c", "user.name=Synthetic fixture", "-c", "user.email=fixture@example.invalid", *args], cwd=root, env=environment(root), check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            git("init", "-q"); git("add", "subject.py", "test_subject.py"); git("commit", "-qm", "Synthetic native CI fixture")
+            git("init", "-q"); git("add", "subject.py", "test_subject.py", "fanout_context.py"); git("commit", "-qm", "Synthetic native CI fixture")
             prefix = [sys.executable, "-m", "ci.mutations"]
             def run(*args, ok=True, cwd=root):
+                args = list(args)
+                if args[0] != "dependencies": args.extend(["--target", "fanout_context.py"])
                 result = subprocess.run([*prefix, *args], cwd=cwd, env=environment(cwd), capture_output=True, text=True, timeout=45)
                 if ok: assert result.returncode == 0, result.stdout + result.stderr
                 else: assert result.returncode != 0
                 return result
             run("plan", "--target", "subject.py", "--output", "plan")
             plan_file = root / "plan/plan.json"; plan = json.loads(plan_file.read_text())
+            assert plan["modules"] == ["fanout_context", "subject"]
             assert len(plan["mutants"]) >= 2
             assert set(sum(plan["shards"], [])) == set(range(len(plan["mutants"])))
             run("dependencies", "--plan", str(plan_file), "--output", "pins.txt")
@@ -43,7 +47,7 @@ class TestEntryPoint:
                 workspaces.append(work)
             children = []
             for index, work in enumerate(workspaces[:2]):
-                args = [*prefix, "run", "--target", "subject.py", "--plan", str(plan_file), "--index", str(index), "--output", "out/result.json", "--wait-stdin"]
+                args = [*prefix, "run", "--target", "subject.py", "--target", "fanout_context.py", "--plan", str(plan_file), "--index", str(index), "--output", "out/result.json", "--wait-stdin"]
                 children.append(subprocess.Popen(args, cwd=work, env=environment(work), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True))
             try:
                 for child in children:
@@ -81,6 +85,8 @@ class TestEntryPoint:
                 shutil.copyfile(root / "aggregate.json", dest / "aggregate.json")
                 for label, work in zip(["shard-0", "shard-1", "serial"], workspaces):
                     shutil.copyfile(work / "out/result.json", dest / (label + ".json"))
+                for work in workspaces:
+                    assert json.loads((work / "out/result.json").read_text())["modules"] == plan["modules"]
                 serial_result = json.loads((serial / "out/result.json").read_text())
-                proof = {"schema": "leela.locked-smoke/v1", "scope": "Real native toy fixture through actual CI entry point, NOT full release proof", "source_sha": subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip(), "lock_sha256": hashlib.sha256((REPO / "uv.lock").read_bytes()).hexdigest(), "python": sys.version, "python_executable": sys.executable, "pytest_version": pytest.__version__, "pytest_file": pytest.__file__, "test": request.node.nodeid, "platform": sys.platform, "image_os": os.environ.get("ImageOS"), "image_version": os.environ.get("ImageVersion"), "native_verdicts": [{k: r[k] for k in ["id", "site", "status", "timeout", "error", "killing_tests"]} for r in serial_result["results"]], "serial_parity": result["serial_parity"], "actual_mutant_utc_overlap_seconds": result["actual_mutant_utc_overlap_seconds"], "missing_shard_refused": True}
+                proof = {"schema": "leela.locked-smoke/v1", "scope": "Real native toy fixture through actual CI entry point, NOT full release proof", "source_sha": subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip(), "lock_sha256": hashlib.sha256((REPO / "uv.lock").read_bytes()).hexdigest(), "python": sys.version, "python_executable": sys.executable, "pytest_version": pytest.__version__, "pytest_file": pytest.__file__, "test": request.node.nodeid, "platform": sys.platform, "image_os": os.environ.get("ImageOS"), "image_version": os.environ.get("ImageVersion"), "target_modules": plan["modules"], "native_verdicts": [{k: r[k] for k in ["id", "site", "status", "timeout", "error", "killing_tests"]} for r in serial_result["results"]], "serial_parity": result["serial_parity"], "actual_mutant_utc_overlap_seconds": result["actual_mutant_utc_overlap_seconds"], "missing_shard_refused": True}
                 (dest / "proof.json").write_text(json.dumps(proof, indent=2) + "\n")
