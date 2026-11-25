@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.0 — 2026-11-25
+
+### Added
+
+- The Boolean operator category can negate a bare comprehension filter
+  (name, attribute, or call) in list, set, and dict comprehensions and
+  generator expressions. Only the selected filter changes; other filters,
+  generator clauses, and evaluation order are preserved. (#51)
+
 ## 0.18.0 — 2026-11-24
 
 ### Added
