@@ -57,6 +57,7 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     ("If", "condition"): ["negate_condition"],
     ("Assert", "condition"): ["negate_condition"],
     ("While", "condition"): ["negate_condition"],
+    ("ComprehensionFilter", "condition"): ["negate_condition"],
     # Decorators
     ("Decorator", "decorator"): ["remove_decorator"],
     # IfExp (ternary)
@@ -211,6 +212,7 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
         ("If", "condition"),
         ("Assert", "condition"),
         ("While", "condition"),
+        ("ComprehensionFilter", "condition"),
     },
     "unary": {
         ("UnaryOp", "USub"),

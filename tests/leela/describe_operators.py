@@ -551,7 +551,7 @@ def describe_mutations_for_with_allowed_keys():
         assert muts == ["Or"]
 
     def it_enables_bare_statement_negation_in_the_default_boolean_category():
-        for kind in ("If", "Assert", "While"):
+        for kind in ("If", "Assert", "While", "ComprehensionFilter"):
             point = _make_point(node_type=kind, original_op="condition")
             for use_types in (True, False):
                 for categories in (DEFAULT_OPERATORS, ("boolean",), ALL_OPERATORS):

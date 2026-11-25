@@ -47,6 +47,68 @@ def _make_mutant(
 
 
 def describe_MutantApplier():
+    @pytest.mark.parametrize("predicate", ["x", "obj.ready", "keep(x, y)", "y"])
+    def it_negates_exactly_one_comprehension_filter_across_generators(predicate):
+        source = "[(x, y) for x in xs if x if obj.ready for y in ys if keep(x, y) if y]"
+        anchor = f"if {predicate}"
+        mutant = _make_mutant(
+            col_offset=source.index(anchor) + 3, node_type="ComprehensionFilter",
+            original_op="condition", replacement_op="negate_condition",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source.replace(anchor, f"if not {predicate}", 1)))
+
+    def it_preserves_generator_laziness_short_circuiting_and_filter_evaluation():
+        source = "result = (y for x in xs if x for y in children(x) if check(y) if allow(y))"
+        tree, applied = apply_mutation(source, _make_mutant(
+            col_offset=source.index("check"), node_type="ComprehensionFilter",
+            original_op="condition", replacement_op="negate_condition",
+        ))
+        assert applied
+        events = []
+
+        def children(x):
+            events.append(("children", x))
+            return [1, 2]
+
+        def check(y):
+            events.append(("check", y))
+            return [y] if y == 1 else []
+
+        def allow(y):
+            events.append(("allow", y))
+            return True
+
+        namespace = dict(xs=[0, 1], children=children, check=check, allow=allow)
+        exec(compile(tree, "test.py", "exec"), namespace)
+        assert events == []
+        assert list(namespace["result"]) == [2]
+        assert events == [("children", 1), ("check", 1), ("check", 2), ("allow", 2)]
+
+    @pytest.mark.parametrize("predicate,mismatch", [
+        ("x", {"col_offset": 0}), ("x", {"lineno": 2}),
+        ("x", {"replacement_op": "unknown"}), ("x", {"node_type": "While"}),
+        ("not x", {}), ("x and ready", {}), ("items[0]", {}),
+    ])
+    def it_keeps_ineligible_or_nonmatching_comprehension_filters(predicate, mismatch):
+        source = f"[x for x in xs if {predicate}]"
+        fields = dict(col_offset=source.index("if ") + 3, node_type="ComprehensionFilter",
+                      original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    def it_still_applies_compound_filter_child_mutations():
+        source = "[x for x in xs if check(x == 1) if x]"
+        tree, applied = apply_mutation(source, _make_mutant(
+            col_offset=source.index("x =="), node_type="Compare",
+            original_op="Eq", replacement_op="NotEq",
+        ))
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source.replace("==", "!=")))
+
     @pytest.mark.parametrize("definition", ["def f():", "async def f():", "class f:"])
     @pytest.mark.parametrize("index", [0, 1, 2])
     def it_removes_only_the_decorator_at_the_selected_coordinates(definition, index):

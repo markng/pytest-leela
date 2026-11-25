@@ -220,6 +220,22 @@ class _MutationPointCollector(ast.NodeVisitor):
     visit_Assert = _visit_statement_condition
     visit_While = _visit_statement_condition
 
+    def visit_comprehension(self, node: ast.comprehension) -> None:
+        for test in node.ifs:
+            if is_bare_predicate(test):
+                self.points.append(
+                    MutationPoint(
+                        file_path=self.file_path,
+                        module_name=self.module_name,
+                        lineno=test.lineno,
+                        col_offset=test.col_offset,
+                        node_type="ComprehensionFilter",
+                        original_op="condition",
+                        inferred_type=None,
+                    )
+                )
+        self.generic_visit(node)
+
     def visit_IfExp(self, node: ast.IfExp) -> None:
         self.points.append(
             MutationPoint(

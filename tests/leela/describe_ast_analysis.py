@@ -45,7 +45,8 @@ def describe_find_mutation_points():
         assert all((p.file_path, p.module_name) == ("src/demo.py", "demo") for p in predicates)
         assert [(p.lineno, p.node_type) for p in points if p.node_type != "If"] == [
             (3, "Assign"), (3, "BinOp"), (4, "Compare"), (6, "BoolOp"),
-            (7, "UnaryOp"), (8, "Compare"), (11, "While"), (12, "Assert"), (13, "Assign"),
+            (7, "UnaryOp"), (8, "Compare"), (11, "While"), (12, "Assert"),
+            (13, "Assign"), (13, "ComprehensionFilter"),
         ]
 
     def it_finds_only_bare_assert_roots_and_visits_predicate_and_message_children():
@@ -77,6 +78,7 @@ def describe_find_mutation_points():
             (6, 7, "UnaryOp", "Not"),
             (7, 7, "Compare", "Eq"),
             (10, 0, "While", "condition"),
+            (11, 21, "ComprehensionFilter", "condition"),
         ]
         assert all((p.file_path, p.module_name, p.inferred_type) == (
             "src/demo.py", "demo", None,
@@ -110,7 +112,39 @@ def describe_find_mutation_points():
             (5, "Compare", "Eq"), (5, "Break", "break"), (6, "BoolOp", "And"),
             (6, "Break", "break"), (7, "UnaryOp", "Not"), (7, "Break", "break"),
             (8, "Compare", "Eq"), (8, "Break", "break"), (9, "Break", "break"),
-            (10, "Break", "break"),
+            (10, "Break", "break"), (12, "ComprehensionFilter", "condition"),
+        ]
+
+    def it_discovers_each_bare_comprehension_filter_at_its_expression():
+        lines = [
+            "[x for x in xs if x if obj.ready for y in ys if check(y == 1)]",
+            "{x for x in xs if x and obj.ready}",
+            "{x: x for x in xs if not x if x > 1 if obj[0] if True}",
+            "(x for x in xs if (",
+            "    check(x)",
+            "))",
+            "[x for x in xs if ignored]  # leela: skip",
+            "[x for x in xs if any(y for y in ys if y)]",
+        ]
+        points = find_mutation_points("\n".join(lines), "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.original_op, p.inferred_type, p.file_path, p.module_name)
+            for p in points if p.node_type == "ComprehensionFilter"
+        ] == [
+            (line, column, "condition", None, "src/demo.py", "demo")
+            for line, column in (
+                (1, lines[0].index("if x") + 3),
+                (1, lines[0].index("obj.ready")),
+                (1, lines[0].index("check(")),
+                (5, 4),
+                (8, lines[7].index("any(")),
+                (8, lines[7].index("if y") + 3),
+            )
+        ]
+        assert [(p.lineno, p.node_type, p.original_op) for p in points
+                if p.node_type != "ComprehensionFilter"] == [
+            (1, "Compare", "Eq"), (2, "BoolOp", "And"),
+            (3, "UnaryOp", "Not"), (3, "Compare", "Gt"),
         ]
 
     def it_finds_binop_nodes():
