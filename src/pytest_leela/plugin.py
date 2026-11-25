@@ -379,13 +379,12 @@ class LeelaPlugin:
                 write_progress(f"  {timing_detail(timing)}")
 
         report = format_terminal_report(result)
+        report += f"\n{self._concurrency_summary(bool(timings), limits.max_cores)}\n"
 
         if tw:
             tw.write(report)
         else:
             print(report)
-
-        write_concurrency(bool(timings))
 
         if html_path is not None and events_path is None:
             from pytest_leela.html_report import generate_html_report
