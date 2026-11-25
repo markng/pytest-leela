@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from pytest_leela.ast_analysis import find_mutation_points
 from pytest_leela.coverage_tracker import collect_coverage
@@ -103,6 +104,27 @@ class BaselineFailure(Exception):
     """
 
 
+@dataclass
+class PreparedRun:
+    """Native full plan after a successful unmutated baseline.
+
+    Execution order, test selections and timeout inputs are preserved together.
+    CI may serialize it; ordinary Engine.run still executes every mutant serially.
+    """
+
+    mutants: list[Mutant]
+    test_ids: list[list[str] | None]
+    target_sources: dict[str, str]
+    module_to_file: dict[str, str]
+    known_user_modules: frozenset[str]
+    scope: ProjectModuleScope
+    coverage_map: CoverageMap | None
+    test_times: dict[str, float] | None
+    total_mutants: int
+    total_pruned: int
+    enrichment_stats: EnrichmentStats
+
+
 class Engine:
     """Orchestrates a full mutation testing run."""
 
@@ -117,7 +139,7 @@ class Engine:
         self._enabled_categories = enabled_categories
         self._allowed_keys = build_allowed_keys(enabled_categories)
 
-    def run(
+    def prepare(
         self,
         target_files: list[str],
         test_dir: str | None = None,
@@ -126,10 +148,8 @@ class Engine:
         test_node_ids: list[str] | None = None,
         pre_coverage_map: CoverageMap | None = None,
         on_progress: Callable[[MutationProgress], None] | None = None,
-        on_mutant_timing: Callable[[MutantTiming], None] | None = None,
-    ) -> RunResult:
-        """Run mutants serially, optionally reporting complete runner-call timings."""
-        start = time.monotonic()
+    ) -> PreparedRun:
+        """Generate the complete native plan and prove its unmutated baseline."""
 
         _clean_process_state()
         scope = ProjectModuleScope()
@@ -221,6 +241,37 @@ class Engine:
             if on_progress is not None:
                 on_progress(MutationProgress("baseline", 0, runnable, total_pruned))
             self._check_baseline(mutant_test_ids, test_dir, known_user_modules, scope)
+
+        return PreparedRun(
+            all_mutants, mutant_test_ids, target_sources, module_to_file,
+            known_user_modules, scope, coverage_map, test_times,
+            total_mutants, total_pruned, total_enrichment_stats,
+        )
+
+    def run(
+        self,
+        target_files: list[str],
+        test_dir: str | None = None,
+        limits: ResourceLimits | None = None,
+        diff_base: str | None = None,
+        test_node_ids: list[str] | None = None,
+        pre_coverage_map: CoverageMap | None = None,
+        on_progress: Callable[[MutationProgress], None] | None = None,
+        on_mutant_timing: Callable[[MutantTiming], None] | None = None,
+    ) -> RunResult:
+        """Run every mutant serially; the default execution policy is unchanged."""
+        start = time.monotonic()
+        prepared = self.prepare(
+            target_files, test_dir, limits, diff_base, test_node_ids,
+            pre_coverage_map, on_progress,
+        )
+        all_mutants, mutant_test_ids = prepared.mutants, prepared.test_ids
+        target_sources, module_to_file = prepared.target_sources, prepared.module_to_file
+        known_user_modules, scope = prepared.known_user_modules, prepared.scope
+        coverage_map, test_times = prepared.coverage_map, prepared.test_times
+        total_mutants, total_pruned = prepared.total_mutants, prepared.total_pruned
+        total_enrichment_stats = prepared.enrichment_stats
+        runnable = len(all_mutants)
 
         # 10. Run each mutant
         results: list[MutantResult] = []

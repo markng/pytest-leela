@@ -1,0 +1,52 @@
+{
+  "schema": "leela.ci-runtime-seed/v1",
+  "provenance": {
+    "repository": "markng/pytest-leela",
+    "run_id": "45513960091",
+    "attempt": 1,
+    "checkout": "add40857b18051c1dbfaa4a7f910e8f3e3dc8288",
+    "tree": "976b64084085b0ceb05037bf1a77562a83b06bd8",
+    "zip_sha256": "a2cc16b4988e871dac10125273906f4db7d7c2d1d0bbb815b719f51d14e2a120",
+    "mode": "explicit-target-file-mean-scheduling-estimates",
+    "scope": "Retained rounded whole-runner totals / observed mutant counts per target. Scheduling estimates ONLY, NOT measured/inferred per-ID execution durations. Raw site data currently on unreachable Mini; regenerate stable-site priors when accessible, preserving distinct native IDs."
+  },
+  "weights": {},
+  "file_weights": {
+    "3.13": {
+      "src/pytest_leela/type_extractor.py": 6.401023391812866,
+      "src/pytest_leela/import_hook.py": 7.8545254237288145,
+      "src/pytest_leela/runner.py": 5.069485714285715,
+      "src/pytest_leela/engine.py": 3.941208333333334,
+      "src/pytest_leela/models.py": 4.425571428571428,
+      "src/pytest_leela/plugin.py": 0.3733906250000001,
+      "src/pytest_leela/operators.py": 1.8972352941176467,
+      "src/pytest_leela/ast_analysis.py": 0.26236206896551734,
+      "src/pytest_leela/output.py": 0.2964772727272727,
+      "src/pytest_leela/html_report.py": 0.25078125,
+      "src/pytest_leela/resources.py": 0.21704166666666672,
+      "src/pytest_leela/coverage_tracker.py": 0.5087647058823529,
+      "src/pytest_leela/git_diff.py": 0.20011363636363635,
+      "src/pytest_leela/benchmark.py": 0.24000000000000005,
+      "src/pytest_leela/config.py": 0.2237333333333333,
+      "src/pytest_leela/mutant_events.py": 0.292
+    },
+    "3.14": {
+      "src/pytest_leela/type_extractor.py": 8.159315789473688,
+      "src/pytest_leela/import_hook.py": 9.679618644067794,
+      "src/pytest_leela/runner.py": 6.161914285714287,
+      "src/pytest_leela/engine.py": 5.3843958333333335,
+      "src/pytest_leela/models.py": 5.73517857142857,
+      "src/pytest_leela/plugin.py": 0.5277499999999999,
+      "src/pytest_leela/operators.py": 2.3681764705882355,
+      "src/pytest_leela/ast_analysis.py": 0.35770689655172405,
+      "src/pytest_leela/output.py": 0.4058181818181818,
+      "src/pytest_leela/html_report.py": 0.320515625,
+      "src/pytest_leela/resources.py": 0.3280416666666667,
+      "src/pytest_leela/coverage_tracker.py": 0.6618823529411765,
+      "src/pytest_leela/git_diff.py": 0.249590909090909,
+      "src/pytest_leela/benchmark.py": 0.31195000000000006,
+      "src/pytest_leela/config.py": 0.27893333333333337,
+      "src/pytest_leela/mutant_events.py": 0.394
+    }
+  }
+}
