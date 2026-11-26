@@ -514,6 +514,7 @@ class InnerSession:
         self.scope = scope
         self.known_user_modules = known_user_modules
         self.test_times = test_times
+        self.ordering_times = test_times
         self.exitfirst = exitfirst
         self.collector = _ResultCollector()
         self.timed_out = threading.Event()
@@ -617,8 +618,8 @@ class InnerSession:
             plugins.append(_TimeoutPlugin(self.timed_out))
         if self.finder is not None:
             plugins.append(_PreferMutationFinder(self.finder))
-            if self.fast_first and self.test_ids and self.test_times:
-                plugins.append(_FastFirst(self.test_times))
+        if self.fast_first and self.test_ids and self.ordering_times:
+            plugins.append(_FastFirst(self.ordering_times))
 
         # Run pytest in-process (suppress noisy output)
         try:
@@ -835,8 +836,11 @@ def run_control(
     test_dir: str | None,
     known_user_modules: frozenset[str],
     scope: ProjectModuleScope,
+    *,
+    fast_first: bool = False,
+    ordering_times: dict[str, float] | None = None,
 ) -> InnerSession:
-    """Run the same test selection with no mutation applied.
+    """Run the same test selection and ordering with no mutation applied.
 
     This is the in-process equivalent of the mutant's path used to prove
     that a setup/teardown/collection/import failure is caused by the mutant
@@ -849,7 +853,10 @@ def run_control(
         scope,
         known_user_modules=known_user_modules,
         exitfirst=False,
+        fast_first=fast_first,
     )
+    # Match mutant ordering without enabling the mutant timer on the control.
+    session.ordering_times = ordering_times
     return session.run()
 
 
@@ -894,7 +901,10 @@ def run_tests_for_mutant(
 
     inconclusive = session.inconclusive_failures()
     control_known = known_user_modules or precompute_user_modules(scope)
-    control = run_control(test_ids, test_dir, control_known, scope)
+    control = run_control(
+        test_ids, test_dir, control_known, scope,
+        fast_first=fast_first, ordering_times=test_times,
+    )
     if control.error() is not None or control.failures():
         reason = control.error()
         if reason is None:
