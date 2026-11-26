@@ -27,6 +27,7 @@ from pytest_leela.mutant_events import (
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
+from pytest_leela.skill import SKILL_MARKDOWN
 
 
 def _is_test_file(basename: str, python_files: list[str]) -> bool:
@@ -53,6 +54,10 @@ _SKIP_DIRS = {
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("leela", "mutation testing")
+    group.addoption(
+        "--skill", action="store_true", default=False,
+        help="Print the bundled Leela SKILL.md and exit without collecting tests",
+    )
     group.addoption(
         "--leela", action="store_true", default=False, help="Enable mutation testing"
     )
@@ -85,6 +90,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Run benchmark mode",
     )
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_cmdline_main(config: pytest.Config) -> pytest.ExitCode | None:
+    if config.getoption("skill", default=False):
+        print(SKILL_MARKDOWN, end="")
+        return pytest.ExitCode.OK
+    return None
 
 
 def pytest_configure(config: pytest.Config) -> None:

@@ -37,6 +37,12 @@ pip install pytest-leela
 pytest --leela
 ```
 
+Print compact agent guidance for writing good mutation tests, without running tests:
+
+```bash
+pytest --skill > SKILL.md
+```
+
 After the normal pytest run, Leela reports its baseline check and prints a progress line
 before each mutant, with the active location and completed/runnable count. Pruned mutants
 are listed separately. Each completed mutant also gets a verdict and wall time covering
