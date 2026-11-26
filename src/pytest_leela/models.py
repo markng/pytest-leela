@@ -68,6 +68,15 @@ class MutationProgress:
     active: Mutant | None = None
 
 
+@dataclass(frozen=True)
+class MutantTiming:
+    """Wall time of one complete runner call, not its reported inner elapsed time."""
+
+    mutant: Mutant
+    status: MutantStatus
+    wall_time_seconds: float
+
+
 @dataclass
 class MutantResult:
     """Result of testing a single mutant."""
@@ -83,6 +92,9 @@ class MutantResult:
     # tests, or inconclusive failure after zero or positive call counts).
     # Errors are excluded from the score; set only when ``killed`` is False.
     error: str | None = None
+    # Set by Engine when it measures the full runner call. The inner attempt's
+    # elapsed time remains in time_seconds, even for a confirmed failure.
+    wall_time_seconds: float | None = None
 
     def __post_init__(self) -> None:
         if self.killed and self.error is not None:

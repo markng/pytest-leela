@@ -5,11 +5,14 @@ from __future__ import annotations
 import ast
 import json
 import os
+import stat
 import textwrap
 from datetime import datetime, timezone
+from functools import partial
 from typing import Any
 
 from pytest_leela.models import RunResult
+from pytest_leela.mutant_events import MutantEventsError
 from pytest_leela.output import _op_display
 
 
@@ -193,6 +196,7 @@ def _build_report_data(result: RunResult) -> dict[str, Any]:
             "error": mr.error,
             "tests_run": mr.tests_run,
             "time_seconds": mr.time_seconds,
+            "wall_time_seconds": mr.wall_time_seconds,
             "killing_test": (
                 {"display": _format_test_name(mr.killing_test), "id": mr.killing_test}
                 if mr.killing_test
@@ -1139,7 +1143,11 @@ window.LEELA_DATA = {json_data};
                 }}
                 html += '<span class="mc-desc">' + esc(m.description) + "</span>";
                 html += "</div>";
-                html += '<div class="mc-meta">' + esc(m.node_type) + " col " + m.col_offset + " &middot; " + (m.time_seconds * 1000).toFixed(0) + "ms</div>";
+                html += '<div class="mc-meta">' + esc(m.node_type) + " col " + m.col_offset + " &middot; " + (m.time_seconds * 1000).toFixed(0) + "ms inner elapsed";
+                if (typeof m.wall_time_seconds === "number") {{
+                    html += " &middot; " + (m.wall_time_seconds * 1000).toFixed(0) + "ms runner wall time";
+                }}
+                html += "</div>";
                 if (m.error) {{
                     html += '<div class="mc-error">' + esc(m.error) + "</div>";
                 }}
@@ -1374,11 +1382,32 @@ window.LEELA_DATA = {json_data};
 """
 
 
-def generate_html_report(result: RunResult, output_path: str) -> None:
-    """Generate a single self-contained HTML mutation testing report."""
+def _open_html_excluding_jsonl(path: str, flags: int, *, jsonl_fd: int) -> int:
+    # Check the descriptor that will actually be written, not a separate path
+    # lookup. The caller keeps the live JSONL file pinned throughout the write.
+    fd = os.open(path, flags & ~os.O_TRUNC)
+    try:
+        target = os.fstat(fd)
+        if os.path.samestat(target, os.fstat(jsonl_fd)):
+            raise MutantEventsError("JSONL and HTML outputs must use different files")
+        if stat.S_ISREG(target.st_mode):
+            os.ftruncate(fd, 0)
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def generate_html_report(
+    result: RunResult, output_path: str, *, jsonl_fd: int | None = None
+) -> None:
+    """Generate a single self-contained HTML report, protecting a live JSONL fd."""
     data = _build_report_data(result)
     json_str = json.dumps(data)
     escaped = _escape_json_for_html(json_str)
     html_content = _build_html_viewer(escaped)
-    with open(output_path, "w") as f:
+    opener = (
+        None if jsonl_fd is None else partial(_open_html_excluding_jsonl, jsonl_fd=jsonl_fd)
+    )
+    with open(output_path, "w", opener=opener) as f:
         f.write(html_content)

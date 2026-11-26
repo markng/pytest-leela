@@ -50,6 +50,16 @@ UNTYPED_MUTATIONS: dict[tuple[str, str], list[str]] = {
     ("UnaryOp", "USub"): ["UAdd"],
     ("UnaryOp", "UAdd"): ["USub"],
     ("UnaryOp", "Not"): ["_remove"],  # Remove the `not`
+    # Assignment initializers
+    ("Assign", "assignment"): ["rhs_to_none"],
+    ("AnnAssign", "assignment"): ["rhs_to_none"],
+    # Bare statement predicates
+    ("If", "condition"): ["negate_condition"],
+    ("Assert", "condition"): ["negate_condition"],
+    ("While", "condition"): ["negate_condition"],
+    ("ComprehensionFilter", "condition"): ["negate_condition"],
+    # Decorators
+    ("Decorator", "decorator"): ["remove_decorator"],
     # IfExp (ternary)
     ("IfExp", "ternary"): ["swap_branches", "always_true", "always_false"],
     # Break/Continue
@@ -199,6 +209,10 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
     "boolean": {
         ("BoolOp", "And"),
         ("BoolOp", "Or"),
+        ("If", "condition"),
+        ("Assert", "condition"),
+        ("While", "condition"),
+        ("ComprehensionFilter", "condition"),
     },
     "unary": {
         ("UnaryOp", "USub"),
@@ -222,6 +236,10 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
         ("BinOp", "LShift"),
         ("BinOp", "RShift"),
     },
+    "assignment": {
+        ("Assign", "assignment"),
+        ("AnnAssign", "assignment"),
+    },
     "augmented_assign": {
         ("AugAssign", "Add"),
         ("AugAssign", "Sub"),
@@ -238,6 +256,9 @@ OPERATOR_CATEGORIES: dict[str, set[tuple[str, str]]] = {
     },
     "ternary": {
         ("IfExp", "ternary"),
+    },
+    "decorator": {
+        ("Decorator", "decorator"),
     },
     "control_flow": {
         ("Break", "break"),

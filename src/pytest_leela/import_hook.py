@@ -1,4 +1,4 @@
-"""Import hook for in-memory AST mutation — zero file I/O."""
+"""Import hook for in-memory AST mutation."""
 
 from __future__ import annotations
 
@@ -6,10 +6,12 @@ import ast
 import importlib
 import importlib.abc
 import importlib.machinery
+import os
 import sys
 import types
 from typing import Any
 
+from pytest_leela.ast_analysis import eligible_assignment_rhs, is_bare_predicate
 from pytest_leela.models import Mutant
 
 # AST operator classes by name
@@ -84,12 +86,80 @@ class MutantApplier(ast.NodeTransformer):
                 self.applied = True
         return self.generic_visit(node)
 
+    def visit_Assign(self, node: ast.Assign | ast.AnnAssign) -> ast.AST:
+        if (
+            self.mutant.replacement_op == "rhs_to_none"
+            and self.mutant.point.node_type == type(node).__name__
+        ):
+            rhs = eligible_assignment_rhs(node)
+            if rhs is not None and self._matches(rhs):
+                node.value = ast.copy_location(ast.Constant(value=None), rhs)
+                self.applied = True
+        return self.generic_visit(node)
+
+    visit_AnnAssign = visit_Assign
+
     def visit_AugAssign(self, node: ast.AugAssign) -> ast.AST:
         if self._matches(node) and self.mutant.point.node_type == "AugAssign":
             op_class = _OP_CLASSES.get(self.mutant.replacement_op)
             if op_class is not None:
                 node.op = op_class()
                 self.applied = True
+        return self.generic_visit(node)
+
+    def visit_FunctionDef(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+    ) -> ast.AST:
+        if (
+            self.mutant.point.node_type == "Decorator"
+            and self.mutant.replacement_op == "remove_decorator"
+        ):
+            for index, decorator in enumerate(node.decorator_list):
+                if self._matches(decorator):
+                    del node.decorator_list[index]
+                    self.applied = True
+                    break
+        return self.generic_visit(node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+    visit_ClassDef = visit_FunctionDef
+
+    def visit_If(self, node: ast.If) -> ast.AST:
+        if (
+            self._matches(node)
+            and self.mutant.point.node_type == "If"
+            and self.mutant.replacement_op == "negate_condition"
+        ):
+            negated = ast.UnaryOp(op=ast.Not(), operand=node.test)
+            node.test = ast.copy_location(negated, node.test)
+            self.applied = True
+        return self.generic_visit(node)
+
+    def _visit_bare_condition(self, node: ast.Assert | ast.While) -> ast.AST:
+        if (
+            self._matches(node)
+            and self.mutant.point.node_type == type(node).__name__
+            and self.mutant.replacement_op == "negate_condition"
+            and is_bare_predicate(node.test)
+        ):
+            negated = ast.UnaryOp(op=ast.Not(), operand=node.test)
+            node.test = ast.copy_location(negated, node.test)
+            self.applied = True
+        return self.generic_visit(node)
+
+    visit_Assert = _visit_bare_condition
+    visit_While = _visit_bare_condition
+
+    def visit_comprehension(self, node: ast.comprehension) -> ast.AST:
+        if (
+            self.mutant.point.node_type == "ComprehensionFilter"
+            and self.mutant.replacement_op == "negate_condition"
+        ):
+            for index, test in enumerate(node.ifs):
+                if self._matches(test) and is_bare_predicate(test):
+                    negated = ast.UnaryOp(op=ast.Not(), operand=test)
+                    node.ifs[index] = ast.copy_location(negated, test)
+                    self.applied = True
         return self.generic_visit(node)
 
     def visit_IfExp(self, node: ast.IfExp) -> ast.AST:
@@ -251,7 +321,7 @@ class MutatingLoader(importlib.abc.Loader):
     def __init__(
         self,
         source: str,
-        mutant: Mutant,
+        mutant: Mutant | None,
         filename: str,
         import_errors: list[str] | None = None,
     ) -> None:
@@ -280,9 +350,9 @@ class MutatingLoader(importlib.abc.Loader):
                 module.__name__, self, origin=self.filename
             )
         tree = ast.parse(self.source, filename=self.filename)
-        applier = MutantApplier(self.mutant)
-        tree = applier.visit(tree)
-        ast.fix_missing_locations(tree)
+        if self.mutant is not None:
+            tree = MutantApplier(self.mutant).visit(tree)
+            ast.fix_missing_locations(tree)
         code = compile(tree, self.filename, "exec")
         try:
             exec(code, module.__dict__)
@@ -309,8 +379,6 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         self.import_errors: list[str] = []
         self._import_failures: list[tuple[str, tuple[object, ...] | None, str]] = []
         self._module_to_file: dict[str, str] = {}
-        for mod_name in target_modules:
-            self._module_to_file[mod_name] = f"<mutated:{mod_name}>"
 
     def set_file_paths(self, module_to_file: dict[str, str]) -> None:
         self._module_to_file.update(module_to_file)
@@ -322,10 +390,17 @@ class MutatingFinder(importlib.abc.MetaPathFinder):
         target: Any = None,
     ) -> importlib.machinery.ModuleSpec | None:
         if fullname in self.target_modules:
-            filename = self._module_to_file.get(fullname, f"<mutated:{fullname}>")
+            filename = self._module_to_file.get(fullname)
+            point = self.mutant.point
+            owns_mutant = fullname == point.module_name
+            if filename is None:
+                filename = f"<mutated:{fullname}>"
+            elif owns_mutant and filename != point.file_path:
+                # Two import roots can yield the same module name for different files.
+                owns_mutant = os.path.realpath(filename) == os.path.realpath(point.file_path)
             loader = MutatingLoader(
                 self.target_modules[fullname],
-                self.mutant,
+                self.mutant if owns_mutant else None,
                 filename,
                 self.import_errors,
             )

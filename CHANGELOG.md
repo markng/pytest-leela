@@ -1,5 +1,133 @@
 # Changelog
 
+## 0.20.0 — 2026-11-26
+
+### Added
+
+- Report whether mutation execution was serial or no mutants ran. CPU affinity
+  and outer pytest worker settings are shown separately from the observed
+  mutation concurrency. (#54)
+
+## 0.19.0 — 2026-11-25
+
+### Added
+
+- The Boolean operator category can negate a bare comprehension filter
+  (name, attribute, or call) in list, set, and dict comprehensions and
+  generator expressions. Only the selected filter changes; other filters,
+  generator clauses, and evaluation order are preserved. (#51)
+
+## 0.18.0 — 2026-11-24
+
+### Added
+
+- The Boolean operator category negates bare `while` predicates (names,
+  attributes, and calls), preserving the loop body, `else`, and
+  per-check evaluation. Existing timeout behavior is unchanged. (#49)
+
+## 0.17.0 — 2026-11-24
+
+### Added
+
+- The Boolean operator category negates bare assertion predicates (names,
+  attributes, and calls). It leaves assertion messages and existing
+  compound-expression mutations intact. (#47)
+
+## 0.16.0 — 2026-11-24
+
+### Added
+
+- Optional HTML reports show each mutant's full runner wall time alongside
+  the existing inner elapsed time. The new value includes control and
+  confirmation and matches the JSON Lines measurement. (#45)
+
+## 0.15.0 — 2026-11-24
+
+### Added
+
+- The opt-in `assignment` operator can replace the RHS of chained assignments
+  with `None` when all targets are names. It emits one mutant per RHS and
+  skips any mixed or destructuring targets. (#43)
+
+## 0.14.0 — 2026-11-24
+
+### Added
+
+- Stream one versioned, flushed JSON Lines record per completed mutant
+  with `--leela-jsonl PATH`. Records expose stable run-local identity,
+  location, operator, verdict, and full runner wall time. (#41)
+
+## 0.13.0 — 2026-11-24
+
+### Added
+
+- The opt-in `assignment` category replaces the RHS of a simple name
+  assignment or annotated initializer with `None`. The target and
+  annotation are preserved. Defaults are unchanged. (#39)
+
+## 0.12.0 — 2026-11-24
+
+### Added
+
+- The opt-in `decorator` category removes one decorator at a time from
+  functions, async functions, or classes. Each stacked decorator has its
+  own mutant at its expression's starting line. Defaults are unchanged. (#37)
+
+## 0.11.3 — 2026-11-24
+
+### Fixed
+
+- When `--diff` finds no mutation candidates, the terminal summary now shows
+  `N/A (nothing to test)` instead of a numeric `0/0` score. The warning,
+  exit status, JSON and HTML are unchanged. (#35)
+
+## 0.11.2 — 2026-11-24
+
+### Fixed
+
+- The default `boolean` category now negates bare `if` and `elif` predicates
+  such as `flag`, `obj.flag`, and `check()`. Leela reports surviving mutations
+  when tests do not distinguish the two branch outcomes. Complex predicates
+  keep their existing operators; `while`, `assert`, and comprehension filters
+  are unchanged. (#18, #33)
+
+## 0.11.1 — 2026-11-23
+
+### Fixed
+
+- Apply each import-hook mutant only to its intended module and source file.
+  Separate modules at the same source coordinates no longer share a mutation
+  and can report independent results. If an import uses the same dotted name
+  but resolves to a different source file, that file is left unmutated.
+  Alternate paths to the intended file still work for the intended module. (#25)
+
+## 0.11.0 — 2026-11-23
+
+### Added
+
+- Print a UTC-stamped completion line for each mutant, with its ID,
+  location, mutation, verdict, and wall time. The duration covers the
+  whole runner call, including any control and confirmation runs. The
+  terminal summary lists up to five slowest completed mutants, including
+  when output is piped. The HTML report's per-mutant elapsed time is
+  unchanged. (#26)
+
+## 0.10.0 — 2026-11-22
+
+### Added
+
+- Print UTC timestamps, the current mutant and completed counts while
+  mutation testing runs, including when output is piped.
+
+### Fixed
+
+- Give the mutation loader precedence over pytest's assertion rewriter
+  before initial conftests. Marked targets no longer silently test
+  unmutated code on that path; non-target assertion rewriting is unchanged.
+- Confirm mutation-caused setup, teardown, collection, or import failures
+  against an unmutated control and a repeated run. Uncertain failures are
+  errors, not kills. Terminal, JSON, and HTML reports show the evidence.
+
 ## 0.9.0 — 2026-10-14
 
 ### Fixed

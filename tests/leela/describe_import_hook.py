@@ -2,8 +2,12 @@
 
 import ast
 import importlib.machinery
+import importlib.util
 import sys
 import types
+from dataclasses import replace
+
+import pytest
 
 from pytest_leela.import_hook import (
     MutantApplier,
@@ -43,6 +47,242 @@ def _make_mutant(
 
 
 def describe_MutantApplier():
+    @pytest.mark.parametrize("predicate", ["x", "obj.ready", "keep(x, y)", "y"])
+    def it_negates_exactly_one_comprehension_filter_across_generators(predicate):
+        source = "[(x, y) for x in xs if x if obj.ready for y in ys if keep(x, y) if y]"
+        anchor = f"if {predicate}"
+        mutant = _make_mutant(
+            col_offset=source.index(anchor) + 3, node_type="ComprehensionFilter",
+            original_op="condition", replacement_op="negate_condition",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source.replace(anchor, f"if not {predicate}", 1)))
+
+    def it_preserves_generator_laziness_short_circuiting_and_filter_evaluation():
+        source = "result = (y for x in xs if x for y in children(x) if check(y) if allow(y))"
+        tree, applied = apply_mutation(source, _make_mutant(
+            col_offset=source.index("check"), node_type="ComprehensionFilter",
+            original_op="condition", replacement_op="negate_condition",
+        ))
+        assert applied
+        events = []
+
+        def children(x):
+            events.append(("children", x))
+            return [1, 2]
+
+        def check(y):
+            events.append(("check", y))
+            return [y] if y == 1 else []
+
+        def allow(y):
+            events.append(("allow", y))
+            return True
+
+        namespace = dict(xs=[0, 1], children=children, check=check, allow=allow)
+        exec(compile(tree, "test.py", "exec"), namespace)
+        assert events == []
+        assert list(namespace["result"]) == [2]
+        assert events == [("children", 1), ("check", 1), ("check", 2), ("allow", 2)]
+
+    @pytest.mark.parametrize("predicate,mismatch", [
+        ("x", {"col_offset": 0}), ("x", {"lineno": 2}),
+        ("x", {"replacement_op": "unknown"}), ("x", {"node_type": "While"}),
+        ("not x", {}), ("x and ready", {}), ("items[0]", {}),
+    ])
+    def it_keeps_ineligible_or_nonmatching_comprehension_filters(predicate, mismatch):
+        source = f"[x for x in xs if {predicate}]"
+        fields = dict(col_offset=source.index("if ") + 3, node_type="ComprehensionFilter",
+                      original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    def it_still_applies_compound_filter_child_mutations():
+        source = "[x for x in xs if check(x == 1) if x]"
+        tree, applied = apply_mutation(source, _make_mutant(
+            col_offset=source.index("x =="), node_type="Compare",
+            original_op="Eq", replacement_op="NotEq",
+        ))
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source.replace("==", "!=")))
+
+    @pytest.mark.parametrize("definition", ["def f():", "async def f():", "class f:"])
+    @pytest.mark.parametrize("index", [0, 1, 2])
+    def it_removes_only_the_decorator_at_the_selected_coordinates(definition, index):
+        decorators = ["@wrap", "@factory()", "@wrap"]
+        tail = [definition, "    pass", "", "@wrap", "def other(): pass"]
+        source = "\n".join(decorators + tail)
+        mutant = _make_mutant(
+            lineno=index + 1, col_offset=1, node_type="Decorator",
+            original_op="decorator", replacement_op="remove_decorator",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        expected = "\n".join(decorators[:index] + decorators[index + 1:] + tail)
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse(expected))
+
+    @pytest.mark.parametrize("mismatch", [
+        {"lineno": 2}, {"col_offset": 0}, {"node_type": "Call"},
+        {"replacement_op": "unknown"},
+    ])
+    def it_leaves_decorators_unchanged_for_a_nonmatching_mutant(mismatch):
+        source = "@wrap\ndef f(): pass\n"
+        fields = dict(
+            col_offset=1, node_type="Decorator", original_op="decorator",
+            replacement_op="remove_decorator",
+        )
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    @pytest.mark.parametrize("result", [[], [1]])
+    def it_negates_one_if_predicate_and_evaluates_it_once(result):
+        source = (
+            "if check():\n"
+            "    if flag: events.append('first')\n"
+            "else:\n"
+            "    events.append('second')\n"
+        )
+        mutant = _make_mutant(
+            node_type="If", original_op="condition", replacement_op="negate_condition"
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        predicate = tree.body[0].test
+        assert (predicate.lineno, predicate.col_offset) == (1, 3)
+        calls = []
+        events = []
+
+        def check():
+            calls.append("checked")
+            return result
+
+        exec(compile(tree, "test.py", "exec"), dict(check=check, flag=True, events=events))
+        assert calls == ["checked"]
+        assert events == (["second"] if result else ["first"])
+
+    @pytest.mark.parametrize("mismatch", [
+        {"lineno": 2}, {"col_offset": 2}, {"node_type": "Call"}, {"replacement_op": "unknown"},
+    ])
+    def it_leaves_if_unchanged_for_a_nonmatching_mutant(mismatch):
+        source = "if check(): pass\n"
+        fields = dict(node_type="If", original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    @pytest.mark.parametrize("result", [[], [1]])
+    def it_negates_only_the_selected_assert_test_and_keeps_the_lazy_message(result):
+        source = "assert flag\nassert check(), explain()\nassert flag and other\n"
+        mutant = _make_mutant(
+            lineno=2, node_type="Assert", original_op="condition",
+            replacement_op="negate_condition",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        expected = ast.parse(source.replace("assert check()", "assert not check()"))
+        assert ast.dump(tree) == ast.dump(expected)
+        original = ast.parse(source).body[1].test
+        predicate = tree.body[1].test
+        assert ast.get_source_segment(source, predicate) == ast.get_source_segment(
+            source, original
+        ) == "check()"
+
+        calls = []
+
+        def check():
+            calls.append("predicate")
+            return result
+
+        def explain():
+            calls.append("message")
+            return "validation failed"
+
+        code = compile(tree, "test.py", "exec")
+        namespace = dict(flag=True, other=True, check=check, explain=explain)
+        if result:
+            with pytest.raises(AssertionError, match="^validation failed$"):
+                exec(code, namespace)
+            assert calls == ["predicate", "message"]
+        else:
+            exec(code, namespace)
+            assert calls == ["predicate"]
+
+    @pytest.mark.parametrize(("predicate", "mismatch"), [
+        ("flag", {"lineno": 2}), ("flag", {"col_offset": 7}),
+        ("flag", {"node_type": "If"}), ("flag", {"replacement_op": "unknown"}),
+        ("flag and other", {}), ("not flag", {}), ("flag == other", {}),
+        ("True", {}), ("obj[0]", {}),
+    ])
+    def it_leaves_assert_unchanged_for_ineligible_or_nonmatching_mutants(predicate, mismatch):
+        source = f"assert {predicate}, message()\n"
+        fields = dict(node_type="Assert", original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    def it_still_applies_existing_mutations_inside_the_assert_message():
+        source = "assert flag, a + b\n"
+        tree, applied = apply_mutation(source, _make_mutant(col_offset=13))
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse("assert flag, a - b\n"))
+
+    def it_negates_one_while_test_once_per_check_without_rewriting_the_loop():
+        source = (
+            "while flag: break\n"
+            "while check():\n"
+            "    events.append('iteration')\n"
+            "else:\n"
+            "    events.append('done')\n"
+        )
+        mutant = _make_mutant(
+            lineno=2, node_type="While", original_op="condition",
+            replacement_op="negate_condition",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        expected = ast.parse(source.replace("while check()", "while not check()"))
+        assert ast.dump(tree) == ast.dump(expected)
+        assert ast.get_source_segment(source, tree.body[1].test) == "check()"
+        values = iter(([], [], [1]))
+        events = []
+
+        def check():
+            events.append("check")
+            return next(values)
+
+        exec(compile(tree, "test.py", "exec"), dict(flag=True, check=check, events=events))
+        assert events == ["check", "iteration", "check", "iteration", "check", "done"]
+
+    @pytest.mark.parametrize(("predicate", "mismatch"), [
+        ("flag", {"lineno": 2}), ("flag", {"col_offset": 6}),
+        ("flag", {"node_type": "Assert"}), ("flag", {"replacement_op": "unknown"}),
+        ("flag and other", {}), ("not flag", {}), ("flag == other", {}),
+        ("True", {}), ("obj[0]", {}),
+    ])
+    def it_leaves_while_unchanged_for_ineligible_or_nonmatching_mutants(predicate, mismatch):
+        source = f"while {predicate}: break\n"
+        fields = dict(node_type="While", original_op="condition", replacement_op="negate_condition")
+        fields.update(mismatch)
+        tree, applied = apply_mutation(source, _make_mutant(**fields))
+        assert not applied
+        assert ast.dump(tree) == ast.dump(ast.parse(source))
+
+    def it_still_applies_existing_mutations_inside_a_while_test():
+        source = "while check(a == b): break\n"
+        mutant = _make_mutant(
+            col_offset=12, node_type="Compare", original_op="Eq", replacement_op="NotEq",
+        )
+        tree, applied = apply_mutation(source, mutant)
+        assert applied
+        assert ast.dump(tree) == ast.dump(ast.parse("while check(a != b): break\n"))
+
     def it_applies_binop_mutation():
         source = "x + y"
         tree = ast.parse(source, mode="eval")
@@ -1202,6 +1442,92 @@ def describe_MutatingFinder():
         spec = finder.find_spec("mymod")
         assert spec is not None
         assert spec.origin == "/real/path/mymod.py"
+
+    def it_mutates_only_the_mutants_own_module_at_shared_coordinates():
+        point = MutationPoint(
+            file_path="leela_same_coord_a.py",
+            module_name="leela_same_coord_a",
+            lineno=1,
+            col_offset=8,
+            node_type="BinOp",
+            original_op="Add",
+            inferred_type=None,
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = install_hook(
+            {
+                "leela_same_coord_a": "VALUE = 2 + 3\n",
+                "leela_same_coord_b": "VALUE = 20 + 30\n",
+            },
+            mutant,
+        )
+        try:
+            mutated = importlib.import_module("leela_same_coord_a")
+            other = importlib.import_module("leela_same_coord_b")
+        finally:
+            remove_hook(finder)
+            sys.modules.pop("leela_same_coord_a", None)
+            sys.modules.pop("leela_same_coord_b", None)
+        assert mutated.VALUE == -1
+        assert other.VALUE == 50
+        assert other.__file__ == "<mutated:leela_same_coord_b>"
+        assert finder.import_errors == []
+
+    @pytest.mark.parametrize(
+        "same_source, expected", [(False, 50), (True, -10)], ids=["shadowed", "alias"]
+    )
+    def it_checks_file_identity_when_module_names_match(tmp_path, same_source, expected):
+        from pytest_leela.import_hook import MutatingFinder
+
+        loaded_path = tmp_path / "active" / "test.py"
+        loaded_path.parent.mkdir()
+        loaded_path.write_text("VALUE = 20 + 30\n")
+        point_path = tmp_path / "test.py"
+        if same_source:
+            # Exercise realpath without requiring permission to create symlinks.
+            point_path = loaded_path.parent / ".." / "active" / "test.py"
+        else:
+            point_path.write_text("VALUE = 2 + 3\n")
+        point = replace(_make_point(col_offset=8), file_path=str(point_path))
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = MutatingFinder({point.module_name: loaded_path.read_text()}, mutant)
+        finder.set_file_paths({point.module_name: str(loaded_path)})
+
+        spec = finder.find_spec(point.module_name)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert module.VALUE == expected
+        assert module.__file__ == str(loaded_path)
+
+    def it_does_not_apply_a_mutant_to_a_different_name_for_the_same_file(tmp_path):
+        from pytest_leela.import_hook import MutatingFinder
+
+        source = "VALUE = 20 + 30\n"
+        source_path = tmp_path / "active" / "subject.py"
+        source_path.parent.mkdir()
+        source_path.write_text(source)
+        alias_path = source_path.parent / ".." / "active" / "subject.py"
+        assert alias_path != source_path
+        assert alias_path.resolve() == source_path.resolve()
+
+        owner, other = "leela_toy.subject", "leela_alias.subject"
+        point = replace(
+            _make_point(col_offset=8), file_path=str(source_path), module_name=owner
+        )
+        mutant = Mutant(point=point, replacement_op="Sub", mutant_id=0)
+        finder = MutatingFinder({owner: source, other: source}, mutant)
+        finder.set_file_paths({owner: str(source_path), other: str(alias_path)})
+
+        def load(name):
+            spec = finder.find_spec(name)
+            assert spec is not None and spec.loader is not None
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+
+        assert load(owner).VALUE == -10
+        assert load(other).VALUE == 50
 
 
 def describe_MutatingLoader():

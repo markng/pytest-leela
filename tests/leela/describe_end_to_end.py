@@ -2,6 +2,7 @@
 
 import importlib
 import re
+import subprocess
 import textwrap
 from datetime import UTC, datetime
 
@@ -17,6 +18,325 @@ def _leela(pytester, *extra):
     return pytester.runpytest_subprocess(
         "-p", "no:cacheprovider", "--leela", "--target", "calc.py", *extra
     )
+
+
+def describe_diff_score():
+    def it_distinguishes_zero_candidates_from_a_numeric_score(pytester, monkeypatch):
+        monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+        monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+        source = pytester.makepyfile(subject='''
+            """Before."""
+            import math
+
+            def is_zero(x):
+                return x == 0
+        ''')
+        pytester.makepyfile(test_subject="""
+            from subject import is_zero
+
+            def test_is_zero():
+                assert is_zero(0) is True
+                assert is_zero(1) is False
+        """)
+
+        def git(*args):
+            subprocess.run(["git", *args], cwd=pytester.path, check=True)
+
+        git("init", "-q", "--template=")
+        git("add", "subject.py", "test_subject.py")
+        git(
+            "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+            "commit", "-qm", "base",
+        )
+
+        def run_diff():
+            result = pytester.runpytest_subprocess("-q", "--leela", "--diff", "HEAD")
+            assert result.ret == pytest.ExitCode.OK
+            result.assert_outcomes(passed=1)
+            return result.stdout.str()
+
+        original = source.read_text()
+        empty = run_diff()
+        assert "leela mutation testing" not in empty
+        assert "Overall:" not in empty
+
+        source.write_text(
+            original.replace("Before", "Updated").replace(
+                "import math", "import math as mathematics"
+            )
+        )
+        zero = run_diff()
+        assert "WARNING: --diff 'HEAD' produced 0 mutants." in zero
+        assert "Mutants: 0 candidates, 0 pruned" in zero
+        assert "Overall: N/A (nothing to test)" in zero
+        assert "0/0 killed" not in zero
+
+        source.write_text(original.replace("x == 0", "x == (0)"))
+        scored = run_diff()
+        assert "WARNING: --diff" not in scored
+        assert "Overall: 2/2 killed (100.0%)" in scored
+
+
+def describe_decorator_removal():
+    def it_reports_each_removal_until_tests_check_the_combined_behavior(pytester):
+        pytester.makefile(".toml", pyproject='[tool.pytest-leela]\noperators = ["decorator"]')
+        pytester.makepyfile(calc='''
+            def wrap(fn):
+                def inner():
+                    return f"[{fn()}]"
+                return inner
+
+            def append(suffix):
+                def decorate(fn):
+                    def inner():
+                        return f"{fn()}{suffix}"
+                    return inner
+                return decorate
+
+            @wrap
+            @append("!")
+            def greet():
+                return "hi"
+        ''')
+        test = pytester.makepyfile(test_calc='''
+            from calc import greet
+
+            def test_greet():
+                assert isinstance(greet(), str)
+        ''')
+        incomplete = _leela(pytester)
+        assert incomplete.ret == pytest.ExitCode.TESTS_FAILED
+        incomplete.assert_outcomes(passed=1)
+        incomplete.stdout.fnmatch_lines([
+            "*calc.py*:13:1 decorator -> remove_decorator: survived *",
+            "*calc.py*:14:1 decorator -> remove_decorator: survived *",
+            "Overall: 0/2 killed (0.0%)*",
+        ])
+
+        test.write_text('from calc import greet\n\ndef test_greet():\n    assert greet() == "[hi!]"\n')
+        complete = _leela(pytester)
+        assert complete.ret == pytest.ExitCode.OK
+        complete.assert_outcomes(passed=1)
+        complete.stdout.fnmatch_lines([
+            "*calc.py*:13:1 decorator -> remove_decorator: killed *",
+            "*calc.py*:14:1 decorator -> remove_decorator: killed *",
+            "Overall: 2/2 killed (100.0%)*",
+        ])
+
+
+def describe_bare_if_predicates():
+    def it_reports_survivors_until_tests_distinguish_both_behaviors(pytester):
+        pytester.makepyfile(calc="""
+            def record(flag, config, check, events):
+                if flag:
+                    events.append('flag on')
+                else:
+                    events.append('flag off')
+                if config.enabled:
+                    events.append('enabled')
+                else:
+                    events.append('disabled')
+                if check():
+                    events.append('ready')
+                else:
+                    events.append('waiting')
+        """)
+        test = pytester.makepyfile(test_calc="""
+            from types import SimpleNamespace
+            from calc import record
+
+            def test_records_events():
+                events = []
+                record(True, SimpleNamespace(enabled=True), lambda: True, events)
+                assert len(events) == 3
+        """)
+        incomplete = _leela(pytester)
+        assert incomplete.ret == 1
+        incomplete.stdout.fnmatch_lines([
+            "*condition*negate_condition*SURVIVED*",
+            "*condition*negate_condition*SURVIVED*",
+            "*condition*negate_condition*SURVIVED*",
+            "Overall: 0/3 killed (0.0%)*",
+        ])
+
+        test.write_text(textwrap.dedent("""\
+            from types import SimpleNamespace
+            from calc import record
+
+            def test_records_events():
+                events = []
+                record(True, SimpleNamespace(enabled=True), lambda: True, events)
+                assert events == ['flag on', 'enabled', 'ready']
+                events.clear()
+                record(False, SimpleNamespace(enabled=False), lambda: False, events)
+                assert events == ['flag off', 'disabled', 'waiting']
+        """), encoding="utf-8")
+        complete = _leela(pytester)
+        assert complete.ret == 0
+        complete.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
+
+
+def describe_bare_assert_predicates():
+    def it_reports_native_assertion_mutants_as_survived_or_killed(pytester):
+        pytester.makepyfile(calc="""
+            def validate_flag(flag):
+                assert flag
+
+            def validate_config(config):
+                assert config.enabled, 'disabled'
+
+            def validate_check(check, explain):
+                assert check(), explain()
+        """)
+        test = pytester.makepyfile(test_calc="""
+            from types import SimpleNamespace
+            from calc import validate_flag, validate_config, validate_check
+
+            def test_exercises_validation_without_enforcing_it():
+                for validate, args in (
+                    (validate_flag, (True,)),
+                    (validate_config, (SimpleNamespace(enabled=True),)),
+                    (validate_check, (lambda: True, lambda: 'not ready')),
+                ):
+                    try:
+                        validate(*args)
+                    except AssertionError:
+                        pass
+        """)
+        incomplete = _leela(pytester)
+        assert incomplete.ret == pytest.ExitCode.TESTS_FAILED
+        incomplete.assert_outcomes(passed=1)
+        incomplete.stdout.fnmatch_lines([
+            "*line 2:*condition*negate_condition*SURVIVED*",
+            "*line 5:*condition*negate_condition*SURVIVED*",
+            "*line 8:*condition*negate_condition*SURVIVED*",
+            "Overall: 0/3 killed (0.0%)*",
+        ])
+
+        test.write_text(textwrap.dedent('''\
+            from types import SimpleNamespace
+            import pytest
+            from calc import validate_flag, validate_config, validate_check
+
+            def test_valid_values_pass_and_invalid_values_raise():
+                def never_explain():
+                    pytest.fail('message evaluated on success')
+                validate_flag(True)
+                validate_config(SimpleNamespace(enabled=True))
+                validate_check(lambda: True, never_explain)
+                with pytest.raises(AssertionError):
+                    validate_flag(False)
+                with pytest.raises(AssertionError, match='^disabled$'):
+                    validate_config(SimpleNamespace(enabled=False))
+                with pytest.raises(AssertionError, match='^not ready$'):
+                    validate_check(lambda: False, lambda: 'not ready')
+        '''), encoding="utf-8")
+        complete = _leela(pytester)
+        assert complete.ret == pytest.ExitCode.OK
+        complete.assert_outcomes(passed=1)
+        complete.stdout.fnmatch_lines(["Overall: 3/3 killed (100.0%)*"])
+
+
+def describe_bare_while_predicates():
+    def it_kills_the_three_bare_loop_predicates_when_tests_check_both_paths(pytester):
+        pytester.makepyfile(calc="""
+            def record_flag(flag, events):
+                while flag:
+                    events.append('entered')
+                    break
+
+            def record_attribute(obj, events):
+                while obj.enabled:
+                    events.append('entered')
+                    break
+
+            def record_call(check, events):
+                while check():
+                    events.append('entered')
+                    break
+        """)
+        pytester.makepyfile(test_calc="""
+            from types import SimpleNamespace
+            from calc import record_flag, record_attribute, record_call
+
+            import pytest
+
+            @pytest.mark.parametrize('enabled', [True, False])
+            @pytest.mark.parametrize('site', ['flag', 'attribute', 'call'])
+            def test_path(site, enabled):
+                events = []
+                checks = []
+
+                def check():
+                    checks.append('checked')
+                    return [1] if enabled else []
+
+                if site == 'flag':
+                    record_flag(enabled, events)
+                elif site == 'attribute':
+                    record_attribute(SimpleNamespace(enabled=enabled), events)
+                else:
+                    record_call(check, events)
+                    assert checks == ['checked']
+                assert events == (['entered'] if enabled else [])
+        """)
+        result = _leela(pytester, "-v")
+        assert result.ret == pytest.ExitCode.OK
+        result.assert_outcomes(passed=6)
+        result.stdout.fnmatch_lines([
+            "*calc.py*:2:4 condition -> negate_condition: killed *",
+            "*calc.py*:7:4 condition -> negate_condition: killed *",
+            "*calc.py*:12:4 condition -> negate_condition: killed *",
+            "Overall: 3/3 killed (100.0%)*",
+        ])
+
+
+def describe_bare_comprehension_filters():
+    def it_reports_weak_survivors_and_adequate_kills_for_all_four_forms(pytester):
+        pytester.makepyfile(calc="""
+            def as_list(values):
+                yield from [item for item in values if item]
+
+            def as_set(values):
+                yield from {item for item in values if item.enabled}
+
+            def as_dict(values, check):
+                yield from {item: item for item in values if check(item)}
+
+            def as_generator(values):
+                yield from (item for item in values if item)
+        """)
+        exercise = textwrap.dedent('''\
+            from collections import namedtuple
+            from calc import as_list, as_set, as_dict, as_generator
+
+            Item = namedtuple('Item', 'enabled')
+
+            def test_filters():
+                items = [Item(True), Item(False)]
+                listed = list(as_list([0, 1]))
+                unique = list(as_set(items))
+                keys = list(as_dict([0, 1], bool))
+                generated = list(as_generator([0, 1]))
+        ''')
+        test = pytester.makepyfile(test_calc=exercise)
+        weak = _leela(pytester)
+        assert weak.ret == pytest.ExitCode.TESTS_FAILED
+        weak.assert_outcomes(passed=1)
+        weak.stdout.fnmatch_lines([
+            *(f"*line {line}:*condition*negate_condition*SURVIVED*" for line in (2, 5, 8, 11)),
+            "Overall: 0/4 killed (0.0%)*",
+        ])
+        test.write_text(exercise + "    assert (listed, unique, keys, generated) == "
+                        "([1], [Item(True)], [1], [1])\n", encoding="utf-8")
+        strong = _leela(pytester, "-v")
+        assert strong.ret == pytest.ExitCode.OK
+        strong.assert_outcomes(passed=1)
+        strong.stdout.fnmatch_lines([
+            *(f"*calc.py*:{line}:{column} condition -> negate_condition: killed *"
+              for line, column in ((2, 43), (5, 43), (8, 49), (11, 43))),
+            "Overall: 4/4 killed (100.0%)*",
+        ])
 
 
 def describe_import_breaking_mutant():
@@ -307,6 +627,39 @@ def describe_clean_project():
         result.stdout.fnmatch_lines(["Overall: *killed (100.0%)*"])
 
 
+def describe_assertion_rewriting():
+    def it_mutates_a_target_marked_for_rewrite_before_conftest_import(pytester):
+        pytester.makeconftest(
+            "import pytest\n"
+            "pytest.register_assert_rewrite('calc', 'assert_helper')\n"
+            "import calc\n"
+        )
+        pytester.makepyfile(
+            calc=_DOUBLE,
+            assert_helper="def check():\n    assert 1 == 2\n",
+            test_calc=(
+                "import pytest\n"
+                "from assert_helper import check\n"
+                "from calc import double\n"
+                "\ndef test_double_and_rewriting():\n"
+                "    with pytest.raises(AssertionError, match='assert 1 == 2'):\n"
+                "        check()\n"
+                "    assert isinstance(double(2), int)\n"
+            ),
+        )
+
+        result = _leela(pytester)
+
+        # The original and both arithmetic replacements return an int, so
+        # the latter survive only if the helper still rewrites during their run.
+        assert result.ret == 1
+        result.assert_outcomes(passed=1)
+        result.stdout.fnmatch_lines(
+            ["*line 2: * → + * SURVIVED", "*line 2: * → // * SURVIVED",
+             "Overall: 1/3 killed (33.3%)*"]
+        )
+
+
 def describe_mutation_progress():
     @pytest.mark.parametrize("without_terminal", [False, True])
     def it_emits_one_outer_progress_sequence_into_a_pipe(pytester, without_terminal):
@@ -329,17 +682,41 @@ def describe_mutation_progress():
 
         assert messages[0] == "finding runnable mutants"
         assert messages[1].startswith("checking baseline (0/")
-        started = [message for message in messages if message.startswith("testing mutant ")]
-        assert started
-        total = len(started)
-        for index, line in enumerate(started, start=1):
-            assert line.startswith(f"testing mutant {index}/{total} calc:2:")
-            assert f"({index - 1}/{total} runnable mutants completed; " in line
+        total = sum(message.startswith("testing mutant ") for message in messages)
+        assert total > 0
+        source = re.escape(repr(str(pytester.path / "calc.py")))
+        for index in range(total):
+            started, completed = messages[2 + 2 * index:4 + 2 * index]
+            match = re.fullmatch(
+                rf"testing mutant {index + 1}/{total} calc:(2:\d+) (.+) "
+                rf"\({index}/{total} runnable mutants completed; \d+ pruned\)",
+                started,
+            )
+            assert match is not None, started
+            assert re.fullmatch(
+                rf"completed mutant id={index} {source}:{match[1]} {re.escape(match[2])}: "
+                r"killed \(\d+\.\d{3}s wall time\)",
+                completed,
+            ), completed
+        finished, header, *slowest = messages[2 + 2 * total:]
         assert re.fullmatch(
             rf"finished \({total}/{total} runnable mutants completed; \d+ pruned\)",
-            messages[-1],
+            finished,
         )
-        assert len(lines) == total + 3
+        assert header == "slowest mutants by wall time (up to 5):"
+        assert len(slowest) == min(total, 5)
+
+    def it_omits_timing_lines_when_no_mutants_run(pytester):
+        pytester.makepyfile(
+            calc="ANSWER = 42", test_calc="def test_pass():\n    pass"
+        )
+
+        result = _leela(pytester)
+
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(["leela: * finished (0/0 runnable mutants completed; *)"])
+        assert "completed mutant id=" not in result.stdout.str()
+        assert "slowest mutants" not in result.stdout.str()
 
 
 _LOGGED = (

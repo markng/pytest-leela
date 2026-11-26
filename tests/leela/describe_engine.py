@@ -22,6 +22,7 @@ from pytest_leela.models import (
     CoverageMap,
     Mutant,
     MutantResult,
+    MutantTiming,
     MutationPoint,
     MutationProgress,
     RunResult,
@@ -538,15 +539,101 @@ def describe_Engine_mutation_progress():
 
     def it_reports_zero_without_starting_baseline_or_a_mutant(tmp_path, monkeypatch):
         target = tmp_path / "empty_target.py"
-        target.write_text("name = 'no mutation points'\n")
+        target.write_text("name = None\n")
         monkeypatch.chdir(tmp_path)
         events: list[MutationProgress] = []
+        timings: list[MutantTiming] = []
         with patch.object(Engine, "_check_baseline") as baseline:
-            result = Engine(use_coverage=False).run([str(target)], on_progress=events.append)
+            result = Engine(use_coverage=False).run(
+                [str(target)], on_progress=events.append, on_mutant_timing=timings.append
+            )
 
         assert result.mutants_tested == 0
         assert events == [MutationProgress("done", 0, 0, 0)]
+        assert timings == []
         baseline.assert_not_called()
+
+
+def describe_Engine_mutant_timing():
+    @pytest.mark.parametrize(
+        "steps, status, wall_seconds, inner_seconds, killing_test",
+        [
+            (
+                [("setup", 2), ("control", 3), ("setup", 4)],
+                "killed", 9, 4, "test_a.py::test_a",
+            ),
+            ([("crash", 2)], "error", 2, 2, None),
+            ([("timeout", 5)], "killed", 5, 5, "<timeout>"),
+            ([("pass", 1)], "survived", 1, 1, None),
+        ],
+        ids=["confirmation", "error", "timeout", "survived"],
+    )
+    def it_times_the_complete_runner_call_without_changing_its_result(
+        tmp_path, monkeypatch, steps, status, wall_seconds, inner_seconds, killing_test
+    ):
+        from pytest_leela.runner import InnerSession, _failure_evidence
+
+        target = tmp_path / "timed.py"
+        target.write_text("def value():\n    return True\n")
+        monkeypatch.chdir(tmp_path)
+        nodeid = "test_a.py::test_a"
+        now = 100.0
+        clock = types.SimpleNamespace(monotonic=lambda: now)
+        remaining = iter(steps)
+        events: list[MutationProgress | MutantTiming] = []
+
+        def check_baseline(test_ids, *_):
+            nonlocal now
+            assert test_ids == [[nodeid]]
+            now += 10
+
+        def run_pytest(session):
+            nonlocal now
+            phase, seconds = next(remaining)
+            assert isinstance(events[-1], MutationProgress)
+            assert events[-1].phase == "mutation"
+            assert session.test_ids == [nodeid]
+            assert (session.finder is None) == (phase == "control")
+            now += seconds
+            if phase == "setup":
+                session.collector.errors.append(nodeid)
+                session.collector.failure_evidence["setup", nodeid] = _failure_evidence(
+                    "setup", nodeid, ValueError("setup failed")
+                )
+            elif phase == "crash":
+                session.crash = "pytest crashed: RuntimeError: boom"
+            elif phase == "timeout":
+                session.timed_out.set()
+            else:
+                session.collector.passed.append(nodeid)
+                session.collector.total = 1
+
+        with (
+            patch.object(Engine, "_check_baseline", side_effect=check_baseline),
+            patch.object(InnerSession, "_run_pytest", run_pytest),
+            patch("pytest_leela.engine.time", clock),
+            patch("pytest_leela.runner.time", clock),
+        ):
+            result = Engine(use_coverage=False).run(
+                [str(target)],
+                test_node_ids=[nodeid],
+                on_progress=events.append,
+                on_mutant_timing=events.append,
+            )
+
+        assert list(remaining) == []
+        (recorded,) = result.results
+        assert recorded.status == status
+        assert recorded.killing_test == killing_test
+        assert recorded.time_seconds == inner_seconds
+        assert recorded.wall_time_seconds == wall_seconds
+        assert result.wall_time_seconds == 10 + wall_seconds
+        assert events == [
+            MutationProgress("baseline", 0, 1, 0),
+            MutationProgress("mutation", 0, 1, 0, recorded.mutant),
+            MutantTiming(recorded.mutant, status, wall_seconds),
+            MutationProgress("done", 1, 1, 0),
+        ]
 
 
 def describe_Engine_enabled_categories():
@@ -999,7 +1086,7 @@ def describe_Engine_run_baseline():
 
     def it_skips_the_baseline_when_there_are_no_mutants(tmp_path, monkeypatch):
         target = tmp_path / "bl_empty.py"
-        target.write_text("X = 1\n")
+        target.write_text("X = None\n")
         monkeypatch.chdir(tmp_path)
 
         with patch.object(Engine, "_check_baseline") as mock_baseline:

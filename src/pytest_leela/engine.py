@@ -22,6 +22,7 @@ from pytest_leela.models import (
     EnrichmentStats,
     Mutant,
     MutantResult,
+    MutantTiming,
     MutationProgress,
     RunResult,
 )
@@ -125,7 +126,9 @@ class Engine:
         test_node_ids: list[str] | None = None,
         pre_coverage_map: CoverageMap | None = None,
         on_progress: Callable[[MutationProgress], None] | None = None,
+        on_mutant_timing: Callable[[MutantTiming], None] | None = None,
     ) -> RunResult:
+        """Run mutants serially, optionally reporting complete runner-call timings."""
         start = time.monotonic()
 
         _clean_process_state()
@@ -234,6 +237,8 @@ class Engine:
                 on_progress(
                     MutationProgress("mutation", len(results), runnable, total_pruned, mutant)
                 )
+            # Time the whole synchronous call, including any control and confirmation.
+            mutant_start = time.monotonic() if on_mutant_timing is not None else 0.0
             result = run_tests_for_mutant(
                 mutant,
                 target_sources,
@@ -244,6 +249,10 @@ class Engine:
                 test_times=test_times,
                 scope=scope,
             )
+            if on_mutant_timing is not None:
+                elapsed = time.monotonic() - mutant_start
+                result.wall_time_seconds = elapsed
+                on_mutant_timing(MutantTiming(mutant, result.status, elapsed))
             results.append(result)
         else:
             if on_progress is not None:

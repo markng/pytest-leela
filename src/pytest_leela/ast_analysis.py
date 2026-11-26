@@ -51,6 +51,29 @@ _UNARYOP_NAMES: dict[type, str] = {
 }
 
 
+def eligible_assignment_rhs(node: ast.Assign | ast.AnnAssign) -> ast.expr | None:
+    """Return a non-None initializer for an assignment to names only."""
+    match node:
+        case ast.Assign(targets=[ast.Name(), *rest], value=value) if all(
+            isinstance(target, ast.Name) for target in rest
+        ):
+            pass
+        case ast.AnnAssign(target=ast.Name(), value=value):
+            pass
+        case _:
+            return None
+    if value is not None and not (
+        isinstance(value, ast.Constant) and value.value is None
+    ):
+        return value
+    return None
+
+
+def is_bare_predicate(test: ast.expr) -> bool:
+    """Match a name, attribute access, or call at the predicate root."""
+    return isinstance(test, (ast.Name, ast.Attribute, ast.Call))
+
+
 class _MutationPointCollector(ast.NodeVisitor):
     """Walk an AST and collect all mutable nodes."""
 
@@ -124,6 +147,24 @@ class _MutationPointCollector(ast.NodeVisitor):
             )
         self.generic_visit(node)
 
+    def visit_Assign(self, node: ast.Assign | ast.AnnAssign) -> None:
+        rhs = eligible_assignment_rhs(node)
+        if rhs is not None:
+            self.points.append(
+                MutationPoint(
+                    file_path=self.file_path,
+                    module_name=self.module_name,
+                    lineno=rhs.lineno,
+                    col_offset=rhs.col_offset,
+                    node_type=type(node).__name__,
+                    original_op="assignment",
+                    inferred_type=None,
+                )
+            )
+        self.generic_visit(node)
+
+    visit_AnnAssign = visit_Assign
+
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         op_name = _BINOP_NAMES.get(type(node.op))
         if op_name is not None:
@@ -138,6 +179,61 @@ class _MutationPointCollector(ast.NodeVisitor):
                     inferred_type=None,
                 )
             )
+        self.generic_visit(node)
+
+    def visit_FunctionDef(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+    ) -> None:
+        for decorator in node.decorator_list:
+            self.points.append(
+                MutationPoint(
+                    file_path=self.file_path,
+                    module_name=self.module_name,
+                    lineno=decorator.lineno,
+                    col_offset=decorator.col_offset,
+                    node_type="Decorator",
+                    original_op="decorator",
+                    inferred_type=None,
+                )
+            )
+        self.generic_visit(node)
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+    visit_ClassDef = visit_FunctionDef
+
+    def _visit_statement_condition(self, node: ast.If | ast.Assert | ast.While) -> None:
+        if is_bare_predicate(node.test):
+            self.points.append(
+                MutationPoint(
+                    file_path=self.file_path,
+                    module_name=self.module_name,
+                    lineno=node.lineno,
+                    col_offset=node.col_offset,
+                    node_type=type(node).__name__,
+                    original_op="condition",
+                    inferred_type=None,
+                )
+            )
+        self.generic_visit(node)
+
+    visit_If = _visit_statement_condition
+    visit_Assert = _visit_statement_condition
+    visit_While = _visit_statement_condition
+
+    def visit_comprehension(self, node: ast.comprehension) -> None:
+        for test in node.ifs:
+            if is_bare_predicate(test):
+                self.points.append(
+                    MutationPoint(
+                        file_path=self.file_path,
+                        module_name=self.module_name,
+                        lineno=test.lineno,
+                        col_offset=test.col_offset,
+                        node_type="ComprehensionFilter",
+                        original_op="condition",
+                        inferred_type=None,
+                    )
+                )
         self.generic_visit(node)
 
     def visit_IfExp(self, node: ast.IfExp) -> None:

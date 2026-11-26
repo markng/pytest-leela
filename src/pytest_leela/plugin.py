@@ -9,6 +9,7 @@ import os
 import sys
 from collections.abc import Generator
 from datetime import UTC, datetime
+from heapq import nlargest
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,12 @@ from pytest_leela.config import load_config
 from pytest_leela.coverage_tracker import CoveragePlugin
 from pytest_leela.engine import BaselineFailure, Engine
 from pytest_leela.git_diff import changed_files
-from pytest_leela.models import MutationProgress
+from pytest_leela.models import MutantTiming, MutationProgress
+from pytest_leela.mutant_events import (
+    MutantEventsError,
+    open_mutant_events,
+    write_mutant_event,
+)
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
@@ -68,6 +74,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="Generate interactive HTML mutation report at PATH",
     )
     group.addoption(
+        "--leela-jsonl",
+        default=None,
+        metavar="PATH",
+        help="Run mutation testing and stream completed mutants to a new JSONL file",
+    )
+    group.addoption(
         "--leela-benchmark",
         action="store_true",
         default=False,
@@ -76,8 +88,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def pytest_configure(config: pytest.Config) -> None:
-    if config.getoption("leela", default=False) or config.getoption(
-        "leela_html", default=None
+    if (
+        config.getoption("leela", default=False)
+        or config.getoption("leela_html", default=None)
+        or config.getoption("leela_jsonl", default=None) is not None
     ):
         config.pluginmanager.register(LeelaPlugin(config), "leela-plugin")
     elif config.getoption("leela_benchmark", default=False):
@@ -213,6 +227,19 @@ class LeelaPlugin:
         with self.config.stash[blocking_manager_key].unblock():
             yield
 
+    def _concurrency_summary(self, mutant_ran: bool, max_cores: int | None) -> str:
+        # The current Engine calls the mutant runner synchronously. A completed
+        # call therefore establishes a peak of one, regardless of CPU settings.
+        peak = "1 (serial)" if mutant_ran else "0 (no mutants executed)"
+        outer_workers = self.config.getoption("numprocesses", default=None)
+        cores = "unset" if max_cores is None else str(max_cores)
+        workers = "unset" if outer_workers is None else str(outer_workers)
+        return (
+            f"Leela mutant concurrency (observed peak): {peak}\n"
+            "Pytest test/worker concurrency during mutation: not measured\n"
+            f"Configured only: --max-cores={cores}; outer pytest -n={workers}"
+        )
+
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
             return
@@ -229,9 +256,7 @@ class LeelaPlugin:
 
         # Reuse target files resolved during pytest_sessionstart
         target_files = self._resolve_target_files(session)
-        if not target_files:
-            return
-
+        events_path = self.config.getoption("leela_jsonl", default=None)
         # Retrieve coverage map collected during the normal test run
         # (avoids re-running the entire test suite).
         pre_coverage_map = None
@@ -255,6 +280,18 @@ class LeelaPlugin:
             and session.config.pluginmanager.hasplugin("terminalreporter")
             else None
         )
+
+        def write_terminal_report(report: str) -> None:
+            if tw:
+                tw.write(report)
+            else:
+                print(report)
+
+        zero_concurrency = f"\n{self._concurrency_summary(False, limits.max_cores)}\n"
+
+        if not target_files and events_path is None:
+            write_terminal_report(zero_concurrency)
+            return
 
         # Bind the outer output before inner pytest sessions replace sys.stdout.
         stream = sys.stdout
@@ -289,19 +326,46 @@ class LeelaPlugin:
                 }[progress.phase]
             write_progress(f"{detail} ({counts})")
 
-        engine = Engine(enabled_categories=enabled_categories)
-        write_progress("finding runnable mutants", leading_newline=True)
+        timings: list[MutantTiming] = []
+
+        def timing_detail(timing: MutantTiming) -> str:
+            mutant = timing.mutant
+            point = mutant.point
+            return (
+                f"id={mutant.mutant_id} {point.file_path!r}:{point.lineno}:{point.col_offset} "
+                f"{point.original_op} -> {mutant.replacement_op}: {timing.status} "
+                f"({timing.wall_time_seconds:.3f}s wall time)"
+            )
+
+        def report_timing(timing: MutantTiming) -> None:
+            timings.append(timing)
+            write_progress(f"completed mutant {timing_detail(timing)}")
+            if events is not None:
+                write_mutant_event(events, timing)
+
         try:
-            with self._outer_django_db_unblocked():
-                result = engine.run(
-                    target_files,
-                    test_node_ids=test_node_ids,
-                    limits=limits,
-                    diff_base=diff_base,
-                    pre_coverage_map=pre_coverage_map,
-                    on_progress=report_progress,
-                )
-        except BaselineFailure as exc:
+            with open_mutant_events(events_path) as events:
+                if not target_files:
+                    write_terminal_report(zero_concurrency)
+                    return
+                html_path = self.config.getoption("leela_html", default=None)
+                engine = Engine(enabled_categories=enabled_categories)
+                write_progress("finding runnable mutants", leading_newline=True)
+                with self._outer_django_db_unblocked():
+                    result = engine.run(
+                        target_files,
+                        test_node_ids=test_node_ids,
+                        limits=limits,
+                        diff_base=diff_base,
+                        pre_coverage_map=pre_coverage_map,
+                        on_progress=report_progress,
+                        on_mutant_timing=report_timing,
+                    )
+                if events is not None and html_path is not None:
+                    from pytest_leela.html_report import generate_html_report
+
+                    generate_html_report(result, html_path, jsonl_fd=events.fileno())
+        except (BaselineFailure, MutantEventsError) as exc:
             message = f"\nleela: aborted: {exc}\n"
             if tw:
                 tw.write(message)
@@ -310,15 +374,17 @@ class LeelaPlugin:
             session.exitstatus = 1
             return
 
+        if timings:
+            write_progress("slowest mutants by wall time (up to 5):")
+            for timing in nlargest(5, timings, key=lambda timing: timing.wall_time_seconds):
+                write_progress(f"  {timing_detail(timing)}")
+
         report = format_terminal_report(result)
+        report += f"\n{self._concurrency_summary(bool(timings), limits.max_cores)}\n"
 
-        if tw:
-            tw.write(report)
-        else:
-            print(report)
+        write_terminal_report(report)
 
-        html_path = self.config.getoption("leela_html", default=None)
-        if html_path is not None:
+        if html_path is not None and events_path is None:
             from pytest_leela.html_report import generate_html_report
 
             generate_html_report(result, html_path)

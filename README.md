@@ -37,7 +37,11 @@ pip install pytest-leela
 pytest --leela
 ```
 
-After the normal pytest run, Leela reports its baseline check and prints a progress line before each mutant, with the active location and completed/runnable count. Pruned mutants are listed separately.
+After the normal pytest run, Leela reports its baseline check and prints a progress line
+before each mutant, with the active location and completed/runnable count. Pruned mutants
+are listed separately. Each completed mutant also gets a verdict and wall time covering
+the whole runner call, including any control and confirmation runs. Leela lists up to five
+slowest completed mutants at the end.
 
 When no `--target` is given, pytest-leela auto-discovers source files:
 
@@ -85,6 +89,32 @@ pytest --leela --diff main --max-cores 4 --max-memory 4096
 pytest --leela --leela-html report.html
 ```
 
+The report shows both the inner attempt's elapsed time (`time_seconds`) and the full
+runner wall time (`wall_time_seconds`) for each mutant. The latter includes any
+control and confirmation runs and matches the JSON Lines measurement when both
+outputs are enabled. If a report is generated from an untimed programmatic run,
+its per-mutant wall time is `null` and the viewer shows only the inner elapsed time.
+
+**Stream completed mutant results to a local JSON Lines file:**
+
+```bash
+pytest --leela-jsonl mutant-events.jsonl
+```
+
+This enables mutation testing and creates a new file after the normal pytest run
+passes. Use a fresh path for each invocation, distinct from any HTML report path;
+an existing file is never overwritten. Each completed mutant produces one UTF-8 JSON object and newline, flushed before
+Leela moves on. No baseline, progress, or summary records are written; a mutation run
+with no completed mutants leaves an empty file.
+
+Schema version 1 has `schema_version` (the integer `1`), `mutant_id` (Leela's
+existing run-local integer ID), `file_path` (absolute), `module_name`, `lineno`
+(one-based), `col_offset` (zero-based UTF-8 byte offset), `original_op`,
+`replacement_op`, `verdict` (`killed`, `survived`, or `error`), and
+`wall_time_seconds` (the full runner call, including any control and confirmation).
+The file is not a success marker: check pytest's exit status. A sink error aborts
+mutation testing with a diagnostic and a nonzero exit; the file may be incomplete.
+
 **Benchmark optimization layers:**
 
 ```bash
@@ -103,7 +133,12 @@ pytest --leela-benchmark
   filesystem writes, fast loop
 - **Git diff mode** — `--diff <ref>` limits mutations to lines changed since that ref
 - **Framework-aware** — clears Django URL caches between mutants so view reloads work correctly
-- **Resource limits** — `--max-cores N` caps parallelism; `--max-memory MB` guards memory
+- **Resource limits** — `--max-cores N` requests a CPU-affinity limit where supported;
+  it does not set a worker count. `--max-memory MB` guards memory.
+- **Concurrency reporting** — the terminal reports the observed peak for serial
+  mutant execution (one if any mutant ran, zero otherwise). Pytest worker
+  concurrency during mutation is not measured. The configured `--max-cores`
+  and outer pytest `-n` are reported separately.
 - **HTML report** — `--leela-html` generates an interactive single-file report with source viewer, survivor navigation, and test source overlay
 - **CI exit codes** — exits non-zero when mutants survive or error, so CI pipelines fail on incomplete kill rates
 - **Benchmark mode** — `--leela-benchmark` measures the speedup from each optimization layer
@@ -149,14 +184,49 @@ Default: `["arithmetic", "comparison", "boolean", "unary", "return"]`
 |---|---|---|
 | `arithmetic` | `+` `-` `*` `/` `//` `%` `**` | on |
 | `comparison` | `==` `!=` `<` `<=` `>` `>=` `is` `in` and negations | on |
-| `boolean` | `and` / `or` | on |
+| `boolean` | `and` / `or`, and negation of bare `if` / `elif` / `assert` / `while` predicates and comprehension filters (`flag`, `obj.flag`, `check()`) | on |
 | `unary` | unary `-` `+` `not` | on |
 | `return` | return values (`True`/`False`, `None`, literals, expressions) | on |
 | `bitwise` | `&` `\|` `^` `<<` `>>` | off |
+| `assignment` | replace the right-hand side of a simple name assignment with `None` | off |
 | `augmented_assign` | `+=` `-=` `*=` etc. | off |
 | `ternary` | `x if cond else y` branch swaps | off |
 | `control_flow` | `break` / `continue` swaps | off |
 | `exception` | `except` handler broadening, body-to-raise | off |
+| `decorator` | remove one decorator from a function, async function, or class | off |
+
+Bare `assert` negation changes `assert check(), message` to
+`assert not check(), message`. It leaves the message in place and adds no
+whole-predicate mutant for `assert a and b`, `assert not a`, or `assert a == b`;
+those expressions retain their existing operator mutations. In `--diff` mode
+bare assertion negation is selected by the line containing the `assert` keyword.
+
+Bare `while` negation changes `while check():` to `while not check():`, leaving
+its body and any `else` intact. It still checks the predicate once per condition
+evaluation. A negated loop can fail to terminate; Leela's in-process timeout
+checks between tests and cannot interrupt a stuck test. In `--diff` mode this
+mutation is selected by the line containing the `while` keyword.
+
+Bare filter negation applies to list, set, and dict comprehensions and generator
+expressions. For example, `[x for x in items if ready(x) if x.active]` can become
+`[x for x in items if not ready(x) if x.active]`. Each mutant changes one filter
+and leaves the other filters and `for` clauses intact. Compound filters keep
+their existing operator mutations. In `--diff` mode, the filter expression's
+starting line must change, which can differ from the line containing `if`.
+
+Add `"decorator"` to your operator list (or use `"all"`) to enable decorator removal.
+For a stack like `@wrap` followed by `@suffix("!")`, Leela generates two separate
+mutants. Each removes one decorator expression, leaving the other in place. In
+`--diff` mode the decorator expression's starting line must be changed.
+
+Add `"assignment"` to your operator list (or use `"all"`) to enable assignment
+RHS replacement. It changes `name = expression`, `a = b = expression`, or
+`name: Type = expression` to assign `None` without evaluating `expression`.
+It creates one mutant per RHS, preserving all name targets and any annotation.
+It skips literal `None`, annotation-only declarations, any assignment with an
+unpacking, attribute, or subscript target (including mixed chains), augmented
+assignments, and assignment expressions. In `--diff` mode the RHS expression's
+starting line must be changed.
 
 ### `fail_on_error`
 

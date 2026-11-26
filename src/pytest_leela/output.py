@@ -143,10 +143,13 @@ def format_terminal_report(result: RunResult) -> str:
     lines.append("")
 
     # Overall summary
-    lines.append(
-        f"Overall: {result.killed}/{result.mutants_scored} killed "
-        f"({result.mutation_score:.1f}%) in {result.wall_time_seconds:.1f}s"
-    )
+    if result.diff_base is not None and result.total_mutants == 0:
+        lines.append(f"Overall: N/A (nothing to test) in {result.wall_time_seconds:.1f}s")
+    else:
+        lines.append(
+            f"Overall: {result.killed}/{result.mutants_scored} killed "
+            f"({result.mutation_score:.1f}%) in {result.wall_time_seconds:.1f}s"
+        )
     if result.errors:
         lines.append(
             f"  {len(result.errors)} mutants errored outside the tests "

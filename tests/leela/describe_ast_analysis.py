@@ -4,6 +4,149 @@ from pytest_leela.ast_analysis import find_mutation_points
 
 
 def describe_find_mutation_points():
+    def it_collects_each_decorator_expression_at_its_own_location():
+        source = (
+            "@wrap\n@factory()\ndef f():\n"
+            "    @wrap\n    def nested(): pass\n    return 1\n\n"
+            "@helpers.wrap\nasync def g(): pass\n\n"
+            "@factory()\n@skip  # leela: skip\nclass C: pass\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.original_op, p.file_path, p.module_name)
+            for p in points if p.node_type == "Decorator"
+        ] == [
+            (line, col, "decorator", "src/demo.py", "demo")
+            for line, col in ((1, 1), (2, 1), (4, 5), (8, 1), (11, 1))
+        ]
+        assert any(p.node_type == "Return" and p.lineno == 6 for p in points)
+
+    def it_finds_only_bare_if_roots_and_still_visits_their_children():
+        source = (
+            "if flag:\n"
+            "    if obj.ready:\n"
+            "        count = 1 + 2\n"
+            "elif check(x == 1):\n"
+            "    pass\n"
+            "if flag and other: pass\n"
+            "if not flag: pass\n"
+            "if flag == other: pass\n"
+            "if True: pass\n"
+            "if obj[0]: pass\n"
+            "while flag: pass\n"
+            "assert obj.ready\n"
+            "values = [x for x in items if check(x)]\n"
+            "if obj.skipped: pass  # leela: skip\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        predicates = [p for p in points if p.node_type == "If"]
+        assert [(p.lineno, p.col_offset) for p in predicates] == [(1, 0), (2, 4), (4, 0)]
+        assert all(p.original_op == "condition" and p.inferred_type is None for p in predicates)
+        assert all((p.file_path, p.module_name) == ("src/demo.py", "demo") for p in predicates)
+        assert [(p.lineno, p.node_type) for p in points if p.node_type != "If"] == [
+            (3, "Assign"), (3, "BinOp"), (4, "Compare"), (6, "BoolOp"),
+            (7, "UnaryOp"), (8, "Compare"), (11, "While"), (12, "Assert"),
+            (13, "Assign"), (13, "ComprehensionFilter"),
+        ]
+
+    def it_finds_only_bare_assert_roots_and_visits_predicate_and_message_children():
+        source = (
+            "assert flag\n"
+            "if active:\n"
+            "    assert obj.ready, detail(1 + 2)\n"
+            "    assert check(value == 1)\n"
+            "assert flag and other\n"
+            "assert not flag\n"
+            "assert flag == other\n"
+            "assert True\n"
+            "assert obj[0]\n"
+            "while flag: pass\n"
+            "[x for x in items if check(x)]\n"
+            "assert ignored  # leela: skip\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.node_type, p.original_op) for p in points
+        ] == [
+            (1, 0, "Assert", "condition"),
+            (2, 0, "If", "condition"),
+            (3, 4, "Assert", "condition"),
+            (3, 29, "BinOp", "Add"),
+            (4, 4, "Assert", "condition"),
+            (4, 17, "Compare", "Eq"),
+            (5, 7, "BoolOp", "And"),
+            (6, 7, "UnaryOp", "Not"),
+            (7, 7, "Compare", "Eq"),
+            (10, 0, "While", "condition"),
+            (11, 21, "ComprehensionFilter", "condition"),
+        ]
+        assert all((p.file_path, p.module_name, p.inferred_type) == (
+            "src/demo.py", "demo", None,
+        ) for p in points)
+
+    def it_finds_only_bare_while_roots_and_visits_the_test_body_and_else():
+        source = (
+            "while flag:\n"
+            "    while obj.ready: break\n"
+            "else:\n"
+            "    count = 1 + 2\n"
+            "while check(x == 1): break\n"
+            "while flag and other: break\n"
+            "while not flag: break\n"
+            "while flag == other: break\n"
+            "while True: break\n"
+            "while obj[0]: break\n"
+            "while ignored: break  # leela: skip\n"
+            "[x for x in items if check(x)]\n"
+        )
+        points = find_mutation_points(source, "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.original_op, p.file_path, p.module_name, p.inferred_type)
+            for p in points if p.node_type == "While"
+        ] == [
+            (line, column, "condition", "src/demo.py", "demo", None)
+            for line, column in ((1, 0), (2, 4), (5, 0))
+        ]
+        assert [(p.lineno, p.node_type, p.original_op) for p in points if p.node_type != "While"] == [
+            (2, "Break", "break"), (4, "Assign", "assignment"), (4, "BinOp", "Add"),
+            (5, "Compare", "Eq"), (5, "Break", "break"), (6, "BoolOp", "And"),
+            (6, "Break", "break"), (7, "UnaryOp", "Not"), (7, "Break", "break"),
+            (8, "Compare", "Eq"), (8, "Break", "break"), (9, "Break", "break"),
+            (10, "Break", "break"), (12, "ComprehensionFilter", "condition"),
+        ]
+
+    def it_discovers_each_bare_comprehension_filter_at_its_expression():
+        lines = [
+            "[x for x in xs if x if obj.ready for y in ys if check(y == 1)]",
+            "{x for x in xs if x and obj.ready}",
+            "{x: x for x in xs if not x if x > 1 if obj[0] if True}",
+            "(x for x in xs if (",
+            "    check(x)",
+            "))",
+            "[x for x in xs if ignored]  # leela: skip",
+            "[x for x in xs if any(y for y in ys if y)]",
+        ]
+        points = find_mutation_points("\n".join(lines), "src/demo.py", "demo")
+        assert [
+            (p.lineno, p.col_offset, p.original_op, p.inferred_type, p.file_path, p.module_name)
+            for p in points if p.node_type == "ComprehensionFilter"
+        ] == [
+            (line, column, "condition", None, "src/demo.py", "demo")
+            for line, column in (
+                (1, lines[0].index("if x") + 3),
+                (1, lines[0].index("obj.ready")),
+                (1, lines[0].index("check(")),
+                (5, 4),
+                (8, lines[7].index("any(")),
+                (8, lines[7].index("if y") + 3),
+            )
+        ]
+        assert [(p.lineno, p.node_type, p.original_op) for p in points
+                if p.node_type != "ComprehensionFilter"] == [
+            (1, "Compare", "Eq"), (2, "BoolOp", "And"),
+            (3, "UnaryOp", "Not"), (3, "Compare", "Gt"),
+        ]
+
     def it_finds_binop_nodes():
         source = "def f(x: int, y: int) -> int:\n    return x + y\n"
         points = find_mutation_points(source, "test.py", "test")
