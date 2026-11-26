@@ -100,13 +100,14 @@ def test_module_fixture_setup_count(pytester, global_sort):
     assert output.index('test_a.py::test_two PASSED') < output.index('test_a.py::test_one PASSED')
 
 
-def test_fast_first_clean_control_does_not_credit_order_dependent_setup(tmp_path, monkeypatch):
+@pytest.mark.parametrize('failure_phase', ['setup', 'call', 'causal'])
+def test_fast_first_clean_control_does_not_credit_order_dependent_failure(tmp_path, monkeypatch, failure_phase):
     monkeypatch.chdir(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path))
     source = 'def neutral(value, zero):\n    return value + zero\n'
     target = tmp_path / 'neutral_target.py'
     target.write_text(source)
-    (tmp_path / 'test_neutral.py').write_text('''\
+    tests = '''\
 import pytest
 from neutral_target import neutral
 
@@ -125,17 +126,28 @@ def test_prepare(shared):
 
 def test_consume(prepared):
     assert neutral(2, 0) == 2
-''')
+'''
+    if failure_phase == 'call':
+        tests = tests.replace('def test_consume(prepared):', 'def test_consume(shared):\n    assert shared, "ambient call requires prior test"')
+    elif failure_phase == 'causal':
+        tests = tests.replace('def test_consume(prepared):', 'def test_consume():')
+        tests = tests.replace('neutral(2, 0) == 2', 'neutral(2, 1) == 3')
+    (tmp_path / 'test_neutral.py').write_text(tests)
     point = next(p for p in find_mutation_points(source, str(target), 'neutral_target')
                  if p.node_type == 'BinOp' and p.original_op == 'Add')
     first, second = 'test_neutral.py::test_prepare', 'test_neutral.py::test_consume'
     common = dict(test_ids=[first, second], test_dir=str(tmp_path),
                   test_times={first: 2.0, second: 1.0}, scope=ProjectModuleScope(str(tmp_path)))
     args = Mutant(point, 'Sub', 0), {'neutral_target': source}, {'neutral_target': str(target)}
-    assert run_tests_for_mutant(*args, **common).status == 'survived'
+    ordinary = run_tests_for_mutant(*args, **common)
     ordered = run_tests_for_mutant(*args, **common, fast_first=True)
-    assert ordered.status == 'error', ordered
-    assert 'control run also failed' in (ordered.error or '')
+    if failure_phase == 'causal':
+        assert ordinary.status == ordered.status == 'killed'
+        assert ordered.killing_test == second
+    else:
+        assert ordinary.status == 'survived'
+        assert ordered.status == 'error', ordered
+        assert 'control run also failed' in (ordered.error or '')
 
 
 @pytest.mark.parametrize('enabled', [False, True])

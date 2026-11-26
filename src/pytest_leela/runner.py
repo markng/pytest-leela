@@ -894,12 +894,16 @@ def run_tests_for_mutant(
     )
     result = session.run().result_for(mutant)
 
-    if result.status != "error" or not (result.error or "").startswith(
+    if result.status == "killed":
+        # Reordered call failures also need a clean run of this exact subset.
+        # The original-order baseline union cannot establish causality here.
+        if not fast_first:
+            return result
+    elif result.status != "error" or not (result.error or "").startswith(
         "inconclusive:"
     ):
         return result
 
-    inconclusive = session.inconclusive_failures()
     control_known = known_user_modules or precompute_user_modules(scope)
     control = run_control(
         test_ids, test_dir, control_known, scope,
@@ -926,6 +930,10 @@ def run_tests_for_mutant(
             ),
         )
 
+    if result.status == "killed":
+        return result
+
+    inconclusive = session.inconclusive_failures()
     finder2 = install_hook(target_sources, mutant, module_to_file)
     session2 = InnerSession(
         finder2,
