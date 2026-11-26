@@ -123,6 +123,31 @@ pytest --leela-benchmark
 
 ---
 
+## Local watch (experimental)
+
+From a Git checkout with Leela and the project's test dependencies installed,
+run `python -m pytest_leela.watch --source src` (Linux/macOS). Replace `src`
+with the source subdirectory relative to the Git root. The watcher does a
+full run of that target at startup, then waits for a quiet period after
+changes. Tracked source-only edits with a Git diff use Leela's existing
+diff mode (`--base HEAD` by default); a test/config change, new file, deletion,
+revert to the comparison ref, or ref change falls back to the full target.
+
+Watch state is JSON on stdout; pytest output goes to stderr. Each run has
+its own ID, revision and scope; `process-exited` carries the pytest exit
+code and points to the mutation JSONL if it exists. The file may be empty
+or partial and does not certify complete scoring. If an edit is detected
+during a run, the watcher stops that run, discards its results and waits
+for the next quiet period.
+The watcher locks the checkout, stores local results in its Git metadata
+directory under `leela-watch/`, and stops on Ctrl-C.
+
+This first slice polls non-ignored Python and common Python config files
+(`.py`, `.toml`, `.ini`, `.cfg`, plus tracked files with those suffixes). It
+does not promise to notice changes to other inputs or to edits that are
+made and undone between polls. It does not keep a mutation index, notify
+agents, automatically prune old results, or change normal pytest behavior.
+
 ## Features
 
 - **Type-aware mutation pruning** — uses type annotations to skip mutations that can't possibly
