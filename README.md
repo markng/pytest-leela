@@ -40,8 +40,12 @@ pytest --leela
 Print compact agent guidance for writing good mutation tests, without running tests:
 
 ```bash
-pytest --skill > SKILL.md
+pytest --noconftest --skill > SKILL.md
 ```
+
+Leela skips test collection, but pytest can import `conftest.py` before Leela
+prints the skill. Use `--noconftest` when exporting the Markdown from a project
+so its conftest files cannot add output or prevent the export.
 
 After the normal pytest run, Leela reports its baseline check and prints a progress line
 before each mutant, with the active location and completed/runnable count. Pruned mutants
