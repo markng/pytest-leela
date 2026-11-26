@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import io
 import importlib.util
+import math
 import ntpath  # noqa: F401 — keep in sys.modules (see engine.py comment)
 import os
 import posixpath  # noqa: F401 — same as ntpath
@@ -458,6 +459,24 @@ class _PreferMutationFinder:
         sys.meta_path.insert(0, self.finder)
 
 
+class _FastFirst:
+    def __init__(self, test_times: dict[str, float]) -> None:
+        self.test_times = test_times
+
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+    def pytest_collection_modifyitems(
+        self, items: list[pytest.Item]
+    ) -> Generator[None, None, None]:
+        # Sort only what pytest actually selected, after other collection hooks.
+        yield
+
+        def duration(item: pytest.Item) -> float:
+            elapsed = self.test_times.get(item.nodeid, math.inf)
+            return elapsed if math.isfinite(elapsed) and elapsed >= 0 else math.inf
+
+        items.sort(key=duration)  # Stable ties and stable missing-timing tail.
+
+
 class InnerSession:
     """One in-process pytest run against the current import state.
 
@@ -476,7 +495,9 @@ class InnerSession:
         known_user_modules: frozenset[str] | None = None,
         test_times: dict[str, float] | None = None,
         exitfirst: bool = True,
+        fast_first: bool = False,
     ) -> None:
+        self.fast_first = fast_first
         self.finder = finder
         self.test_ids = test_ids
         self.test_dir = test_dir
@@ -586,6 +607,8 @@ class InnerSession:
             plugins.append(_TimeoutPlugin(self.timed_out))
         if self.finder is not None:
             plugins.append(_PreferMutationFinder(self.finder))
+            if self.fast_first and self.test_ids and self.test_times:
+                plugins.append(_FastFirst(self.test_times))
 
         # Run pytest in-process (suppress noisy output)
         try:
@@ -829,6 +852,8 @@ def run_tests_for_mutant(
     known_user_modules: frozenset[str] | None = None,
     test_times: dict[str, float] | None = None,
     scope: ProjectModuleScope | None = None,
+    *,
+    fast_first: bool = False,
 ) -> MutantResult:
     """Run tests against a single mutant, return the result.
 
@@ -848,6 +873,7 @@ def run_tests_for_mutant(
         scope,
         known_user_modules=known_user_modules,
         test_times=test_times,
+        fast_first=fast_first,
     )
     result = session.run().result_for(mutant)
 
@@ -888,6 +914,7 @@ def run_tests_for_mutant(
         scope,
         known_user_modules=control_known,
         test_times=test_times,
+        fast_first=fast_first,
     )
     confirmation = session2.run().result_for(mutant)
     if (

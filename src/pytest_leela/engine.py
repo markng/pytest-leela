@@ -127,6 +127,8 @@ class Engine:
         pre_coverage_map: CoverageMap | None = None,
         on_progress: Callable[[MutationProgress], None] | None = None,
         on_mutant_timing: Callable[[MutantTiming], None] | None = None,
+        *,
+        fast_first: bool = False,
     ) -> RunResult:
         """Run mutants serially, optionally reporting complete runner-call timings."""
         start = time.monotonic()
@@ -248,6 +250,11 @@ class Engine:
                 known_user_modules=known_user_modules,
                 test_times=test_times,
                 scope=scope,
+                fast_first=(
+                    fast_first
+                    and coverage_map is not None
+                    and bool(coverage_map.tests_for(mutant.point.file_path, mutant.point.lineno))
+                ),
             )
             if on_mutant_timing is not None:
                 elapsed = time.monotonic() - mutant_start

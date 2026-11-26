@@ -62,6 +62,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--leela", action="store_true", default=False, help="Enable mutation testing"
     )
     group.addoption(
+        "--leela-fast-first",
+        action="store_true",
+        default=False,
+        help="Run faster measured covering tests first inside each mutant",
+    )
+    group.addoption(
         "--diff", default=None, help="Only mutate files changed since this git ref"
     )
     group.addoption(
@@ -300,7 +306,13 @@ class LeelaPlugin:
             else:
                 print(report)
 
-        zero_concurrency = f"\n{self._concurrency_summary(False, limits.max_cores)}\n"
+        fast_first = self.config.getoption("leela_fast_first", default=False)
+        ordering = (
+            "Fast-first ordering: on"
+            if fast_first
+            else "Fast-first ordering: off (default); try --leela-fast-first"
+        )
+        zero_concurrency = f"\n{self._concurrency_summary(False, limits.max_cores)}\n{ordering}\n"
 
         if not target_files and events_path is None:
             write_terminal_report(zero_concurrency)
@@ -373,6 +385,7 @@ class LeelaPlugin:
                         pre_coverage_map=pre_coverage_map,
                         on_progress=report_progress,
                         on_mutant_timing=report_timing,
+                        fast_first=fast_first,
                     )
                 if events is not None and html_path is not None:
                     from pytest_leela.html_report import generate_html_report
@@ -393,7 +406,7 @@ class LeelaPlugin:
                 write_progress(f"  {timing_detail(timing)}")
 
         report = format_terminal_report(result)
-        report += f"\n{self._concurrency_summary(bool(timings), limits.max_cores)}\n"
+        report += f"\n{self._concurrency_summary(bool(timings), limits.max_cores)}\n{ordering}\n"
 
         write_terminal_report(report)
 

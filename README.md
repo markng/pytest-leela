@@ -53,6 +53,12 @@ are listed separately. Each completed mutant also gets a verdict and wall time c
 the whole runner call, including any control and confirmation runs. Leela lists up to five
 slowest completed mutants at the end.
 
+Add `--leela-fast-first` to run the fastest measured covering tests first inside
+mutant runs. Equal or missing timings keep collection order within their group,
+and unmeasured tests follow measured tests. The flag does not change which tests
+are selected, the baseline order, or the timeout calculation. The terminal summary
+shows whether the option is on; it is off by default.
+
 When no `--target` is given, pytest-leela auto-discovers source files:
 
 1. Looks for a `target/` or `src/` directory (in that order) and mutates all `.py` files inside it
