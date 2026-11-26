@@ -4,22 +4,50 @@ from types import SimpleNamespace
 
 import pytest
 
-from pytest_leela.runner import _FastFirst
+from pytest_leela.runner import InnerSession, ProjectModuleScope, _FastFirst
 
 
 def test_fast_first_keeps_all_items_and_stable_ties():
     parent = object()
     items = [SimpleNamespace(nodeid=name, parent=parent) for name in (
-        'missing', 'slow', 'tie_b', 'tie_a', 'invalid', 'missing_again',
+        'missing', 'slow', 'tie_b', 'tie_a', 'invalid', 'missing_again', 'zero', 'negative',
     )]
     original = items.copy()
-    ordering = _FastFirst({'slow': 8, 'tie_a': 1, 'tie_b': 1, 'invalid': float('nan')})
+    ordering = _FastFirst({'slow': 8, 'tie_a': 1, 'tie_b': 1, 'invalid': float('nan'),
+                           'zero': 0.0, 'negative': -1.0})
     hook = ordering.pytest_collection_modifyitems(items)
     next(hook)
     assert items == original
     with pytest.raises(StopIteration):
         next(hook)
-    assert items == [original[i] for i in (2, 3, 1, 0, 4, 5)]
+    assert items == [original[i] for i in (6, 2, 3, 1, 0, 4, 5, 7)]
+
+
+@pytest.mark.parametrize(('enabled', 'selected', 'timed', 'expected'), [
+    (False, True, True, False),
+    (True, False, True, False),
+    (True, True, False, False),
+    (True, True, True, True),
+])
+def test_mutant_fast_first_requires_opt_in_selection_and_timings(
+    monkeypatch, enabled, selected, timed, expected,
+):
+    nodeid = 'test_calc.py::test_a'
+    recorded = []
+
+    def fake_main(args, *, plugins):
+        recorded.extend(plugins)
+        return pytest.ExitCode.OK
+
+    monkeypatch.setattr(pytest, 'main', fake_main)
+    session = InnerSession(
+        object(), [nodeid] if selected else None, None, ProjectModuleScope(),
+        test_times={nodeid: 0.0} if timed else None, fast_first=enabled,
+    )
+    session._run_pytest()
+    assert session.crash is None
+    assert bool(recorded)
+    assert any(isinstance(plugin, _FastFirst) for plugin in recorded) is expected
 
 
 def test_fast_first_preserves_parent_runs_and_parameter_barriers():
