@@ -29,7 +29,7 @@ from pytest_leela.models import (
 )
 from pytest_leela.operators import build_allowed_keys
 from pytest_leela.resources import ResourceLimits
-from pytest_leela.runner import ProjectModuleScope
+from pytest_leela.runner import ProjectModuleScope, run_baseline
 
 
 def describe_engine():
@@ -1125,8 +1125,21 @@ def describe_Engine_baseline_source_freshness():
             if selected
             else {"test_dir": str(tests)}
         )
-        first = Engine(use_types=False, use_coverage=False).run([str(target)], **options)
-        assert first.mutants_tested > 0
+        if changed_input == "helper" and selected:
+            # Keep one full Engine-to-Engine timestamp cache regression.
+            first = Engine(use_types=False, use_coverage=False).run([str(target)], **options)
+            assert first.mutants_tested > 0
+        else:
+            # Cache seeding uses real imports and pytest assertion rewriting,
+            # but need not run a mutation campaign before the edit.
+            seed = run_baseline(
+                test_ids=options.get("test_node_ids"),
+                test_dir=options.get("test_dir"),
+                known_user_modules=frozenset(),
+                scope=ProjectModuleScope(),
+            )
+            assert seed.error() is None
+            assert not seed.failures()
         assert "fresh_target" not in sys.modules
         changed, old, new = {
             "target": (target, "a + b", "a - b"),

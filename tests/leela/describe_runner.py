@@ -116,6 +116,23 @@ def describe_prepare_source_bytecode():
         assert installed_cache.exists()
         assert unrelated.read_text() == "keep"
 
+    def it_removes_matching_assertion_rewrite_caches(tmp_path):
+        source = tmp_path / "test_app.py"
+        source.write_text("def test_app(): pass\n")
+        cache_dir = tmp_path / "__pycache__"
+        cache_dir.mkdir()
+        current_tag = sys.implementation.cache_tag
+        rewritten = [
+            cache_dir / f"test_app.{current_tag}-pytest-older.pyc",
+            cache_dir / f"test_app.{current_tag}-pytest-newer.pyc",
+        ]
+        keep = cache_dir / f"other_test.{current_tag}-pytest-newer.pyc"
+        for artifact in [*rewritten, keep]:
+            artifact.write_bytes(b"cache artifact")
+        _prepare_source_bytecode(ProjectModuleScope(str(tmp_path)))
+        assert all(not artifact.exists() for artifact in rewritten)
+        assert keep.exists()
+
     def it_propagates_a_real_cache_permission_error(tmp_path):
         source = tmp_path / "denied.py"
         source.write_text("value = 1\n")
