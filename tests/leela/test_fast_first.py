@@ -181,6 +181,9 @@ def test_fast_first_summary_once_without_changing_outer_order(pytester, enabled)
     result.assert_outcomes(passed=2)
     output = result.stdout.str()
     assert output.count('Fast-first ordering:') == 1
-    expected = 'on' if enabled else 'off (default); try --leela-fast-first'
+    expected = (
+        'on (experimental; reordered kills can add a clean run)' if enabled
+        else 'off (default; --leela-fast-first is experimental)'
+    )
     assert f'Fast-first ordering: {expected}' in output
     assert output.index('test_calc.py::test_first PASSED') < output.index('test_calc.py::test_second PASSED')

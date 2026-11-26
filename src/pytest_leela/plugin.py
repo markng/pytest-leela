@@ -65,7 +65,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--leela-fast-first",
         action="store_true",
         default=False,
-        help="Run faster measured covering tests first inside each mutant",
+        help="Experimental: order covering tests by timing; reordered kills may need a full clean run",
     )
     group.addoption(
         "--diff", default=None, help="Only mutate files changed since this git ref"
@@ -308,9 +308,9 @@ class LeelaPlugin:
 
         fast_first = self.config.getoption("leela_fast_first", default=False)
         ordering = (
-            "Fast-first ordering: on"
+            "Fast-first ordering: on (experimental; reordered kills can add a clean run)"
             if fast_first
-            else "Fast-first ordering: off (default); try --leela-fast-first"
+            else "Fast-first ordering: off (default; --leela-fast-first is experimental)"
         )
         zero_concurrency = f"\n{self._concurrency_summary(False, limits.max_cores)}\n{ordering}\n"
 

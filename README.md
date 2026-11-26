@@ -53,12 +53,17 @@ are listed separately. Each completed mutant also gets a verdict and wall time c
 the whole runner call, including any control and confirmation runs. Leela lists up to five
 slowest completed mutants at the end.
 
-Add `--leela-fast-first` to run faster measured covering tests first inside
-mutant runs. Ordering stays within contiguous collection groups and does not move
-parametrized tests, preserving pytest's fixture grouping. Equal timings keep
-collection order, and unmeasured tests come last within each group. The flag does
-not change which tests are selected, the baseline order, or the timeout calculation.
-The terminal summary shows whether the option is on; it is off by default.
+`--leela-fast-first` is an experimental ordering option, off by default—not a
+guaranteed speedup. It orders measured covering tests by duration within contiguous
+collection groups and leaves parametrized items in place. Ties stay stable, and
+unmeasured tests go last within each group. It can override the order set by other
+collection hooks within a group; leave it off if your suite depends on that order.
+
+Before crediting a call-phase kill after reordering, Leela runs the entire selected
+subset without the mutation, in the same order, to rule out an unrelated failure.
+That clean run can include slow tests the mutant stopped before reaching, making
+the experiment slower overall. The option does not change which tests are selected,
+the baseline order, or the timeout calculation.
 
 When no `--target` is given, pytest-leela auto-discovers source files:
 
