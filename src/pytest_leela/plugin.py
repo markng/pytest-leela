@@ -227,6 +227,19 @@ class LeelaPlugin:
         with self.config.stash[blocking_manager_key].unblock():
             yield
 
+    def _concurrency_summary(self, mutant_ran: bool, max_cores: int | None) -> str:
+        # The current Engine calls the mutant runner synchronously. A completed
+        # call therefore establishes a peak of one, regardless of CPU settings.
+        peak = "1 (serial)" if mutant_ran else "0 (no mutants executed)"
+        outer_workers = self.config.getoption("numprocesses", default=None)
+        cores = "unset" if max_cores is None else str(max_cores)
+        workers = "unset" if outer_workers is None else str(outer_workers)
+        return (
+            f"Leela mutant concurrency (observed peak): {peak}\n"
+            "Pytest test/worker concurrency during mutation: not measured\n"
+            f"Configured only: --max-cores={cores}; outer pytest -n={workers}"
+        )
+
     def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
         if exitstatus != 0:
             return
@@ -244,9 +257,6 @@ class LeelaPlugin:
         # Reuse target files resolved during pytest_sessionstart
         target_files = self._resolve_target_files(session)
         events_path = self.config.getoption("leela_jsonl", default=None)
-        if not target_files and events_path is None:
-            return
-
         # Retrieve coverage map collected during the normal test run
         # (avoids re-running the entire test suite).
         pre_coverage_map = None
@@ -270,6 +280,18 @@ class LeelaPlugin:
             and session.config.pluginmanager.hasplugin("terminalreporter")
             else None
         )
+
+        def write_terminal_report(report: str) -> None:
+            if tw:
+                tw.write(report)
+            else:
+                print(report)
+
+        zero_concurrency = f"\n{self._concurrency_summary(False, limits.max_cores)}\n"
+
+        if not target_files and events_path is None:
+            write_terminal_report(zero_concurrency)
+            return
 
         # Bind the outer output before inner pytest sessions replace sys.stdout.
         stream = sys.stdout
@@ -324,6 +346,7 @@ class LeelaPlugin:
         try:
             with open_mutant_events(events_path) as events:
                 if not target_files:
+                    write_terminal_report(zero_concurrency)
                     return
                 html_path = self.config.getoption("leela_html", default=None)
                 engine = Engine(enabled_categories=enabled_categories)
@@ -357,11 +380,9 @@ class LeelaPlugin:
                 write_progress(f"  {timing_detail(timing)}")
 
         report = format_terminal_report(result)
+        report += f"\n{self._concurrency_summary(bool(timings), limits.max_cores)}\n"
 
-        if tw:
-            tw.write(report)
-        else:
-            print(report)
+        write_terminal_report(report)
 
         if html_path is not None and events_path is None:
             from pytest_leela.html_report import generate_html_report

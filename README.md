@@ -133,7 +133,12 @@ pytest --leela-benchmark
   filesystem writes, fast loop
 - **Git diff mode** — `--diff <ref>` limits mutations to lines changed since that ref
 - **Framework-aware** — clears Django URL caches between mutants so view reloads work correctly
-- **Resource limits** — `--max-cores N` caps parallelism; `--max-memory MB` guards memory
+- **Resource limits** — `--max-cores N` requests a CPU-affinity limit where supported;
+  it does not set a worker count. `--max-memory MB` guards memory.
+- **Concurrency reporting** — the terminal reports the observed peak for serial
+  mutant execution (one if any mutant ran, zero otherwise). Pytest worker
+  concurrency during mutation is not measured. The configured `--max-cores`
+  and outer pytest `-n` are reported separately.
 - **HTML report** — `--leela-html` generates an interactive single-file report with source viewer, survivor navigation, and test source overlay
 - **CI exit codes** — exits non-zero when mutants survive or error, so CI pipelines fail on incomplete kill rates
 - **Benchmark mode** — `--leela-benchmark` measures the speedup from each optimization layer
