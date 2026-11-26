@@ -281,15 +281,16 @@ class LeelaPlugin:
             else None
         )
 
-        def write_concurrency(mutant_ran: bool) -> None:
-            lines = f"\n{self._concurrency_summary(mutant_ran, limits.max_cores)}\n"
-            if tw is not None:
-                tw.write(lines, flush=True)
+        def write_terminal_report(report: str) -> None:
+            if tw:
+                tw.write(report)
             else:
-                print(lines, end="", flush=True)
+                print(report)
+
+        zero_concurrency = f"\n{self._concurrency_summary(False, limits.max_cores)}\n"
 
         if not target_files and events_path is None:
-            write_concurrency(False)
+            write_terminal_report(zero_concurrency)
             return
 
         # Bind the outer output before inner pytest sessions replace sys.stdout.
@@ -345,7 +346,7 @@ class LeelaPlugin:
         try:
             with open_mutant_events(events_path) as events:
                 if not target_files:
-                    write_concurrency(False)
+                    write_terminal_report(zero_concurrency)
                     return
                 html_path = self.config.getoption("leela_html", default=None)
                 engine = Engine(enabled_categories=enabled_categories)
@@ -381,10 +382,7 @@ class LeelaPlugin:
         report = format_terminal_report(result)
         report += f"\n{self._concurrency_summary(bool(timings), limits.max_cores)}\n"
 
-        if tw:
-            tw.write(report)
-        else:
-            print(report)
+        write_terminal_report(report)
 
         if html_path is not None and events_path is None:
             from pytest_leela.html_report import generate_html_report
