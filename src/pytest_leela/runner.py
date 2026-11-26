@@ -16,6 +16,7 @@ import time
 import types
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
+from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -474,7 +475,16 @@ class _FastFirst:
             elapsed = self.test_times.get(item.nodeid, math.inf)
             return elapsed if math.isfinite(elapsed) and elapsed >= 0 else math.inf
 
-        items.sort(key=duration)  # Stable ties and stable missing-timing tail.
+        # Keep pytest's parent transitions and parametrized fixture order.
+        # A callspec may include a high-scope fixture parameter, not just test args.
+        def group(item: pytest.Item) -> int:
+            return id(item) if getattr(item, "callspec", None) is not None else id(item.parent)
+
+        items[:] = [
+            item
+            for _, batch in groupby(items, key=group)
+            for item in sorted(batch, key=duration)
+        ]
 
 
 class InnerSession:
