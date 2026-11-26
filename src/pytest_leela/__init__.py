@@ -1,1 +1,3 @@
-IiIicHl0ZXN0LWxlZWxhOiBUeXBlLWF3YXJlIG11dGF0aW9uIHRlc3RpbmcgZm9yIFB5dGhvbi4iIiIKCl9fdmVyc2lvbl9fID0gIjAuMjAuMCIK
+"""pytest-leela: Type-aware mutation testing for Python."""
+
+__version__ = "0.20.0"
