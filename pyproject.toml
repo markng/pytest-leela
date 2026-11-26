@@ -1,1 +1,80 @@
-W2J1aWxkLXN5c3RlbV0KcmVxdWlyZXMgPSBbImhhdGNobGluZyJdCmJ1aWxkLWJhY2tlbmQgPSAiaGF0Y2hsaW5nLmJ1aWxkIgoKW3Byb2plY3RdCm5hbWUgPSAicHl0ZXN0LWxlZWxhIgp2ZXJzaW9uID0gIjAuMjAuMCIKZGVzY3JpcHRpb24gPSAiVHlwZS1hd2FyZSBtdXRhdGlvbiB0ZXN0aW5nIGZvciBQeXRob24g4oCUIGZhc3QsIG9waW5pb25hdGVkLCBweXRlc3QtbmF0aXZlIgpyZXF1aXJlcy1weXRob24gPSAiPj0zLjEyIgpyZWFkbWUgPSAiUkVBRE1FLm1kIgpsaWNlbnNlID0gIk1JVCIKYXV0aG9ycyA9IFt7IG5hbWUgPSAiTWFyayBOZyIsIGVtYWlsID0gIm1hcmtAcm9hbWluZy1wYW5kYS5jb20iIH1dCmtleXdvcmRzID0gWyJweXRlc3QiLCAibXV0YXRpb24tdGVzdGluZyIsICJ0ZXN0aW5nIiwgInF1YWxpdHkiLCAidHlwZS1hd2FyZSJdCmNsYXNzaWZpZXJzID0gWwogICAgIkRldmVsb3BtZW50IFN0YXR1cyA6OiAzIC0gQWxwaGEiLAogICAgIkZyYW1ld29yayA6OiBQeXRlc3QiLAogICAgIkludGVuZGVkIEF1ZGllbmNlIDo6IERldmVsb3BlcnMiLAogICAgIkxpY2Vuc2UgOjogT1NJIEFwcHJvdmVkIDo6IE1JVCBMaWNlbnNlIiwKICAgICJPcGVyYXRpbmcgU3lzdGVtIDo6IE9TIEluZGVwZW5kZW50IiwKICAgICJQcm9ncmFtbWluZyBMYW5ndWFnZSA6OiBQeXRob24gOjogMyIsCiAgICAiUHJvZ3JhbW1pbmcgTGFuZ3VhZ2UgOjogUHl0aG9uIDo6IDMuMTIiLAogICAgIlByb2dyYW1taW5nIExhbmd1YWdlIDo6IFB5dGhvbiA6OiAzLjEzIiwKICAgICJQcm9ncmFtbWluZyBMYW5ndWFnZSA6OiBQeXRob24gOjogMy4xNCIsCiAgICAiVG9waWMgOjogU29mdHdhcmUgRGV2ZWxvcG1lbnQgOjogVGVzdGluZyIsCiAgICAiVG9waWMgOjogU29mdHdhcmUgRGV2ZWxvcG1lbnQgOjogUXVhbGl0eSBBc3N1cmFuY2UiLApdCmRlcGVuZGVuY2llcyA9IFsKICAgICJweXRlc3Q+PTcuMCIsCl0KCltwcm9qZWN0Lm9wdGlvbmFsLWRlcGVuZGVuY2llc10KZGV2ID0gWwogICAgInB5dGVzdC1kZXNjcmliZT49Mi4wIiwKICAgICJteXB5IiwKICAgICJkamFuZ28tc3R1YnMiLAogICAgImZhY3RvcnktYm95IiwKICAgICJmYWtlciIsCl0KIyBFeGVyY2lzZXMgbGVlbGEncyBEamFuZ28gaGFuZGxpbmcgKHB5dGVzdC1kamFuZ28gREIgYmxvY2ssIG1vZGVsL2FkbWluCiMgbW9kdWxlIHBpbm5pbmcpIGVuZCB0byBlbmQuICBweXRlc3QtZGphbmdvIDQuMTAgaXMgdGhlIGZpcnN0IHJlbGVhc2UKIyB3aG9zZSBweXRlc3RfdW5jb25maWd1cmUgcmVzdG9yZXMgdGhlIHNlc3Npb24ncyBEQiBibG9jay4KZGphbmdvID0gWwogICAgImRqYW5nbz49NS4yIiwKICAgICJweXRlc3QtZGphbmdvPj00LjEwIiwKXQoKW3Byb2plY3QudXJsc10KSG9tZXBhZ2UgPSAiaHR0cHM6Ly9naXRodWIuY29tL21hcmtuZy9weXRlc3QtbGVlbGEiCklzc3VlcyA9ICJodHRwczovL2dpdGh1Yi5jb20vbWFya25nL3B5dGVzdC1sZWVsYS9pc3N1ZXMiCgpbcHJvamVjdC5lbnRyeS1wb2ludHMucHl0ZXN0MTFdCmxlZWxhID0gInB5dGVzdF9sZWVsYS5wbHVnaW4iCgpbdG9vbC5oYXRjaC5idWlsZC50YXJnZXRzLndoZWVsXQpwYWNrYWdlcyA9IFsic3JjL3B5dGVzdF9sZWVsYSJdCgpbdG9vbC5weXRlc3QuaW5pX29wdGlvbnNdCnRlc3RwYXRocyA9IFsidGVzdHMiXQpweXRob25wYXRoID0gWyJzcmMiLCAiLiJdCnB5dGhvbl9maWxlcyA9IFsidGVzdF8qLnB5IiwgImRlc2NyaWJlXyoucHkiXQoKW3Rvb2wubXlweV0KcHl0aG9uX3ZlcnNpb24gPSAiMy4xMiIKc3RyaWN0ID0gdHJ1ZQp3YXJuX3JldHVybl9hbnkgPSB0cnVlCndhcm5fdW51c2VkX2NvbmZpZ3MgPSB0cnVlCmRpc2FsbG93X3VudHlwZWRfZGVmcyA9IHRydWUKZmlsZXMgPSBbInNyYy9weXRlc3RfbGVlbGEiXQoKW1t0b29sLm15cHkub3ZlcnJpZGVzXV0KbW9kdWxlID0gImRqYW5nby4qIgppZ25vcmVfbWlzc2luZ19pbXBvcnRzID0gdHJ1ZQoKW1t0b29sLm15cHkub3ZlcnJpZGVzXV0KbW9kdWxlID0gInB5dGVzdF9kamFuZ28uKiIKaWdub3JlX21pc3NpbmdfaW1wb3J0cyA9IHRydWUKCltbdG9vbC5teXB5Lm92ZXJyaWRlc11dCm1vZHVsZSA9ICJweXRlc3RfbGVlbGEuY292ZXJhZ2VfdHJhY2tlciIKZGlzYWJsZV9lcnJvcl9jb2RlID0gWyJhcmctdHlwZSJdCg==
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytest-leela"
+version = "0.20.0"
+description = "Type-aware mutation testing for Python — fast, opinionated, pytest-native"
+requires-python = ">=3.12"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Mark Ng", email = "mark@roaming-panda.com" }]
+keywords = ["pytest", "mutation-testing", "testing", "quality", "type-aware"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = [
+    "pytest>=7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-describe>=2.0",
+    "mypy",
+    "django-stubs",
+    "factory-boy",
+    "faker",
+]
+# Exercises leela's Django handling (pytest-django DB block, model/admin
+# module pinning) end to end.  pytest-django 4.10 is the first release
+# whose pytest_unconfigure restores the session's DB block.
+django = [
+    "django>=5.2",
+    "pytest-django>=4.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/markng/pytest-leela"
+Issues = "https://github.com/markng/pytest-leela/issues"
+
+[project.entry-points.pytest11]
+leela = "pytest_leela.plugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytest_leela"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+python_files = ["test_*.py", "describe_*.py"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+files = ["src/pytest_leela"]
+
+[[tool.mypy.overrides]]
+module = "django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_django.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_leela.coverage_tracker"
+disable_error_code = ["arg-type"]
