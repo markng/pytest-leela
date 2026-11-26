@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.0 — 2026-11-26
+
+### Added
+
+- Export Leela’s mutation-testing guidance with `pytest --noconftest --skill`.
+  It prints a Markdown skill for coding agents without collecting tests. (#56, #58)
+
 ## 0.20.0 — 2026-11-26
 
 ### Added
