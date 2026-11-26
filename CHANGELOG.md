@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.0 — 2026-11-26
+
+### Added
+
+- Report whether mutation execution was serial or no mutants ran. CPU affinity
+  and outer pytest worker settings are shown separately from the observed
+  mutation concurrency. (#54)
+
 ## 0.19.0 — 2026-11-25
 
 ### Added
