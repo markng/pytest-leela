@@ -463,6 +463,8 @@ class _PreferMutationFinder:
 class _FastFirst:
     def __init__(self, test_times: dict[str, float]) -> None:
         self.test_times = test_times
+        # If collection did not complete, do not claim that ordering was a no-op.
+        self.changed = True
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_collection_modifyitems(
@@ -480,11 +482,13 @@ class _FastFirst:
         def group(item: pytest.Item) -> int:
             return id(item) if getattr(item, "callspec", None) is not None else id(item.parent)
 
-        items[:] = [
+        ordered = [
             item
             for _, batch in groupby(items, key=group)
             for item in sorted(batch, key=duration)
         ]
+        self.changed = any(original is not new for original, new in zip(items, ordered))
+        items[:] = ordered
 
 
 class InnerSession:
@@ -508,6 +512,7 @@ class InnerSession:
         fast_first: bool = False,
     ) -> None:
         self.fast_first = fast_first
+        self.fast_first_plugin: _FastFirst | None = None
         self.finder = finder
         self.test_ids = test_ids
         self.test_dir = test_dir
@@ -619,7 +624,8 @@ class InnerSession:
         if self.finder is not None:
             plugins.append(_PreferMutationFinder(self.finder))
         if self.fast_first and self.test_ids and self.ordering_times:
-            plugins.append(_FastFirst(self.ordering_times))
+            self.fast_first_plugin = _FastFirst(self.ordering_times)
+            plugins.append(self.fast_first_plugin)
 
         # Run pytest in-process (suppress noisy output)
         try:
@@ -895,9 +901,10 @@ def run_tests_for_mutant(
     result = session.run().result_for(mutant)
 
     if result.status == "killed":
-        # Reordered call failures also need a clean run of this exact subset.
-        # The original-order baseline union cannot establish causality here.
-        if not fast_first:
+        # Only skip the additional control when this feature introduced no
+        # permutation. An observed change still needs the exact-subset check.
+        ordering = session.fast_first_plugin
+        if ordering is None or not ordering.changed:
             return result
     elif result.status != "error" or not (result.error or "").startswith(
         "inconclusive:"

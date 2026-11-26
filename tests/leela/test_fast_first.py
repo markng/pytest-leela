@@ -100,7 +100,7 @@ def test_module_fixture_setup_count(pytester, global_sort):
     assert output.index('test_a.py::test_two PASSED') < output.index('test_a.py::test_one PASSED')
 
 
-@pytest.mark.parametrize('failure_phase', ['setup', 'call', 'causal'])
+@pytest.mark.parametrize('failure_phase', ['setup', 'call', 'causal', 'unchanged', 'single'])
 def test_fast_first_clean_control_does_not_credit_order_dependent_failure(tmp_path, monkeypatch, failure_phase):
     monkeypatch.chdir(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path))
@@ -129,19 +129,30 @@ def test_consume(prepared):
 '''
     if failure_phase == 'call':
         tests = tests.replace('def test_consume(prepared):', 'def test_consume(shared):\n    assert shared, "ambient call requires prior test"')
-    elif failure_phase == 'causal':
+    elif failure_phase in {'causal', 'unchanged', 'single'}:
         tests = tests.replace('def test_consume(prepared):', 'def test_consume():')
         tests = tests.replace('neutral(2, 0) == 2', 'neutral(2, 1) == 3')
     (tmp_path / 'test_neutral.py').write_text(tests)
     point = next(p for p in find_mutation_points(source, str(target), 'neutral_target')
                  if p.node_type == 'BinOp' and p.original_op == 'Add')
     first, second = 'test_neutral.py::test_prepare', 'test_neutral.py::test_consume'
-    common = dict(test_ids=[first, second], test_dir=str(tmp_path),
-                  test_times={first: 2.0, second: 1.0}, scope=ProjectModuleScope(str(tmp_path)))
+    selected = [second] if failure_phase == 'single' else [first, second]
+    timings = {first: 1.0, second: 2.0} if failure_phase == 'unchanged' else {first: 2.0, second: 1.0}
+    common = dict(test_ids=selected, test_dir=str(tmp_path), test_times=timings,
+                  scope=ProjectModuleScope(str(tmp_path)))
     args = Mutant(point, 'Sub', 0), {'neutral_target': source}, {'neutral_target': str(target)}
     ordinary = run_tests_for_mutant(*args, **common)
+    calls = []
+    main = pytest.main
+
+    def observe(argv, *, plugins):
+        calls.append('mutant' if '-x' in argv else 'clean')
+        return main(argv, plugins=plugins)
+
+    monkeypatch.setattr(pytest, 'main', observe)
     ordered = run_tests_for_mutant(*args, **common, fast_first=True)
-    if failure_phase == 'causal':
+    assert calls == (['mutant'] if failure_phase in {'unchanged', 'single'} else ['mutant', 'clean'])
+    if failure_phase in {'causal', 'unchanged', 'single'}:
         assert ordinary.status == ordered.status == 'killed'
         assert ordered.killing_test == second
     else:
