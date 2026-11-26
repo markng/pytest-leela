@@ -1,1 +1,299 @@
-IyBDaGFuZ2Vsb2cKCiMjIDAuMjAuMCDigJQgMjAyNi0xMS0yNgoKIyMjIEFkZGVkCgotIFJlcG9ydCB3aGV0aGVyIG11dGF0aW9uIGV4ZWN1dGlvbiB3YXMgc2VyaWFsIG9yIG5vIG11dGFudHMgcmFuLiBDUFUgYWZmaW5pdHkKICBhbmQgb3V0ZXIgcHl0ZXN0IHdvcmtlciBzZXR0aW5ncyBhcmUgc2hvd24gc2VwYXJhdGVseSBmcm9tIHRoZSBvYnNlcnZlZAogIG11dGF0aW9uIGNvbmN1cnJlbmN5LiAoIzU0KQoKIyMgMC4xOS4wIOKAlCAyMDI2LTExLTI1CgojIyMgQWRkZWQKCi0gVGhlIEJvb2xlYW4gb3BlcmF0b3IgY2F0ZWdvcnkgY2FuIG5lZ2F0ZSBhIGJhcmUgY29tcHJlaGVuc2lvbiBmaWx0ZXIKICAobmFtZSwgYXR0cmlidXRlLCBvciBjYWxsKSBpbiBsaXN0LCBzZXQsIGFuZCBkaWN0IGNvbXByZWhlbnNpb25zIGFuZAogIGdlbmVyYXRvciBleHByZXNzaW9ucy4gT25seSB0aGUgc2VsZWN0ZWQgZmlsdGVyIGNoYW5nZXM7IG90aGVyIGZpbHRlcnMsCiAgZ2VuZXJhdG9yIGNsYXVzZXMsIGFuZCBldmFsdWF0aW9uIG9yZGVyIGFyZSBwcmVzZXJ2ZWQuICgjNTEpCgojIyAwLjE4LjAg4oCUIDIwMjYtMTEtMjQKCiMjIyBBZGRlZAoKLSBUaGUgQm9vbGVhbiBvcGVyYXRvciBjYXRlZ29yeSBuZWdhdGVzIGJhcmUgYHdoaWxlYCBwcmVkaWNhdGVzIChuYW1lcywKICBhdHRyaWJ1dGVzLCBhbmQgY2FsbHMpLCBwcmVzZXJ2aW5nIHRoZSBsb29wIGJvZHksIGBlbHNlYCwgYW5kCiAgcGVyLWNoZWNrIGV2YWx1YXRpb24uIEV4aXN0aW5nIHRpbWVvdXQgYmVoYXZpb3IgaXMgdW5jaGFuZ2VkLiAoIzQ5KQoKIyMgMC4xNy4wIOKAlCAyMDI2LTExLTI0CgojIyMgQWRkZWQKCi0gVGhlIEJvb2xlYW4gb3BlcmF0b3IgY2F0ZWdvcnkgbmVnYXRlcyBiYXJlIGFzc2VydGlvbiBwcmVkaWNhdGVzIChuYW1lcywKICBhdHRyaWJ1dGVzLCBhbmQgY2FsbHMpLiBJdCBsZWF2ZXMgYXNzZXJ0aW9uIG1lc3NhZ2VzIGFuZCBleGlzdGluZwogIGNvbXBvdW5kLWV4cHJlc3Npb24gbXV0YXRpb25zIGludGFjdC4gKCM0NykKCiMjIDAuMTYuMCDigJQgMjAyNi0xMS0yNAoKIyMjIEFkZGVkCgotIE9wdGlvbmFsIEhUTUwgcmVwb3J0cyBzaG93IGVhY2ggbXV0YW50J3MgZnVsbCBydW5uZXIgd2FsbCB0aW1lIGFsb25nc2lkZQogIHRoZSBleGlzdGluZyBpbm5lciBlbGFwc2VkIHRpbWUuIFRoZSBuZXcgdmFsdWUgaW5jbHVkZXMgY29udHJvbCBhbmQKICBjb25maXJtYXRpb24gYW5kIG1hdGNoZXMgdGhlIEpTT04gTGluZXMgbWVhc3VyZW1lbnQuICgjNDUpCgojIyAwLjE1LjAg4oCUIDIwMjYtMTEtMjQKCiMjIyBBZGRlZAoKLSBUaGUgb3B0LWluIGBhc3NpZ25tZW50YCBvcGVyYXRvciBjYW4gcmVwbGFjZSB0aGUgUkhTIG9mIGNoYWluZWQgYXNzaWdubWVudHMKICB3aXRoIGBOb25lYCB3aGVuIGFsbCB0YXJnZXRzIGFyZSBuYW1lcy4gSXQgZW1pdHMgb25lIG11dGFudCBwZXIgUkhTIGFuZAogIHNraXBzIGFueSBtaXhlZCBvciBkZXN0cnVjdHVyaW5nIHRhcmdldHMuICgjNDMpCgojIyAwLjE0LjAg4oCUIDIwMjYtMTEtMjQKCiMjIyBBZGRlZAoKLSBTdHJlYW0gb25lIHZlcnNpb25lZCwgZmx1c2hlZCBKU09OIExpbmVzIHJlY29yZCBwZXIgY29tcGxldGVkIG11dGFudAogIHdpdGggYC0tbGVlbGEtanNvbmwgUEFUSGAuIFJlY29yZHMgZXhwb3NlIHN0YWJsZSBydW4tbG9jYWwgaWRlbnRpdHksCiAgbG9jYXRpb24sIG9wZXJhdG9yLCB2ZXJkaWN0LCBhbmQgZnVsbCBydW5uZXIgd2FsbCB0aW1lLiAoIzQxKQoKIyMgMC4xMy4wIOKAlCAyMDI2LTExLTI0CgojIyMgQWRkZWQKCi0gVGhlIG9wdC1pbiBgYXNzaWdubWVudGAgY2F0ZWdvcnkgcmVwbGFjZXMgdGhlIFJIUyBvZiBhIHNpbXBsZSBuYW1lCiAgYXNzaWdubWVudCBvciBhbm5vdGF0ZWQgaW5pdGlhbGl6ZXIgd2l0aCBgTm9uZWAuIFRoZSB0YXJnZXQgYW5kCiAgYW5ub3RhdGlvbiBhcmUgcHJlc2VydmVkLiBEZWZhdWx0cyBhcmUgdW5jaGFuZ2VkLiAoIzM5KQoKIyMgMC4xMi4wIOKAlCAyMDI2LTExLTI0CgojIyMgQWRkZWQKCi0gVGhlIG9wdC1pbiBgZGVjb3JhdG9yYCBjYXRlZ29yeSByZW1vdmVzIG9uZSBkZWNvcmF0b3IgYXQgYSB0aW1lIGZyb20KICBmdW5jdGlvbnMsIGFzeW5jIGZ1bmN0aW9ucywgb3IgY2xhc3Nlcy4gRWFjaCBzdGFja2VkIGRlY29yYXRvciBoYXMgaXRzCiAgb3duIG11dGFudCBhdCBpdHMgZXhwcmVzc2lvbidzIHN0YXJ0aW5nIGxpbmUuIERlZmF1bHRzIGFyZSB1bmNoYW5nZWQuICgjMzcpCgojIyAwLjExLjMg4oCUIDIwMjYtMTEtMjQKCiMjIyBGaXhlZAoKLSBXaGVuIGAtLWRpZmZgIGZpbmRzIG5vIG11dGF0aW9uIGNhbmRpZGF0ZXMsIHRoZSB0ZXJtaW5hbCBzdW1tYXJ5IG5vdyBzaG93cwogIGBOL0EgKG5vdGhpbmcgdG8gdGVzdClgIGluc3RlYWQgb2YgYSBudW1lcmljIGAwLzBgIHNjb3JlLiBUaGUgd2FybmluZywKICBleGl0IHN0YXR1cywgSlNPTiBhbmQgSFRNTCBhcmUgdW5jaGFuZ2VkLiAoIzM1KQoKIyMgMC4xMS4yIOKAlCAyMDI2LTExLTI0CgojIyMgRml4ZWQKCi0gVGhlIGRlZmF1bHQgYGJvb2xlYW5gIGNhdGVnb3J5IG5vdyBuZWdhdGVzIGJhcmUgYGlmYCBhbmQgYGVsaWZgIHByZWRpY2F0ZXMKICBzdWNoIGFzIGBmbGFnYCwgYG9iai5mbGFnYCwgYW5kIGBjaGVjaygpYC4gTGVlbGEgcmVwb3J0cyBzdXJ2aXZpbmcgbXV0YXRpb25zCiAgd2hlbiB0ZXN0cyBkbyBub3QgZGlzdGluZ3Vpc2ggdGhlIHR3byBicmFuY2ggb3V0Y29tZXMuIENvbXBsZXggcHJlZGljYXRlcwogIGtlZXAgdGhlaXIgZXhpc3Rpbmcgb3BlcmF0b3JzOyBgd2hpbGVgLCBgYXNzZXJ0YCwgYW5kIGNvbXByZWhlbnNpb24gZmlsdGVycwogIGFyZSB1bmNoYW5nZWQuICgjMTgsICMzMykKCiMjIDAuMTEuMSDigJQgMjAyNi0xMS0yMwoKIyMjIEZpeGVkCgotIEFwcGx5IGVhY2ggaW1wb3J0LWhvb2sgbXV0YW50IG9ubHkgdG8gaXRzIGludGVuZGVkIG1vZHVsZSBhbmQgc291cmNlIGZpbGUuCiAgU2VwYXJhdGUgbW9kdWxlcyBhdCB0aGUgc2FtZSBzb3VyY2UgY29vcmRpbmF0ZXMgbm8gbG9uZ2VyIHNoYXJlIGEgbXV0YXRpb24KICBhbmQgY2FuIHJlcG9ydCBpbmRlcGVuZGVudCByZXN1bHRzLiBJZiBhbiBpbXBvcnQgdXNlcyB0aGUgc2FtZSBkb3R0ZWQgbmFtZQogIGJ1dCByZXNvbHZlcyB0byBhIGRpZmZlcmVudCBzb3VyY2UgZmlsZSwgdGhhdCBmaWxlIGlzIGxlZnQgdW5tdXRhdGVkLgogIEFsdGVybmF0ZSBwYXRocyB0byB0aGUgaW50ZW5kZWQgZmlsZSBzdGlsbCB3b3JrIGZvciB0aGUgaW50ZW5kZWQgbW9kdWxlLiAoIzI1KQoKIyMgMC4xMS4wIOKAlCAyMDI2LTExLTIzCgojIyMgQWRkZWQKCi0gUHJpbnQgYSBVVEMtc3RhbXBlZCBjb21wbGV0aW9uIGxpbmUgZm9yIGVhY2ggbXV0YW50LCB3aXRoIGl0cyBJRCwKICBsb2NhdGlvbiwgbXV0YXRpb24sIHZlcmRpY3QsIGFuZCB3YWxsIHRpbWUuIFRoZSBkdXJhdGlvbiBjb3ZlcnMgdGhlCiAgd2hvbGUgcnVubmVyIGNhbGwsIGluY2x1ZGluZyBhbnkgY29udHJvbCBhbmQgY29uZmlybWF0aW9uIHJ1bnMuIFRoZQogIHRlcm1pbmFsIHN1bW1hcnkgbGlzdHMgdXAgdG8gZml2ZSBzbG93ZXN0IGNvbXBsZXRlZCBtdXRhbnRzLCBpbmNsdWRpbmcKICB3aGVuIG91dHB1dCBpcyBwaXBlZC4gVGhlIEhUTUwgcmVwb3J0J3MgcGVyLW11dGFudCBlbGFwc2VkIHRpbWUgaXMKICB1bmNoYW5nZWQuICgjMjYpCgojIyAwLjEwLjAg4oCUIDIwMjYtMTEtMjIKCiMjIyBBZGRlZAoKLSBQcmludCBVVEMgdGltZXN0YW1wcywgdGhlIGN1cnJlbnQgbXV0YW50IGFuZCBjb21wbGV0ZWQgY291bnRzIHdoaWxlCiAgbXV0YXRpb24gdGVzdGluZyBydW5zLCBpbmNsdWRpbmcgd2hlbiBvdXRwdXQgaXMgcGlwZWQuCgojIyMgRml4ZWQKCi0gR2l2ZSB0aGUgbXV0YXRpb24gbG9hZGVyIHByZWNlZGVuY2Ugb3ZlciBweXRlc3QncyBhc3NlcnRpb24gcmV3cml0ZXIKICBiZWZvcmUgaW5pdGlhbCBjb25mdGVzdHMuIE1hcmtlZCB0YXJnZXRzIG5vIGxvbmdlciBzaWxlbnRseSB0ZXN0CiAgdW5tdXRhdGVkIGNvZGUgb24gdGhhdCBwYXRoOyBub24tdGFyZ2V0IGFzc2VydGlvbiByZXdyaXRpbmcgaXMgdW5jaGFuZ2VkLgotIENvbmZpcm0gbXV0YXRpb24tY2F1c2VkIHNldHVwLCB0ZWFyZG93biwgY29sbGVjdGlvbiwgb3IgaW1wb3J0IGZhaWx1cmVzCiAgYWdhaW5zdCBhbiB1bm11dGF0ZWQgY29udHJvbCBhbmQgYSByZXBlYXRlZCBydW4uIFVuY2VydGFpbiBmYWlsdXJlcyBhcmUKICBlcnJvcnMsIG5vdCBraWxscy4gVGVybWluYWwsIEpTT04sIGFuZCBIVE1MIHJlcG9ydHMgc2hvdyB0aGUgZXZpZGVuY2UuCgojIyAwLjkuMCDigJQgMjAyNi0xMC0xNAoKIyMjIEZpeGVkCgotICoqVGhlIGNsZWFuIGJhc2VsaW5lIHJlYWRzIGN1cnJlbnQgbG9jYWwgc291cmNlLCB0ZXN0cyBhbmQgaGVscGVycy4qKgogIFRpbWVzdGFtcCBieXRlY29kZSBjYWNoZXMgY291bGQgcmV1c2Ugc3RhbGUgY29kZSBhZnRlciBhIHNhbWUtc2l6ZSBlZGl0CiAgd2l0aCBhbiB1bmNoYW5nZWQgbXRpbWUsIGFjY2VwdGluZyBhIGZhaWxpbmcgYmFzZWxpbmUgYW5kIHJ1bm5pbmcgbXV0YW50cy4KICBMZWVsYSBub3cgcmVtb3ZlcyBvbmx5IHRoZSBwcm9qZWN0J3Mgc291cmNlIGFuZCBhc3NlcnRpb24tcmV3cml0ZSBjYWNoZXMKICBiZWZvcmUgY292ZXJhZ2UgYW5kIHRoZSB1bm11dGF0ZWQgYmFzZWxpbmUsIGxlYXZpbmcgaW5zdGFsbGVkIHBhY2thZ2VzIGFsb25lLgoKLSAqKkluc3RhbGxlZCBwYWNrYWdlcyBpbiBhIHZpcnR1YWxlbnYgaW5zaWRlIHRoZSBwcm9qZWN0IGFyZSBubyBsb25nZXIKICBldmljdGVkIGJldHdlZW4gbXV0YW50cy4qKiBMZWVsYSBldmljdGVkIGV2ZXJ5IG1vZHVsZSB3aG9zZSBgX19maWxlX19gCiAgc2F0IHVuZGVyIHRoZSBjd2QgKGFuZCwgYmVmb3JlIGEgcnVuLCBldmVyeXRoaW5nIHVuZGVyIHRoZSB0ZW1wIGRpcikuCiAgV2l0aCB1didzIGRlZmF1bHQgYC52ZW52YCBpbnNpZGUgdGhlIHByb2plY3QgdGhhdCBpbmNsdWRlZCB0aGlyZC1wYXJ0eQogIHBhY2thZ2VzLCBzbyBDIGV4dGVuc2lvbnMgc3VjaCBhcyBudW1weSBmYWlsZWQgdG8gcmUtaW1wb3J0IHdpdGgKICBgSW1wb3J0RXJyb3I6IGNhbm5vdCBsb2FkIG1vZHVsZSBtb3JlIHRoYW4gb25jZSBwZXIgcHJvY2Vzc2AuIFRoYXQKICBjcmFzaCB3YXMgc2NvcmVkIGFzIGEgKipraWxsKiosIHNvIGV2ZXJ5IG11dGFudCByZXBvcnRlZCBraWxsZWQsCiAgaW5jbHVkaW5nIG11dGFudHMgbm8gdGVzdCBjYXVnaHQuIEV2aWN0aW9uIG5vdyBza2lwcyBhbnl0aGluZyB1bmRlcgogIGBzeXMucHJlZml4YCwgYHN5cy5iYXNlX3ByZWZpeGAsIGBzeXMuZXhlY19wcmVmaXhgLAogIGBzaXRlLmdldHNpdGVwYWNrYWdlcygpYCwgYHNpdGUuZ2V0dXNlcnNpdGVwYWNrYWdlcygpYCBvciBhCiAgYHNpdGUtcGFja2FnZXNgIC8gYGRpc3QtcGFja2FnZXNgIGRpcmVjdG9yeSwgd2hpbGUgc3RpbGwgZXZpY3RpbmcgdGhlCiAgcHJvamVjdCdzIG93biBtb2R1bGVzIHNvIG11dGF0ZWQgY29kZSByZWxvYWRzLgoKICAqKlNjb3JlcyByZXBvcnRlZCBieSBlYXJsaWVyIHZlcnNpb25zIG1heSBiZSBpbmZsYXRlZCoqIGZvciBwcm9qZWN0cwogIHdob3NlIHZpcnR1YWxlbnYgbGl2ZXMgaW5zaWRlIHRoZSBwcm9qZWN0IGRpcmVjdG9yeS4gUmUtcnVuIHRvIGdldCBhbgogIGhvbmVzdCBudW1iZXIuCgotICoqRGF0YWJhc2UgdGVzdHMgdW5kZXIgcHl0ZXN0LWRqYW5nbyBjYW4gcnVuIGluc2lkZSBsZWVsYSdzIGlubmVyCiAgc2Vzc2lvbnMuKiogcHl0ZXN0LWRqYW5nbyBibG9ja3MgREIgYWNjZXNzIGF0IGNvbmZpZ3VyZSB0aW1lIGFuZCBvbmx5CiAgcmVzdG9yZXMgaXQgYXQgdW5jb25maWd1cmUsIHdoaWNoIGlzIGFmdGVyIGxlZWxhIHJ1bnMuIEVhY2ggaW5uZXIKICBzZXNzaW9uJ3MgYERqYW5nb0RiQmxvY2tlcmAgcmVjb3JkZWQgdGhhdCBvdXRlciBibG9ja2luZyB3cmFwcGVyIGFzIHRoZQogICJyZWFsIiBgZW5zdXJlX2Nvbm5lY3Rpb25gLCBzbyBgZGphbmdvX2RiX2Jsb2NrZXIudW5ibG9jaygpYCBjb3VsZAogIG5ldmVyIHJlYWNoIHRoZSBkYXRhYmFzZTogZXZlcnkgREIgdGVzdCBlcnJvcmVkIGluIHNldHVwLCBhbmQgZWFjaAogIHNldHVwIGVycm9yIHdhcyBzY29yZWQgYXMgYSAqKmtpbGwqKiwgaW5jbHVkaW5nIGZvciBtdXRhbnRzIG5vIHRlc3QKICBjb3VsZCBkZXRlY3QuIExlZWxhIG5vdyBsaWZ0cyB0aGUgb3V0ZXIgYmxvY2sgKHZpYSBweXRlc3QtZGphbmdvJ3Mgb3duCiAgYHVuYmxvY2soKWApIHdoaWxlIGl0IHJ1bnMuIFNjb3JlcyBmcm9tIGVhcmxpZXIgdmVyc2lvbnMgb24KICBweXRlc3QtZGphbmdvIHByb2plY3RzIHdpdGggREIgdGVzdHMgbWF5IGJlIGluZmxhdGVkLgoKLSAqKkRqYW5nbyBtb2RlbCBhbmQgYWRtaW4gbW9kdWxlcyBhcmUgbm8gbG9uZ2VyIHJlbG9hZGVkIGJldHdlZW4KICBtdXRhbnRzLioqIFJlLWV4ZWN1dGluZyB0aGVtIHJlLXJlZ2lzdGVyZWQgbW9kZWxzICgiUmVsb2FkaW5nIG1vZGVscyBpcwogIG5vdCBhZHZpc2VkIikgYW5kIGFkbWluIGNsYXNzZXMgKGBBbHJlYWR5UmVnaXN0ZXJlZGApLCBhbmQgcmUtZW50ZXJlZAogIGltcG9ydCBjeWNsZXMgdGhhdCBvbmx5IHJlc29sdmUgaW4gRGphbmdvJ3MgYXBwLWxvYWRpbmcgb3JkZXIuIEFueQogIHByb2plY3QgbW9kdWxlIHRoZXkgcmVmZXJlbmNlIGlzIGtlcHQgdG9vLCBzbyBhIGtlcHQgbW9kZWwgbmV2ZXIgZW5kcwogIHVwIHN1YmNsYXNzaW5nIGEgc3RhbGUgY29weSBvZiBhIHJlbG9hZGVkIG1peGluLgoKLSAqKlRoZSBzdW1tYXJ5IG5vIGxvbmdlciByZXBvcnRzIGEgbmVnYXRpdmUgInBydW5lZCBieSB0eXBlIGFuYWx5c2lzIgogIGNvdW50LioqIEEgdHlwZWQgcnVsZSBjYW4gYWRkIG9wZXJhdG9ycyB0aGUgdW50eXBlZCBydWxlIGxhY2tzIChpbnQKICBgK2AgZ2FpbnMgYC8vYCksIGFuZCBgY291bnRfcHJ1bmVkYCBzdWJ0cmFjdGVkIGxpc3QgbGVuZ3Rocywgc28gc3VjaAogIHBvaW50cyBjb3VudGVkIGFzIG5lZ2F0aXZlIHBydW5pbmcgKCItMSBwcnVuZWQiKS4gSXQgbm93IGNvdW50cyBvbmx5CiAgdW50eXBlZCBtdXRhdGlvbnMgdGhlIHR5cGVkIHJ1bGUgZHJvcHBlZC4KCi0gKipVbmRlciBgLS1kaWZmYCwgdGhlIHN1bW1hcnkncyBjYW5kaWRhdGUsIHBydW5lZCBhbmQgdHlwZS1lbnJpY2htZW50CiAgY291bnRzIGNvdmVyIG9ubHkgdGhlIGNoYW5nZWQgbGluZXMuKiogVGhleSBjb3VudGVkIGV2ZXJ5IG11dGF0aW9uCiAgcG9pbnQgaW4gdGhlIHRhcmdldCBmaWxlcyB3aGlsZSBvbmx5IGNoYW5nZWQtbGluZSBtdXRhbnRzIHJhbiAoIjE1OQogIGNhbmRpZGF0ZXMiIGZvciA4OCB0ZXN0ZWQpLiBUaGUgZGlmZiBmaWx0ZXIgbm93IGFwcGxpZXMgYmVmb3JlIHR5cGUKICBlbnJpY2htZW50LCBjb3VudGluZyBhbmQgZ2VuZXJhdGlvbi4KCiMjIyBBZGRlZAoKLSAqKkNsZWFuIGJhc2VsaW5lIGJlZm9yZSBhbnkgbXV0YW50LioqIFRoZSBzZWxlY3RlZCB0ZXN0cyBydW4gb25jZSB3aXRoCiAgbm8gbXV0YXRpb24gYXBwbGllZCwgdGhyb3VnaCB0aGUgc2FtZSBpbi1wcm9jZXNzIHBhdGggYXMgZXZlcnkgbXV0YW50LgogIElmIGFueXRoaW5nIGZhaWxzIG9yIGVycm9ycywgdGhlIHJ1biBhYm9ydHMgd2l0aCBhIG1lc3NhZ2UgbmFtaW5nIHRoZQogIGZhaWxpbmcgdGVzdHMgYW5kIGEgbm9uLXplcm8gZXhpdCwgaW5zdGVhZCBvZiBzY29yaW5nIGV2ZXJ5IG11dGFudCBhcwogIGtpbGxlZC4KCi0gKipBIHRoaXJkIG11dGFudCBzdGF0dXMsIGBlcnJvcmAuKiogQSBtdXRhbnQgd2hvc2UgaW5uZXIgcnVuIGNyYXNoZWQsCiAgZXhpdGVkIGFibm9ybWFsbHkgKHVzYWdlIGVycm9yLCBub3RoaW5nIGNvbGxlY3RlZCwgaW50ZXJydXB0ZWQpIHdpdGggbm8KICB0ZXN0IGZhaWx1cmUgb3IgY29sbGVjdGlvbiBmYWlsdXJlLCBvciByYW4gemVybyB0ZXN0cywgd2FzIHByZXZpb3VzbHkKICByZXBvcnRlZCBhcyBraWxsZWQgKGNyYXNoKSBvciAqKlNVUlZJVkVEKiogKGB0ZXN0c19ydW46IDBgKS4gSXQgaXMgbm93CiAgYW4gZXJyb3I6IHJlcG9ydGVkIHdpdGggaXRzIHJlYXNvbiBpbiB0aGUgdGVybWluYWwsIEhUTUwgYW5kIEpTT04KICByZXBvcnRzLCBleGNsdWRlZCBmcm9tIHRoZSBtdXRhdGlvbiBzY29yZSwgYW5kIGZhaWxpbmcgdGhlIHNlc3Npb24gYnkKICBkZWZhdWx0LiBgTXV0YW50UmVzdWx0YCBnYWlucyBgZXJyb3JgIGFuZCBhIGBzdGF0dXNgIG9mIGAia2lsbGVkImAsCiAgYCJzdXJ2aXZlZCJgIG9yIGAiZXJyb3IiYDsgYFJ1blJlc3VsdGAgZ2FpbnMgYGVycm9yc2AgYW5kCiAgYG11dGFudHNfc2NvcmVkYC4gVGltZW91dHMgcmVtYWluIGtpbGxzLgoKLSAqKkEgdGVzdCBtb2R1bGUgdGhhdCBmYWlscyB0byBjb2xsZWN0IHVuZGVyIHRoZSBtdXRhbnQgaXMgYSBraWxsLioqCiAgVGhlIGNsZWFuIGJhc2VsaW5lIHNob3dzIGl0IGNvbGxlY3RzIHVubXV0YXRlZCwgc28gdGhlIGZhaWx1cmUgaXMgdGhlCiAgbXV0YW50J3MgZG9pbmc6IHRoZSB0YXJnZXQgcmFpc2luZyBhdCBpbXBvcnQsIG9yIGEgdGVzdCBtb2R1bGUncyBvd24KICBtb2R1bGUtbGV2ZWwgY2hlY2sgZmFpbGluZy4gVGhvc2UgbW9kdWxlcyBhcmUgdGhlIGtpbGxpbmcgdGVzdHMuCiAgYE11dGF0aW5nTG9hZGVyYCByZWNvcmRzIGV4Y2VwdGlvbnMgcmFpc2VkIGJ5IHRoZSBtdXRhdGVkIHNvdXJjZSwgYW5kIGEKICBjb25mdGVzdCB0aGF0IGZhaWxzIHRvIGltcG9ydCBiZWNhdXNlIG9mIG9uZSBpcyBhIGtpbGwgdG9vLiBBCiAgY29uZnRlc3QncyBvd24gZmFpbGluZyBjaGVjaywgb3IgYSBjb25mdGVzdCBvciB0ZXN0IG1vZHVsZSB0aGF0IGNhbGxzCiAgYHB5dGVzdC5leGl0KClgIGF0IGltcG9ydCwgaXMgYW4gYGVycm9yYDogaXQgaXMgbm90IGF0dHJpYnV0ZWQgdG8gdGhlCiAgbXV0YW50LiBTbyBpcyBhIGNvbmZ0ZXN0IGNvbGxlY3Rpb24gaG9vayB0aGF0IGNhbGxzIGBweXRlc3QuZXhpdCgpYDsKICB0aGUgZXJyb3IgbmFtZXMgdGhlIG5vZGUgYmVpbmcgY29sbGVjdGVkLiBFcnJvciB0ZXh0IHJlbmRlcnMgZWFjaAogIGNvbGxlY3Rpb24gZmFpbHVyZSBhcyBgcGF0aDogVHlwZTogbWVzc2FnZWAuIEEgcnVuIHRoYXQKICBzdGF5cyBncmVlbiBvciBlbXB0eSBpcyBub3QgYSBraWxsOiBhbiBpbXBvcnQgY2F1Z2h0IGJ5IHRoZSB0ZXN0IGlzCiAgU1VSVklWRUQsIGFuZCBhIG1vZHVsZS1sZXZlbCBza2lwLCBhIHNraXAgbWFya2VyIG9yIGEgY29uZnRlc3QgdGhhdAogIHNraXBzIGlzIGFuIGBlcnJvcmAsIGJlY2F1c2Ugbm8gdGVzdCByYW4uIEEgY29uZnRlc3QgcmFpc2luZyBgU2tpcHBlZGAKICBhdCBpbXBvcnQgbm8gbG9uZ2VyIGNyYXNoZXMgdGhlIHdob2xlIGxlZWxhIHJ1bjogYFNraXBwZWRgIGlzIGEKICBgQmFzZUV4Y2VwdGlvbmAsIG91dHNpZGUgd2hhdCBpbm5lciBydW5zIGNhdWdodC4KICAwLjguMCdzIHZlcmRpY3QgZm9yIGEgbXV0YW50IHRoYXQgYnJva2UgdGhlIHRhcmdldCdzIGltcG9ydCBkZXBlbmRlZAogIG9uIHRoZSBsYXlvdXQuIFdpdGggdGhlIHZpcnR1YWxlbnYgYW5kIHRoZSB0ZW1wIGRpciBvdXRzaWRlIHRoZQogIHByb2plY3QsIGl0IHdhcyBTVVJWSVZFRCB3aXRoIGB0ZXN0c19ydW46IDBgLiBXaXRoIHRoZSB2aXJ0dWFsZW52CiAgaW5zaWRlIHRoZSBwcm9qZWN0LCByZS1pbXBvcnRpbmcgaW5zdGFsbGVkIHBhY2thZ2VzIGNvdWxkIGNyYXNoIHRoZQogIGlubmVyIHJ1biwgYW5kIHRoZSBtdXRhbnQgd2FzIEtJTExFRCBhcyBgPGNyYXNoZWQ+YCwgYSB2ZXJkaWN0CiAgaW5kaXN0aW5ndWlzaGFibGUgZnJvbSBsZWVsYSBmYWlsaW5nIHRvIHRlc3QgaXQuCgotICoqYC0tbGVlbGEtYmVuY2htYXJrYCBubyBsb25nZXIgcmFpc2VzIGBUeXBlRXJyb3JgLioqIEl0IGNhbGxlZCB0aGUKICB0YXJnZXQtZGlzY292ZXJ5IGhlbHBlcnMgd2l0aG91dCB0aGUgYHB5dGhvbl9maWxlc2AgcGF0dGVybnMgdGhleQogIHJlcXVpcmUuCgotICoqVGhlIGBkamFuZ29gIGV4dHJhIHJlcXVpcmVzIGBweXRlc3QtZGphbmdvPj00LjEwYC4qKiA0LjEwIGlzIHRoZQogIGZpcnN0IHJlbGVhc2Ugd2hvc2UgYHB5dGVzdF91bmNvbmZpZ3VyZWAgcmVzdG9yZXMgdGhlIHNlc3Npb24ncwogIGRhdGFiYXNlIGJsb2NrLCB3aGljaCBsZWVsYSdzIG5lc3RlZCBzZXNzaW9ucyBkZXBlbmQgb24uCgotICoqYGZhaWxfb25fZXJyb3JgIG9wdGlvbioqIGluIGBbdG9vbC5weXRlc3QtbGVlbGFdYCAoZGVmYXVsdCBgdHJ1ZWApLgogIFNldCBpdCB0byBgZmFsc2VgIHRvIGtlZXAgZXJyb3JlZCBtdXRhbnRzIGZyb20gZmFpbGluZyB0aGUgc2Vzc2lvbi4KCiMjIDAuOC4wIOKAlCAyMDI2LTA2LTEwCgojIyMgQWRkZWQKCi0gKipXb3JraW5nLXRyZWUgZGlmZiBzdXBwb3J0IGluIGAtLWRpZmZgIG1vZGUuKiogYGdpdCBkaWZmIGJhc2UuLi5IRUFEYAogICh0aHJlZS1kb3QpIG9ubHkgc3BhbnMgY29tbWl0dGVkIGhpc3RvcnksIHNvIGAtLWRpZmYgSEVBRGAgYWdhaW5zdAogIHVuY29tbWl0dGVkIGVkaXRzIHByZXZpb3VzbHkgcHJvZHVjZWQgYW4gZW1wdHkgZGlmZiwgMCBtdXRhbnRzIHRlc3RlZCwKICBhbmQgYSBzaWxlbnQgZXhpdCAwIOKAlCBhIGhvbGxvdyBxdWFsaXR5IGdhdGUuIGBjaGFuZ2VkX2ZpbGVzYCBhbmQKICBgY2hhbmdlZF9saW5lc2Agbm93IHRha2UgdGhlICoqdW5pb24qKiBvZiB0aGUgY29tbWl0dGVkIHJhbmdlCiAgKGBiYXNlLi4uSEVBRGApIGFuZCB0aGUgd29ya2luZy10cmVlL2luZGV4IGRpZmYgKGBiYXNlYCwgdHdvLWRvdCksIHNvCiAgYC0tZGlmZiBIRUFEYCBjYXB0dXJlcyBzdGFnZWQgYW5kIHVuc3RhZ2VkIGVkaXRzLCBhbmQgYC0tZGlmZiBtYWluYAogIGNvbnRpbnVlcyB0byBjYXB0dXJlIGFsbCBjb21taXRzIHNpbmNlIG1haW4uCgotICoqWmVyby1tdXRhbnQgd2FybmluZyB3aGVuIGAtLWRpZmZgIGlzIGFjdGl2ZS4qKiBgUnVuUmVzdWx0YCBnYWlucyBhCiAgYGRpZmZfYmFzZWAgZmllbGQuIFdoZW4gYC0tZGlmZmAgaXMgYWN0aXZlIGFuZCBgbXV0YW50c190ZXN0ZWQgPT0gMGAsCiAgYGZvcm1hdF90ZXJtaW5hbF9yZXBvcnRgIGVtaXRzIGEgcHJvbWluZW50IGBXQVJOSU5HYCBzbyBvcGVyYXRvcnMga25vdwogIHRoZSBnYXRlIHByb2R1Y2VkIG5vIHNpZ25hbCByYXRoZXIgdGhhbiBzaWxlbnRseSBwYXNzaW5nLiAoWmVybyBtdXRhbnRzCiAgb24gYSBmdWxsIG5vbi1kaWZmIHJ1biBpcyBzdGlsbCBzaWxlbnQg4oCUIHRoYXQgaXMgZXhwZWN0ZWQgZm9yIGVtcHR5CiAgY29kZWJhc2VzLikKCi0gKipNb25vcmVwbyByZXBvLXJvb3QgcGF0aCBub3JtYWxpemF0aW9uLioqIEdpdCByZXBvcnRzIGZpbGUgcGF0aHMKICByZWxhdGl2ZSB0byB0aGUgcmVwb3NpdG9yeSByb290LCBidXQgcHl0ZXN0J3MgY3dkIG1heSBiZSBhCiAgc3ViZGlyZWN0b3J5LiBBIG5ldyBgX2dldF9yZXBvX3Jvb3QoKWAgaGVscGVyIHJlc29sdmVzIGdpdC1yZXBvcnRlZAogIHBhdGhzIGFnYWluc3QgdGhlIHJlYWwgcmVwbyByb290IHJhdGhlciB0aGFuIGN3ZCwgcHJldmVudGluZwogIGRvdWJsZS1zdWJkaXIgY29ycnVwdGlvbiAoZS5nLiBgc2VydmljZXMvYXBpL3NlcnZpY2VzL2FwaS94LnB5YCkuCiAgYF9wYXJzZV9kaWZmX2h1bmtzYCBnYWlucyBhbiBvcHRpb25hbCBgcmVwb19yb290YCBwYXJhbWV0ZXI7IGNhbGxlcnMKICB0aGF0IHBhc3MgZGlmZiB0ZXh0IGRpcmVjdGx5IGNvbnRpbnVlIHRvIHdvcmsgd2l0aCB0aGUgY3dkLXJlbGF0aXZlCiAgZmFsbGJhY2suCgotICoqTXV0YXRpb24taGFyZGVuaW5nIHRlc3RzIGZvciBgZ2l0X2RpZmZgLioqIEFsbCA0MSBtdXRhdGlvbnMgaW4KICBgZ2l0X2RpZmYucHlgIGFyZSBub3cga2lsbGVkICgxMDAlKSwgdXAgZnJvbSAzMi80MiAoNzYuMiUpIGJlZm9yZQogIHRoaXMgcmVsZWFzZS4gTmV3IHRlc3Qgc2NlbmFyaW9zIGNvdmVyIHRoZSB1bmlvbi1icmFuY2ggcGF0aHMsCiAgYF9nZXRfcmVwb19yb290YCBzdWNjZXNzL2ZhaWx1cmUgcGlucywgYW5kIHRoZSB6ZXJvLW11dGFudCB3YXJuaW5nCiAgZmlyaW5nIGNvbmRpdGlvbi4KCiMjIDAuNy4xIOKAlCAyMDI2LTA0LTI3CgojIyMgRml4ZWQKCi0gKipgTXV0YXRpbmdMb2FkZXJgIG5vdyBwb3B1bGF0ZXMgYF9fZmlsZV9fYCwgYF9fbG9hZGVyX19gLCBhbmQgYF9fc3BlY19fYAogIGJlZm9yZSBleGVjdXRpbmcgbXV0YXRlZCBzb3VyY2UuKiogUHJldmlvdXNseSwgYW55IHRhcmdldCBtb2R1bGUgdGhhdAogIHJlZmVyZW5jZWQgYF9fZmlsZV9fYCBhdCBtb2R1bGUgc2NvcGUgKGUuZy4gYEJBU0VfRElSID0gUGF0aChfX2ZpbGVfXykucmVzb2x2ZSgpLnBhcmVudGAKICBpbiBEamFuZ28gc2V0dGluZ3MsIGFzc2V0IHBhdGggbG9va3VwcyB2aWEgYFBhdGgoX19maWxlX18pLnBhcmVudCAvICdzdGF0aWMnIC8gLi4uYCwKICBvciBgcGtnX3Jlc291cmNlcy5yZXNvdXJjZV9maWxlbmFtZShfX25hbWVfXywgLi4uKWApIHJhaXNlZAogIGBOYW1lRXJyb3I6IG5hbWUgJ19fZmlsZV9fJyBpcyBub3QgZGVmaW5lZGAgZHVyaW5nIHRoZSBtdXRhdGVkIGltcG9ydC4KICBUaGUgaGFybmVzcyBjb3VudGVkIHRoYXQgaW1wb3J0IGZhaWx1cmUgYXMgIm5vIHRlc3Qga2lsbGVkIHRoaXMgbXV0YW50IgogIGFuZCByZXBvcnRlZCBhIGZhbHNlLXBvc2l0aXZlICoqU1VSVklWRUQqKiwgZXZlbiB3aGVuIHRoZSBleGlzdGluZyB0ZXN0cwogIHdvdWxkIGhhdmUgY2F1Z2h0IHRoZSBtdXRhdGlvbi4gVGhlIGxvYWRlciBub3cgbWlycm9ycyB0aGUgYXR0cmlidXRlCiAgcG9wdWxhdGlvbiB0aGF0IGBpbXBvcnRsaWIuX2Jvb3RzdHJhcF9leHRlcm5hbC5Tb3VyY2VGaWxlTG9hZGVyYCBwZXJmb3JtcwogIHZpYSBgX2luaXRfbW9kdWxlX2F0dHJzYC4gUmVwb3J0ZWQgYW5kIHJvb3QtY2F1c2VkIGluCiAgcGl0aC10YXNrIGAwYjA0OGRkNC1hYzg3LTRlMjItOWM4Yi03ODlhZTJiMWJlYmJgLgoKICBNdXRhbnRzIHRoYXQgd2VyZSBzaWxlbnRseSBhYnNvcmJlZCBhcyBTVVJWSVZFRCBvbiBgX19maWxlX19gLXVzaW5nCiAgbW9kdWxlcyB3aWxsIG5vdyBmbGlwIHRvIEtJTExFRCDigJQgdGhlIHRlc3RzIHdlcmUgYWx3YXlzIGNvcnJlY3Q7IG9ubHkKICB0aGUgaGFybmVzcyB3YXMgcmVwb3J0aW5nIHdyb25nbHkuIERvd25zdHJlYW0gcHJvamVjdHMgdGhhdCBpbnRyb2R1Y2VkCiAgd29ya2Fyb3VuZHMgdG8gZG9kZ2UgdGhpcyBidWcgKGUuZy4gZXh0cmFjdGluZyBgX19maWxlX19gLXRvdWNoaW5nCiAgY29kZSBpbnRvIGhlbHBlciBtb2R1bGVzLCBvciByb3V0aW5nIGFzc2V0IGxvb2t1cHMgdGhyb3VnaCBmcmFtZXdvcmsKICBmaW5kZXJzIHNvbGVseSB0byBhdm9pZCB0aGUgZmFsc2UgcG9zaXRpdmVzKSBjYW4gcmV2ZXJ0IHRob3NlCiAgd29ya2Fyb3VuZHMgaW4gYSBmb2xsb3ctdXAg4oCUIHRoZXkgYXJlIG5vIGxvbmdlciBsb2FkLWJlYXJpbmcgZm9yIGEKICBncmVlbiBsZWVsYSBydW4uCg==
+# Changelog
+
+## 0.20.0 — 2026-11-26
+
+### Added
+
+- Report whether mutation execution was serial or no mutants ran. CPU affinity
+  and outer pytest worker settings are shown separately from the observed
+  mutation concurrency. (#54)
+
+## 0.19.0 — 2026-11-25
+
+### Added
+
+- The Boolean operator category can negate a bare comprehension filter
+  (name, attribute, or call) in list, set, and dict comprehensions and
+  generator expressions. Only the selected filter changes; other filters,
+  generator clauses, and evaluation order are preserved. (#51)
+
+## 0.18.0 — 2026-11-24
+
+### Added
+
+- The Boolean operator category negates bare `while` predicates (names,
+  attributes, and calls), preserving the loop body, `else`, and
+  per-check evaluation. Existing timeout behavior is unchanged. (#49)
+
+## 0.17.0 — 2026-11-24
+
+### Added
+
+- The Boolean operator category negates bare assertion predicates (names,
+  attributes, and calls). It leaves assertion messages and existing
+  compound-expression mutations intact. (#47)
+
+## 0.16.0 — 2026-11-24
+
+### Added
+
+- Optional HTML reports show each mutant's full runner wall time alongside
+  the existing inner elapsed time. The new value includes control and
+  confirmation and matches the JSON Lines measurement. (#45)
+
+## 0.15.0 — 2026-11-24
+
+### Added
+
+- The opt-in `assignment` operator can replace the RHS of chained assignments
+  with `None` when all targets are names. It emits one mutant per RHS and
+  skips any mixed or destructuring targets. (#43)
+
+## 0.14.0 — 2026-11-24
+
+### Added
+
+- Stream one versioned, flushed JSON Lines record per completed mutant
+  with `--leela-jsonl PATH`. Records expose stable run-local identity,
+  location, operator, verdict, and full runner wall time. (#41)
+
+## 0.13.0 — 2026-11-24
+
+### Added
+
+- The opt-in `assignment` category replaces the RHS of a simple name
+  assignment or annotated initializer with `None`. The target and
+  annotation are preserved. Defaults are unchanged. (#39)
+
+## 0.12.0 — 2026-11-24
+
+### Added
+
+- The opt-in `decorator` category removes one decorator at a time from
+  functions, async functions, or classes. Each stacked decorator has its
+  own mutant at its expression's starting line. Defaults are unchanged. (#37)
+
+## 0.11.3 — 2026-11-24
+
+### Fixed
+
+- When `--diff` finds no mutation candidates, the terminal summary now shows
+  `N/A (nothing to test)` instead of a numeric `0/0` score. The warning,
+  exit status, JSON and HTML are unchanged. (#35)
+
+## 0.11.2 — 2026-11-24
+
+### Fixed
+
+- The default `boolean` category now negates bare `if` and `elif` predicates
+  such as `flag`, `obj.flag`, and `check()`. Leela reports surviving mutations
+  when tests do not distinguish the two branch outcomes. Complex predicates
+  keep their existing operators; `while`, `assert`, and comprehension filters
+  are unchanged. (#18, #33)
+
+## 0.11.1 — 2026-11-23
+
+### Fixed
+
+- Apply each import-hook mutant only to its intended module and source file.
+  Separate modules at the same source coordinates no longer share a mutation
+  and can report independent results. If an import uses the same dotted name
+  but resolves to a different source file, that file is left unmutated.
+  Alternate paths to the intended file still work for the intended module. (#25)
+
+## 0.11.0 — 2026-11-23
+
+### Added
+
+- Print a UTC-stamped completion line for each mutant, with its ID,
+  location, mutation, verdict, and wall time. The duration covers the
+  whole runner call, including any control and confirmation runs. The
+  terminal summary lists up to five slowest completed mutants, including
+  when output is piped. The HTML report's per-mutant elapsed time is
+  unchanged. (#26)
+
+## 0.10.0 — 2026-11-22
+
+### Added
+
+- Print UTC timestamps, the current mutant and completed counts while
+  mutation testing runs, including when output is piped.
+
+### Fixed
+
+- Give the mutation loader precedence over pytest's assertion rewriter
+  before initial conftests. Marked targets no longer silently test
+  unmutated code on that path; non-target assertion rewriting is unchanged.
+- Confirm mutation-caused setup, teardown, collection, or import failures
+  against an unmutated control and a repeated run. Uncertain failures are
+  errors, not kills. Terminal, JSON, and HTML reports show the evidence.
+
+## 0.9.0 — 2026-10-14
+
+### Fixed
+
+- **The clean baseline reads current local source, tests and helpers.**
+  Timestamp bytecode caches could reuse stale code after a same-size edit
+  with an unchanged mtime, accepting a failing baseline and running mutants.
+  Leela now removes only the project's source and assertion-rewrite caches
+  before coverage and the unmutated baseline, leaving installed packages alone.
+
+- **Installed packages in a virtualenv inside the project are no longer
+  evicted between mutants.** Leela evicted every module whose `__file__`
+  sat under the cwd (and, before a run, everything under the temp dir).
+  With uv's default `.venv` inside the project that included third-party
+  packages, so C extensions such as numpy failed to re-import with
+  `ImportError: cannot load module more than once per process`. That
+  crash was scored as a **kill**, so every mutant reported killed,
+  including mutants no test caught. Eviction now skips anything under
+  `sys.prefix`, `sys.base_prefix`, `sys.exec_prefix`,
+  `site.getsitepackages()`, `site.getusersitepackages()` or a
+  `site-packages` / `dist-packages` directory, while still evicting the
+  project's own modules so mutated code reloads.
+
+  **Scores reported by earlier versions may be inflated** for projects
+  whose virtualenv lives inside the project directory. Re-run to get an
+  honest number.
+
+- **Database tests under pytest-django can run inside leela's inner
+  sessions.** pytest-django blocks DB access at configure time and only
+  restores it at unconfigure, which is after leela runs. Each inner
+  session's `DjangoDbBlocker` recorded that outer blocking wrapper as the
+  "real" `ensure_connection`, so `django_db_blocker.unblock()` could
+  never reach the database: every DB test errored in setup, and each
+  setup error was scored as a **kill**, including for mutants no test
+  could detect. Leela now lifts the outer block (via pytest-django's own
+  `unblock()`) while it runs. Scores from earlier versions on
+  pytest-django projects with DB tests may be inflated.
+
+- **Django model and admin modules are no longer reloaded between
+  mutants.** Re-executing them re-registered models ("Reloading models is
+  not advised") and admin classes (`AlreadyRegistered`), and re-entered
+  import cycles that only resolve in Django's app-loading order. Any
+  project module they reference is kept too, so a kept model never ends
+  up subclassing a stale copy of a reloaded mixin.
+
+- **The summary no longer reports a negative "pruned by type analysis"
+  count.** A typed rule can add operators the untyped rule lacks (int
+  `+` gains `//`), and `count_pruned` subtracted list lengths, so such
+  points counted as negative pruning ("-1 pruned"). It now counts only
+  untyped mutations the typed rule dropped.
+
+- **Under `--diff`, the summary's candidate, pruned and type-enrichment
+  counts cover only the changed lines.** They counted every mutation
+  point in the target files while only changed-line mutants ran ("159
+  candidates" for 88 tested). The diff filter now applies before type
+  enrichment, counting and generation.
+
+### Added
+
+- **Clean baseline before any mutant.** The selected tests run once with
+  no mutation applied, through the same in-process path as every mutant.
+  If anything fails or errors, the run aborts with a message naming the
+  failing tests and a non-zero exit, instead of scoring every mutant as
+  killed.
+
+- **A third mutant status, `error`.** A mutant whose inner run crashed,
+  exited abnormally (usage error, nothing collected, interrupted) with no
+  test failure or collection failure, or ran zero tests, was previously
+  reported as killed (crash) or **SURVIVED** (`tests_run: 0`). It is now
+  an error: reported with its reason in the terminal, HTML and JSON
+  reports, excluded from the mutation score, and failing the session by
+  default. `MutantResult` gains `error` and a `status` of `"killed"`,
+  `"survived"` or `"error"`; `RunResult` gains `errors` and
+  `mutants_scored`. Timeouts remain kills.
+
+- **A test module that fails to collect under the mutant is a kill.**
+  The clean baseline shows it collects unmutated, so the failure is the
+  mutant's doing: the target raising at import, or a test module's own
+  module-level check failing. Those modules are the killing tests.
+  `MutatingLoader` records exceptions raised by the mutated source, and a
+  conftest that fails to import because of one is a kill too. A
+  conftest's own failing check, or a conftest or test module that calls
+  `pytest.exit()` at import, is an `error`: it is not attributed to the
+  mutant. So is a conftest collection hook that calls `pytest.exit()`;
+  the error names the node being collected. Error text renders each
+  collection failure as `path: Type: message`. A run that
+  stays green or empty is not a kill: an import caught by the test is
+  SURVIVED, and a module-level skip, a skip marker or a conftest that
+  skips is an `error`, because no test ran. A conftest raising `Skipped`
+  at import no longer crashes the whole leela run: `Skipped` is a
+  `BaseException`, outside what inner runs caught.
+  0.8.0's verdict for a mutant that broke the target's import depended
+  on the layout. With the virtualenv and the temp dir outside the
+  project, it was SURVIVED with `tests_run: 0`. With the virtualenv
+  inside the project, re-importing installed packages could crash the
+  inner run, and the mutant was KILLED as `<crashed>`, a verdict
+  indistinguishable from leela failing to test it.
+
+- **`--leela-benchmark` no longer raises `TypeError`.** It called the
+  target-discovery helpers without the `python_files` patterns they
+  require.
+
+- **The `django` extra requires `pytest-django>=4.10`.** 4.10 is the
+  first release whose `pytest_unconfigure` restores the session's
+  database block, which leela's nested sessions depend on.
+
+- **`fail_on_error` option** in `[tool.pytest-leela]` (default `true`).
+  Set it to `false` to keep errored mutants from failing the session.
+
+## 0.8.0 — 2026-06-10
+
+### Added
+
+- **Working-tree diff support in `--diff` mode.** `git diff base...HEAD`
+  (three-dot) only spans committed history, so `--diff HEAD` against
+  uncommitted edits previously produced an empty diff, 0 mutants tested,
+  and a silent exit 0 — a hollow quality gate. `changed_files` and
+  `changed_lines` now take the **union** of the committed range
+  (`base...HEAD`) and the working-tree/index diff (`base`, two-dot), so
+  `--diff HEAD` captures staged and unstaged edits, and `--diff main`
+  continues to capture all commits since main.
+
+- **Zero-mutant warning when `--diff` is active.** `RunResult` gains a
+  `diff_base` field. When `--diff` is active and `mutants_tested == 0`,
+  `format_terminal_report` emits a prominent `WARNING` so operators know
+  the gate produced no signal rather than silently passing. (Zero mutants
+  on a full non-diff run is still silent — that is expected for empty
+  codebases.)
+
+- **Monorepo repo-root path normalization.** Git reports file paths
+  relative to the repository root, but pytest's cwd may be a
+  subdirectory. A new `_get_repo_root()` helper resolves git-reported
+  paths against the real repo root rather than cwd, preventing
+  double-subdir corruption (e.g. `services/api/services/api/x.py`).
+  `_parse_diff_hunks` gains an optional `repo_root` parameter; callers
+  that pass diff text directly continue to work with the cwd-relative
+  fallback.
+
+- **Mutation-hardening tests for `git_diff`.** All 41 mutations in
+  `git_diff.py` are now killed (100%), up from 32/42 (76.2%) before
+  this release. New test scenarios cover the union-branch paths,
+  `_get_repo_root` success/failure pins, and the zero-mutant warning
+  firing condition.
+
+## 0.7.1 — 2026-04-27
+
+### Fixed
+
+- **`MutatingLoader` now populates `__file__`, `__loader__`, and `__spec__`
+  before executing mutated source.** Previously, any target module that
+  referenced `__file__` at module scope (e.g. `BASE_DIR = Path(__file__).resolve().parent`
+  in Django settings, asset path lookups via `Path(__file__).parent / 'static' / ...`,
+  or `pkg_resources.resource_filename(__name__, ...)`) raised
+  `NameError: name '__file__' is not defined` during the mutated import.
+  The harness counted that import failure as "no test killed this mutant"
+  and reported a false-positive **SURVIVED**, even when the existing tests
+  would have caught the mutation. The loader now mirrors the attribute
+  population that `importlib._bootstrap_external.SourceFileLoader` performs
+  via `_init_module_attrs`. Reported and root-caused in
+  pith-task `0b048dd4-ac87-4e22-9c8b-789ae2b1bebb`.
+
+  Mutants that were silently absorbed as SURVIVED on `__file__`-using
+  modules will now flip to KILLED — the tests were always correct; only
+  the harness was reporting wrongly. Downstream projects that introduced
+  workarounds to dodge this bug (e.g. extracting `__file__`-touching
+  code into helper modules, or routing asset lookups through framework
+  finders solely to avoid the false positives) can revert those
+  workarounds in a follow-up — they are no longer load-bearing for a
+  green leela run.
