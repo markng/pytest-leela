@@ -26,6 +26,7 @@ def describe_concurrency_reporting():
         assert result.ret == 0
         result.stdout.fnmatch_lines([
             "Leela mutant concurrency (observed peak): 0 (no mutants executed)",
+            "Mutation test dispatch model: serial calls to in-process pytest.main()",
             "Pytest test/worker concurrency during mutation: not measured",
             "Configured only: --max-cores=unset; outer pytest -n=unset",
         ])
@@ -48,6 +49,7 @@ def describe_concurrency_reporting():
         assert result.ret == 0
         result.stdout.fnmatch_lines([
             "Leela mutant concurrency (observed peak): 1 (serial)",
+            "Mutation test dispatch model: serial calls to in-process pytest.main()",
             "Pytest test/worker concurrency during mutation: not measured",
             "Configured only: --max-cores=4; outer pytest -n=unset",
         ])
@@ -70,6 +72,7 @@ def describe_concurrency_reporting():
 
         assert summary.splitlines() == [
             "Leela mutant concurrency (observed peak): 1 (serial)",
+            "Mutation test dispatch model: serial calls to in-process pytest.main()",
             "Pytest test/worker concurrency during mutation: not measured",
             f"Configured only: --max-cores=unset; outer pytest -n={workers}",
         ]
