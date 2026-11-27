@@ -1,0 +1,218 @@
+diff --git a/.github/self-mutation-shards.py b/.github/self-mutation-shards.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..fb3bf5cd9b3e775d38ed63825cab7c18cbcfb358
+--- /dev/null
++++ b/.github/self-mutation-shards.py
+@@ -0,0 +1,87 @@
++"""Inactive CI fixture: shared plan, two serial shards, and the strict gate."""
++
++import argparse
++import json
++import subprocess
++import sys
++from pathlib import Path
++
++
++def normalized(path):
++    rows = []
++    text = path.read_text(encoding="utf-8")
++    if not text.endswith("\n"):
++        raise ValueError(f"missing or truncated self-check evidence: {path}")
++    for line in text.splitlines():
++        row = json.loads(line)
++        del row["wall_time_seconds"]
++        # GitHub's checkout roots need not be identical across jobs.
++        filename = Path(row["file_path"])
++        if not filename.is_absolute() or filename.parent.parts[-2:] != ("src", "pytest_leela"):
++            raise ValueError(f"unexpected self-check target path: {filename}")
++        row["file_path"] = filename.name
++        rows.append(row)
++    return sorted(rows, key=lambda row: row["mutant_id"])
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    commands = parser.add_subparsers(dest="stage", required=True)
++    plan = commands.add_parser("plan")
++    plan.add_argument("plan", type=Path)
++    serial = commands.add_parser("serial")
++    serial.add_argument("jsonl", type=Path)
++    shard = commands.add_parser("shard")
++    shard.add_argument("plan", type=Path)
++    shard.add_argument("index", choices=("0", "1"))
++    shard.add_argument("jsonl", type=Path)
++    verify = commands.add_parser("verify")
++    verify.add_argument("plan", type=Path)
++    verify.add_argument("shard0", type=Path)
++    verify.add_argument("shard1", type=Path)
++    parity = commands.add_parser("parity")
++    parity.add_argument("plan", type=Path)
++    parity.add_argument("serial", type=Path)
++    parity.add_argument("shard0", type=Path)
++    parity.add_argument("shard1", type=Path)
++    args = parser.parse_args()
++
++    if args.stage in {"verify", "parity"}:
++        # Keep the usual strict self-mutation gate. Do not mask verifier exit 1
++        # (complete but failed mutation policy) or exit 2 (invalid evidence).
++        result = subprocess.run(
++            [sys.executable, "-m", "pytest_leela.shard", str(args.plan),
++             str(args.shard0), str(args.shard1)], check=False,
++        )
++        if args.stage == "verify" or result.returncode not in (0, 1):
++            return result.returncode
++        reference = normalized(args.serial)
++        union = sorted(normalized(args.shard0) + normalized(args.shard1),
++                       key=lambda row: row["mutant_id"])
++        if reference != union:
++            parser.error("serial and shard identities/verdicts differ")
++        print(f"Exact full-suite identity and verdict equality: {len(reference)} occurrences")
++        return result.returncode
++
++    # Same target universe as the existing Python package self-check.
++    targets = sorted(p for p in Path("src/pytest_leela").glob("*.py")
++                     if p.name != "__init__.py")
++    if not targets:
++        parser.error("no self-mutation targets; run from the checkout root")
++    argv = [sys.executable, "-m", "pytest", "--leela"]
++    for target in targets:
++        argv.extend(("--target", str(target)))
++    if args.stage == "plan":
++        argv.extend(("--leela-write-plan", str(args.plan), "--leela-shard-count", "2"))
++    elif args.stage == "serial":
++        argv.extend(("--leela-jsonl", str(args.jsonl)))
++    else:
++        argv.extend(("--leela-plan", str(args.plan), "--leela-shard", f"{args.index}/2",
++                     "--leela-jsonl", str(args.jsonl)))
++    # Keep the raw exit status. Workflows must upload completed artifacts even
++    # on exit 1 and always run the verifier, not declare success from a worker.
++    return subprocess.run(argv, check=False).returncode
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/.github/workflows/self-mutation-parity-pilot.yml b/.github/workflows/self-mutation-parity-pilot.yml
+new file mode 100644
+index 0000000000000000000000000000000000000000..b18a83a930455819114cb9220968f8faeb773491
+--- /dev/null
++++ b/.github/workflows/self-mutation-parity-pilot.yml
+@@ -0,0 +1,119 @@
++# Draft pilot only. No change to the required Python package workflow.
++name: Experimental self-mutation parity pilot
++
++on:
++  pull_request:
++    branches: [main]
++    paths:
++      - .github/workflows/self-mutation-parity-pilot.yml
++      - .github/self-mutation-shards.py
++
++permissions:
++  contents: read
++
++jobs:
++  reference:
++    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 't4c/self-mutation-parity-pilot'
++    runs-on: ubuntu-24.04
++    timeout-minutes: 60
++    steps:
++      - &checkout
++        uses: actions/checkout@v4
++        with:
++          ref: ${{ github.event.pull_request.head.sha }}
++          persist-credentials: false
++      - &python
++        uses: actions/setup-python@v5
++        with:
++          python-version: '3.13.18'
++      - &environment
++        name: Install locked pilot environment outside checkout
++        run: |
++          python -m pip install 'uv==0.11.19'
++          UV_PROJECT_ENVIRONMENT="$RUNNER_TEMP/leela-venv" uv sync --locked --extra dev --extra django
++      - name: Generate shared plan and run full serial reference
++        run: |
++          out="$RUNNER_TEMP/reference"
++          mkdir "$out"
++          p="$RUNNER_TEMP/leela-venv/bin/python"
++          git rev-parse HEAD > "$out/source"
++          "$p" .github/self-mutation-shards.py plan "$out/plan.json"
++          rc=0
++          "$p" .github/self-mutation-shards.py serial "$out/serial.jsonl" || rc=$?
++          printf '%s\n' "$rc" > "$out/serial.exit"
++          test "$rc" -le 1
++      - uses: actions/upload-artifact@v4
++        if: always()
++        with:
++          name: pilot-reference
++          path: ${{ runner.temp }}/reference/
++          if-no-files-found: error
++          retention-days: 3
++
++  shard:
++    needs: reference
++    runs-on: ubuntu-24.04
++    timeout-minutes: 60
++    strategy:
++      fail-fast: false
++      matrix:
++        index: [0, 1]
++    steps:
++      - *checkout
++      - *python
++      - *environment
++      - uses: actions/download-artifact@v4
++        with:
++          name: pilot-reference
++          path: ${{ runner.temp }}/reference
++      - name: Run assigned global occurrences serially
++        env:
++          INDEX: ${{ matrix.index }}
++        run: |
++          out="$RUNNER_TEMP/shard"
++          mkdir "$out"
++          git rev-parse HEAD > "$out/source"
++          cmp "$out/source" "$RUNNER_TEMP/reference/source"
++          cp /proc/sys/kernel/random/boot_id "$out/boot-id"
++          rc=0
++          "$RUNNER_TEMP/leela-venv/bin/python" .github/self-mutation-shards.py shard "$RUNNER_TEMP/reference/plan.json" "$INDEX" "$out/result.jsonl" || rc=$?
++          test "$rc" -le 1
++      - uses: actions/upload-artifact@v4
++        if: always()
++        with:
++          name: pilot-shard-${{ matrix.index }}
++          path: ${{ runner.temp }}/shard/
++          if-no-files-found: error
++          retention-days: 3
++
++  parity:
++    if: always() && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 't4c/self-mutation-parity-pilot'
++    needs: [reference, shard]
++    runs-on: ubuntu-24.04
++    timeout-minutes: 10
++    steps:
++      - name: Require reference and both workers
++        env:
++          REFERENCE_RESULT: ${{ needs.reference.result }}
++          SHARD_RESULT: ${{ needs.shard.result }}
++        run: test "$REFERENCE_RESULT" = success && test "$SHARD_RESULT" = success
++      - *checkout
++      - *python
++      - *environment
++      - uses: actions/download-artifact@v4
++        with:
++          pattern: pilot-*
++          path: ${{ runner.temp }}/evidence
++      - name: Verify exact identities and verdicts; preserve strict failure policy
++        run: |
++          out="$RUNNER_TEMP/evidence"
++          ref="$out/pilot-reference"
++          a="$out/pilot-shard-0"
++          b="$out/pilot-shard-1"
++          git rev-parse HEAD | cmp - "$ref/source"
++          cmp "$a/source" "$ref/source"
++          cmp "$b/source" "$ref/source"
++          test -s "$a/boot-id" && test -s "$b/boot-id"
++          test "$(< "$a/boot-id")" != "$(< "$b/boot-id")"
++          "$RUNNER_TEMP/leela-venv/bin/python" .github/self-mutation-shards.py parity "$ref/plan.json" "$ref/serial.jsonl" "$a/result.jsonl" "$b/result.jsonl"
++          test "$(< "$ref/serial.exit")" = 0
