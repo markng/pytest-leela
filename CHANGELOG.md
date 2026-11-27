@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.0 — 2026-11-27
+
+- Add experimental, default-off `--leela-fast-first` ordering for covering tests.
+  Reordered call-phase kills require a clean verification run, so this option
+  is not a guaranteed speedup. The terminal summary reports its state.
+
 ## 0.21.0 — 2026-11-26
 
 ### Added
