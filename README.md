@@ -144,6 +144,7 @@ mutation testing with a diagnostic and a nonzero exit; the file may be incomplet
 pytest --leela-write-plan leela-plan.json --leela-shard-count 2
 pytest --leela-plan leela-plan.json --leela-shard 0/2 --leela-jsonl shard-0.jsonl
 pytest --leela-plan leela-plan.json --leela-shard 1/2 --leela-jsonl shard-1.jsonl
+python -m pytest_leela.shard leela-plan.json shard-0.jsonl shard-1.jsonl
 ```
 
 Copy the plan from the first command to both workers. Use matching checkouts,
@@ -153,13 +154,21 @@ full clean baseline before executing its assigned occurrences serially. Workers
 reject differences in the checked inputs or selectors and reuse the planner's
 timing inputs. Don't divide `--target` between workers.
 
-Run each index once. Compare complete JSONL records by global `mutant_id`, not
-by source location (locations can repeat); `file_path` is local to each worker.
-Check each exit status and verify completeness before combining results. The
-plan checksum detects accidental changes, not untrusted plans; use only plans
-from your own matching run. This is not a distributed runner, merger, or
-speed guarantee. Diff, fast-first, HTML, benchmark and xdist modes cannot be
-combined with sharding.
+Run each index once and collect each JSONL file with its `.receipt.json` sidecar.
+The verifier checks every assigned `mutant_id`, the plan identity and the exact
+event bytes. It returns 0 for complete passing results, 1 for complete results
+that fail mutation policy, and 2 for invalid or incomplete evidence. Do not use
+worker exit codes alone as proof of completion. Source locations can repeat;
+`file_path` is local to each worker.
+
+Use a regular checkout without symlinked project directories and with its Python
+environment outside the checkout. The fingerprint includes local `.py` files,
+effective Leela config, pytest config, platform and dependency versions. It does
+not check all external state (e.g. data files, environment variables, native
+libraries or installed package contents); those must be equivalent separately.
+Checksums detect accidental changes, not untrusted inputs. This is not a
+distributed runner or a speed guarantee. Diff, fast-first, HTML, benchmark and
+xdist modes cannot be combined with sharding.
 
 **Benchmark optimization layers:**
 

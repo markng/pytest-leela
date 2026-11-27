@@ -1,34 +1,168 @@
-"""Experimental shared plan for serial workers on separate checkouts."""
+"""Experimental shared mutation plans and completion proofs for serial shards."""
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import math
+import os
+import platform
 import sys
-from dataclasses import dataclass
-from pathlib import Path
+from dataclasses import asdict, dataclass, field
+from importlib.metadata import distributions
+from pathlib import Path, PurePosixPath
+from uuid import uuid4
 
 import pytest
 
 from pytest_leela import __version__
+from pytest_leela.config import load_config
 from pytest_leela.models import Mutant
 
 
 class ShardError(Exception):
-    """The full local run cannot be matched to the shared plan."""
+    """The shared mutation plan or shard evidence cannot be verified."""
 
 
 class PlanWritten(Exception):
     """Planning completed without running any mutations."""
 
 
-def digest(value: object) -> str:
+def _digest(value: object) -> str:
     data = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(data.encode()).hexdigest()
 
 
+def _read_object(path: Path) -> dict[str, object]:
+    try:
+        value = json.loads(path.read_bytes())
+    except (OSError, ValueError) as exc:
+        raise ShardError(f"cannot read {path.name}: {exc}") from exc
+    if not isinstance(value, dict):
+        raise ShardError(f"invalid object in {path.name}")
+    return dict(value)
+
+
+def _write_object(path: Path, value: dict[str, object]) -> None:
+    try:
+        with path.open("x", encoding="utf-8") as stream:
+            json.dump(value, stream, allow_nan=False)
+            stream.write("\n")
+    except (OSError, ValueError) as exc:
+        raise ShardError(f"cannot write {path.name}: {exc}") from exc
+
+
+def _finite_time(value: object) -> bool:
+    try:
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0
+    except OverflowError:
+        return False
+
+
 @dataclass(frozen=True)
+class Plan:
+    seal: str
+    count: int
+    occurrences: list[list[object]]
+    members: list[list[int]]
+    times: dict[str, float]
+    fingerprint: str
+    fail_on_error: bool
+
+
+def _load_plan(path: Path) -> Plan:
+    data = _read_object(path)
+    seal = data.pop("seal", None)
+    if set(data) != {"schema", "nonce", "fingerprint", "count", "runnable", "occurrences", "members", "times", "fail_on_error"}:
+        raise ShardError("invalid shared mutation plan keys")
+    try:
+        valid_seal = seal == _digest(data)
+    except (ValueError, OverflowError) as exc:
+        raise ShardError("invalid shared mutation plan values") from exc
+    if not isinstance(seal, str) or not valid_seal:
+        raise ShardError("shared mutation plan checksum mismatch")
+    count, runnable, occurrences, members = (data[k] for k in ("count", "runnable", "occurrences", "members"))
+    fingerprint, times, fail_on_error = (data[k] for k in ("fingerprint", "times", "fail_on_error"))
+    if (type(data["schema"]) is not int or data["schema"] != 2 or not isinstance(data["nonce"], str)
+        or type(count) is not int or type(runnable) is not int or not isinstance(occurrences, list)
+        or not isinstance(members, list) or not 0 < count <= runnable == len(occurrences)
+        or not isinstance(fingerprint, str) or not isinstance(fail_on_error, bool)
+        or not isinstance(times, dict) or not all(_finite_time(t) for t in times.values())):
+        raise ShardError("invalid shared mutation plan shape")
+    for i, row in enumerate(occurrences):
+        if (not isinstance(row, list) or len(row) != 7 or type(row[0]) is not int or row[0] != i
+            or not all(isinstance(row[j], str) for j in (1, 2, 5, 6))
+            or not all(type(row[j]) is int for j in (3, 4))):
+            raise ShardError("invalid shared mutation occurrence")
+    if (any(not isinstance(group, list) or any(type(i) is not int for i in group) for group in members)
+        or members != [list(range(i, runnable, count)) for i in range(count)]):
+        raise ShardError("invalid shared mutation shard membership")
+    return Plan(seal, count, occurrences, members, times, fingerprint, fail_on_error)
+
+
+def receipt_path(path: Path) -> Path:
+    return path.with_name(path.name + ".receipt.json")
+
+
+def _result_evidence(plan: Plan, index: int, path: Path) -> dict[str, object]:
+    try:
+        raw = path.read_bytes()
+        if not raw.endswith(b"\n"):
+            raise ShardError("truncated shard JSONL")
+        expected = plan.members[index]
+        lines = raw[:-1].split(b"\n")
+        if len(lines) != len(expected):
+            raise ShardError("shard JSONL completion count mismatch")
+        outcomes = {"killed": 0, "survived": 0, "error": 0}
+        for i, line in zip(expected, lines, strict=True):
+            row = json.loads(line)
+            if (not isinstance(row, dict) or set(row) != {"schema_version", "mutant_id", "file_path", "module_name", "lineno",
+                "col_offset", "original_op", "replacement_op", "verdict", "wall_time_seconds"}
+                or type(row["schema_version"]) is not int or row["schema_version"] != 1
+                or any(type(row[k]) is not int for k in ("mutant_id", "lineno", "col_offset"))
+                or not isinstance(row["file_path"], str) or not isinstance(row["verdict"], str)
+                or row["verdict"] not in outcomes or not _finite_time(row["wall_time_seconds"])):
+                raise ShardError("invalid shard JSONL v1 row")
+            file = Path(row["file_path"])
+            identity = [row[k] for k in ("mutant_id", "module_name", "lineno", "col_offset", "original_op", "replacement_op")]
+            expected_path = PurePosixPath(str(plan.occurrences[i][1]))
+            if not file.is_absolute() or file.parts[-len(expected_path.parts):] != expected_path.parts or identity != [plan.occurrences[i][j] for j in (0, 2, 3, 4, 5, 6)]:
+                raise ShardError(f"unexpected shard JSONL identity for occurrence {i}")
+            outcomes[row["verdict"]] += 1
+    except (OSError, ValueError) as exc:
+        raise ShardError(f"cannot read shard JSONL {path.name}: {exc}") from exc
+    return {"schema": 1, "plan": plan.seal, "index": index, "count": plan.count,
+            "completed": len(expected), "jsonl_sha256": hashlib.sha256(raw).hexdigest(),
+            "outcomes": outcomes}
+
+
+def verify_results(plan: Plan, outputs: list[Path]) -> dict[str, int]:
+    seen = set()
+    totals = {"killed": 0, "survived": 0, "error": 0}
+    for path in outputs:
+        receipt = _read_object(receipt_path(path))
+        index = receipt.get("index")
+        if type(index) is not int or not 0 <= index < plan.count or index in seen:
+            raise ShardError("unexpected or duplicate shard index")
+        expected = _result_evidence(plan, index, path)
+        try:
+            matches = _digest(receipt) == _digest(expected)
+        except (ValueError, OverflowError) as exc:
+            raise ShardError("invalid shard completion receipt values") from exc
+        if not matches:
+            raise ShardError("shard completion receipt does not match plan and JSONL bytes")
+        seen.add(index)
+        results = expected["outcomes"]
+        assert isinstance(results, dict)
+        for name in totals:
+            totals[name] += results[name]
+    if len(seen) != plan.count:
+        raise ShardError("missing shard completion receipt")
+    return totals
+
+
+@dataclass
 class Shard:
     path: Path
     root: Path
@@ -36,6 +170,12 @@ class Shard:
     count: int = 1
     write: bool = False
     config_path: Path | None = None
+    _plan: Plan | None = field(default=None, init=False, repr=False)
+
+    def complete(self, path: Path) -> None:
+        if self._plan is None:
+            raise ShardError("cannot complete an unverified shard")
+        _write_object(receipt_path(path), _result_evidence(self._plan, self.index, path))
 
     def resolve(
         self,
@@ -61,41 +201,71 @@ class Shard:
             return full.relative_to(self.root).as_posix(), hashlib.sha256(full.read_bytes()).hexdigest()
 
         try:
-            tests = sorted({node.split("::", 1)[0] for node in test_ids})
-            parents = {self.root}
-            for test in tests:
-                parents.update(p for p in (self.root / test).parents if p.is_relative_to(self.root))
-            inputs = {str(p / "conftest.py") for p in parents if (p / "conftest.py").is_file()}
+            # The initial supported scope is a regular Python checkout with an
+            # external environment. Include helpers even when not mutation targets.
+            files_in_root: set[str] = set()
+            for parent, dirs, names in os.walk(self.root, onerror=_walk_error):
+                dirs[:] = [d for d in dirs if d not in {".git", "__pycache__", ".pytest_cache", ".mypy_cache"}]
+                if any((Path(parent) / d).is_symlink() for d in dirs) or "pyvenv.cfg" in names:
+                    raise ShardError("shards require an external environment and no symlinked project directories")
+                sources = [Path(parent) / name for name in names if name.endswith(".py")]
+                if any(p.is_symlink() or not p.is_file() for p in sources):
+                    raise ShardError("shards require regular project Python files")
+                files_in_root.update(map(str, sources))
+            if any(str(self.root / node.split("::", 1)[0]) not in files_in_root for node in test_ids):
+                raise ShardError("shards require collected Python test files inside the checkout")
             if self.config_path is not None:
-                inputs.add(str(self.config_path))
-            fingerprint = digest([
-                self.count, sys.implementation.name, list(sys.version_info), pytest.__version__, __version__,
-                [file_identity(f) for f in files],
-                [(m, file_identity(f)[0]) for m, f in modules.items()],
-                test_ids, [file_identity(t) for t in tests], sorted(file_identity(p) for p in inputs), selectors,
-                [(m.mutant_id, m.point.module_name, m.point.lineno, m.point.col_offset,
-                  m.point.node_type, m.point.original_op, m.replacement_op) for m in mutants],
+                files_in_root.add(str(self.config_path))
+            config = load_config(self.root)
+            file_ids = {os.path.abspath(f): file_identity(f) for f in files}
+            occurrences = [[m.mutant_id, file_ids[m.point.file_path][0], m.point.module_name,
+                            m.point.lineno, m.point.col_offset, m.point.original_op,
+                            m.replacement_op] for m in mutants]
+            fingerprint = _digest([
+                self.count, sys.implementation.name, sys.version, platform.system(), platform.machine(),
+                pytest.__version__, __version__, sorted((d.metadata["Name"], d.version) for d in distributions()),
+                asdict(config), list(file_ids.values()), [(m, file_identity(f)[0]) for m, f in modules.items()],
+                test_ids, sorted(file_identity(p) for p in files_in_root), selectors,
+                [(row, m.point.node_type) for row, m in zip(occurrences, mutants, strict=True)],
             ])
             if self.write:
                 selected_times = {node: elapsed for node, elapsed in times.items() if node in all_ids}
-            else:
-                value = json.loads(self.path.read_text(encoding="utf-8"))
-                if (not isinstance(value, dict) or set(value) != {"schema", "fingerprint", "times", "seal"}
-                    or type(value["schema"]) is not int or value["schema"] != 1
-                    or value["fingerprint"] != fingerprint):
-                    raise ShardError("local full mutation plan does not match the shared plan")
-                selected_times = value["times"]
-                if value["seal"] != digest([fingerprint, selected_times]):
-                    raise ShardError("shared mutation plan checksum mismatch")
-            if (not isinstance(selected_times, dict) or not all_ids.issuperset(selected_times)
-                or any(type(t) not in (int, float) or not math.isfinite(t) or t < 0
-                       for t in selected_times.values())):
-                raise ShardError("invalid shared mutation plan timings")
-            if self.write:
-                with self.path.open("x", encoding="utf-8") as stream:
-                    json.dump({"schema": 1, "fingerprint": fingerprint, "times": selected_times,
-                               "seal": digest([fingerprint, selected_times])}, stream, allow_nan=False)
-                    stream.write("\n")
+                if not all(_finite_time(t) for t in selected_times.values()):
+                    raise ShardError("invalid shared mutation plan timings")
+                data: dict[str, object] = {"schema": 2, "nonce": uuid4().hex, "fingerprint": fingerprint,
+                    "count": self.count, "runnable": len(mutants), "occurrences": occurrences,
+                    "members": [list(range(i, len(mutants), self.count)) for i in range(self.count)],
+                    "times": selected_times, "fail_on_error": config.fail_on_error}
+                _write_object(self.path, {**data, "seal": _digest(data)})
+                return selected_times
+            plan = _load_plan(self.path)
+            if (plan.fingerprint != fingerprint or plan.count != self.count or plan.occurrences != occurrences
+                or plan.fail_on_error != config.fail_on_error or not all_ids.issuperset(plan.times)):
+                raise ShardError("local full mutation plan does not match the shared plan")
+            self._plan = plan
+            return plan.times
         except (OSError, ValueError, OverflowError) as exc:
             raise ShardError(f"cannot use shared mutation plan: {exc}") from exc
-        return selected_times
+
+
+def _walk_error(exc: OSError) -> None:
+    raise exc
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Verify all JSONL shards and their completion receipts")
+    parser.add_argument("plan", type=Path)
+    parser.add_argument("jsonl", nargs="+", type=Path)
+    args = parser.parse_args()
+    try:
+        plan = _load_plan(args.plan)
+        totals = verify_results(plan, args.jsonl)
+    except ShardError as exc:
+        print(f"shard verification failed: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(totals, sort_keys=True))
+    return int(totals["survived"] > 0 or (totals["error"] > 0 and plan.fail_on_error))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

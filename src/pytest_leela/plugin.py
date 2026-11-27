@@ -27,7 +27,7 @@ from pytest_leela.mutant_events import (
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
-from pytest_leela.shard import PlanWritten, Shard, ShardError
+from pytest_leela.shard import PlanWritten, Shard, ShardError, receipt_path
 from pytest_leela.skill import SKILL_MARKDOWN
 
 
@@ -134,6 +134,8 @@ def _shard_options(config: pytest.Config) -> Shard | None:
             pass
         else:
             if 0 <= index < count:
+                if config.getoption("leela_jsonl", default=None) is None:
+                    raise pytest.UsageError("--leela-shard requires a fresh --leela-jsonl PATH")
                 return Shard(Path(read), config.rootpath.resolve(), index, count, config_path=config.inipath)
     raise pytest.UsageError("use --leela-write-plan PATH --leela-shard-count N or --leela-plan PATH --leela-shard INDEX/COUNT (zero-based)")
 
@@ -404,6 +406,10 @@ class LeelaPlugin:
                 write_mutant_event(events, timing)
 
         try:
+            if self._shard is not None and not self._shard.write:
+                assert events_path is not None
+                if os.path.lexists(receipt_path(Path(events_path))):
+                    raise ShardError("shard completion receipt already exists")
             with open_mutant_events(events_path) as events:
                 if not target_files:
                     if self._shard is not None:
@@ -458,3 +464,10 @@ class LeelaPlugin:
 
         if result.survived or (result.errors and leela_config.fail_on_error):
             session.exitstatus = 1
+        if self._shard is not None:
+            assert events_path is not None
+            try:
+                self._shard.complete(Path(events_path))
+            except ShardError as exc:
+                write_terminal_report(f"\nleela: aborted: {exc}\n")
+                session.exitstatus = 1
