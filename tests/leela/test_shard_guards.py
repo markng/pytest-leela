@@ -5,12 +5,12 @@ from unittest.mock import Mock
 
 import pytest
 
-from pytest_leela import engine
 from pytest_leela.models import MutantResult
 from pytest_leela.shard import Shard, ShardError
 
 
 def test_shard_engine_accepts_completed_assignments(tmp_path, monkeypatch):
+    engine = importlib.import_module('pytest_leela.engine')
     target = tmp_path / 'calc.py'
     target.write_text('def value(x):\n    return x + 2\n')
     monkeypatch.setattr(engine, '_clean_process_state', lambda: None)
