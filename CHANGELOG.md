@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.1 — 2026-11-27
+
+- Show the effective fast-first ordering label in saved HTML reports, matching
+  the terminal summary. JSONL v1 and mutation behavior are unchanged.
+
 ## 0.22.0 — 2026-11-27
 
 - Add experimental, default-off `--leela-fast-first` ordering for covering tests.
