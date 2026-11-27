@@ -924,7 +924,10 @@ def describe_LeelaPlugin():
         ):
             plugin.pytest_sessionfinish(session, exitstatus=0)
 
-        mock_generate.assert_called_once_with(run_result, "/tmp/report.html")
+        mock_generate.assert_called_once_with(
+            run_result, "/tmp/report.html",
+            ordering="Fast-first ordering: off (default; --leela-fast-first is experimental)",
+        )
 
     def it_does_not_generate_html_report_without_flag():
         """No HTML report when --leela-html is not set."""

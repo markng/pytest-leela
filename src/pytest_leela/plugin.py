@@ -390,7 +390,7 @@ class LeelaPlugin:
                 if events is not None and html_path is not None:
                     from pytest_leela.html_report import generate_html_report
 
-                    generate_html_report(result, html_path, jsonl_fd=events.fileno())
+                    generate_html_report(result, html_path, jsonl_fd=events.fileno(), ordering=ordering)
         except (BaselineFailure, MutantEventsError) as exc:
             message = f"\nleela: aborted: {exc}\n"
             if tw:
@@ -413,7 +413,7 @@ class LeelaPlugin:
         if html_path is not None and events_path is None:
             from pytest_leela.html_report import generate_html_report
 
-            generate_html_report(result, html_path)
+            generate_html_report(result, html_path, ordering=ordering)
 
         if result.survived or (result.errors and leela_config.fail_on_error):
             session.exitstatus = 1

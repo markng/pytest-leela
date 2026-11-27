@@ -175,7 +175,8 @@ def test_fast_first_summary_once_without_changing_outer_order(pytester, enabled)
     ''')
     flags = ['--leela-fast-first'] if enabled else []
     result = pytester.runpytest_subprocess(
-        '-v', '--leela', '--target', 'calc.py', '-p', 'no:cacheprovider', *flags,
+        '-v', '--leela', '--target', 'calc.py', '-p', 'no:cacheprovider',
+        '--leela-html', 'report.html', '--leela-jsonl', 'events.jsonl', *flags,
     )
     assert result.ret == pytest.ExitCode.OK
     result.assert_outcomes(passed=2)
@@ -185,5 +186,8 @@ def test_fast_first_summary_once_without_changing_outer_order(pytester, enabled)
         'on (experimental; reordered kills can add a clean run)' if enabled
         else 'off (default; --leela-fast-first is experimental)'
     )
-    assert f'Fast-first ordering: {expected}' in output
+    label = f'Fast-first ordering: {expected}'
+    assert label in output
+    report = (pytester.path / 'report.html').read_text(encoding='utf-8')
+    assert report.count(f'<span id="fast-first-ordering">{label}</span>') == 1
     assert output.index('test_calc.py::test_first PASSED') < output.index('test_calc.py::test_second PASSED')
