@@ -81,6 +81,11 @@ after target discovery, so you can auto-discover `src/` while still excluding sp
 pytest --leela --target myapp/models.py --target myapp/views.py
 ```
 
+File targeting is useful for quick local feedback. It can narrow both the set
+of tests run without mutations to establish a clean baseline and the set of
+modules tracked by Leela’s mutation import hook. Combining separate file-only
+runs does not establish parity with a full run.
+
 **Only mutate lines changed vs a branch:**
 
 ```bash
