@@ -292,6 +292,7 @@ class LeelaPlugin:
         workers = "unset" if outer_workers is None else str(outer_workers)
         return (
             f"Leela mutant concurrency (observed peak): {peak}\n"
+            "Mutation test dispatch model: serial calls to in-process pytest.main()\n"
             "Pytest test/worker concurrency during mutation: not measured\n"
             f"Configured only: --max-cores={cores}; outer pytest -n={workers}"
         )
