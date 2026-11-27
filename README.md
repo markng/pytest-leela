@@ -111,6 +111,7 @@ pytest --leela --diff main --max-cores 4 --max-memory 4096
 pytest --leela --leela-html report.html
 ```
 
+The report header shows the same fast-first ordering label as the terminal summary.
 The report shows both the inner attempt's elapsed time (`time_seconds`) and the full
 runner wall time (`wall_time_seconds`) for each mutant. The latter includes any
 control and confirmation runs and matches the JSON Lines measurement when both

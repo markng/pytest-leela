@@ -9,6 +9,7 @@ import stat
 import textwrap
 from datetime import datetime, timezone
 from functools import partial
+from html import escape
 from typing import Any
 
 from pytest_leela.models import RunResult
@@ -296,7 +297,7 @@ def _escape_json_for_html(json_str: str) -> str:
     return json_str.replace("</", "<\\/")
 
 
-def _build_html_viewer(json_data: str) -> str:
+def _build_html_viewer(json_data: str, *, ordering: str = "") -> str:
     """Build a full interactive HTML viewer with inline JSON data.
 
     Returns a self-contained HTML string with inline CSS, JS, and data.
@@ -798,6 +799,7 @@ html, body {{
     <span id="score-badge" class="score-badge"></span>
     <span id="survived-count"></span>
     <span id="error-count" class="mut-error"></span>
+    <span id="fast-first-ordering">{escape(ordering)}</span>
     <span class="hdr-spacer"></span>
     <button class="hdr-btn" id="btn-prev" title="Previous survivor (p)">&lt; Prev</button>
     <button class="hdr-btn" id="btn-next" title="Next survivor (n)">Next &gt;</button>
@@ -1399,13 +1401,13 @@ def _open_html_excluding_jsonl(path: str, flags: int, *, jsonl_fd: int) -> int:
 
 
 def generate_html_report(
-    result: RunResult, output_path: str, *, jsonl_fd: int | None = None
+    result: RunResult, output_path: str, *, jsonl_fd: int | None = None, ordering: str = ""
 ) -> None:
     """Generate a single self-contained HTML report, protecting a live JSONL fd."""
     data = _build_report_data(result)
     json_str = json.dumps(data)
     escaped = _escape_json_for_html(json_str)
-    html_content = _build_html_viewer(escaped)
+    html_content = _build_html_viewer(escaped, ordering=ordering)
     opener = (
         None if jsonl_fd is None else partial(_open_html_excluding_jsonl, jsonl_fd=jsonl_fd)
     )
