@@ -82,6 +82,18 @@ def test_invalid_plan_options_stop_before_collection(plan_cli, tmp_path, capsys,
     assert not (tmp_path / 'events.jsonl').exists()
 
 
+def test_reader_rejects_index_equal_to_shard_count(plan_cli, tmp_path, capsys):
+    run, node = plan_cli
+    opts = ('--leela-plan=plan.json', '--leela-jsonl=events.jsonl')
+    assert run(*opts, '--leela-shard=1/1') == (pytest.ExitCode.USAGE_ERROR, [])
+    assert 'use --leela-write-plan' in capsys.readouterr().err
+    assert not (tmp_path / 'events.jsonl').exists()
+    assert run(*opts, '--leela-shard=0/1', stop_after_collection=True) == (
+        pytest.ExitCode.INTERRUPTED, [node],
+    )
+    assert not (tmp_path / 'events.jsonl').exists()
+
+
 def test_plan_reader_reaches_collection(plan_cli, tmp_path):
     run, node = plan_cli
     assert run('--leela-plan=plan.json', '--leela-shard=0/1', '--leela-jsonl=events.jsonl',
