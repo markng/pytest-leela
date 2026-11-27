@@ -1,10 +1,11 @@
 """In-process coverage of the shard guards, visible to the mutation self-check."""
 
+import importlib
 from unittest.mock import Mock
 
 import pytest
 
-from pytest_leela import engine, plugin
+from pytest_leela import engine
 from pytest_leela.models import MutantResult
 from pytest_leela.shard import Shard, ShardError
 
@@ -24,6 +25,7 @@ def test_shard_engine_accepts_completed_assignments(tmp_path, monkeypatch):
 
 
 def test_plan_only_option_reaches_planner(tmp_path):
+    plugin = importlib.import_module('pytest_leela.plugin')
     config = Mock(rootpath=tmp_path, inipath=None)
     options = {'leela_write_plan': 'plan.json', 'leela_shard_count': 2}
     config.getoption.side_effect = lambda key, default=None: options.get(key, default)
@@ -32,6 +34,7 @@ def test_plan_only_option_reaches_planner(tmp_path):
 
 
 def test_empty_shard_is_not_an_ordinary_no_target_run(tmp_path, monkeypatch):
+    plugin = importlib.import_module('pytest_leela.plugin')
     config = Mock(rootpath=tmp_path)
     config.getoption.side_effect = lambda key, default=None: default
     config.pluginmanager.hasplugin.return_value = False
