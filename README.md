@@ -81,11 +81,6 @@ after target discovery, so you can auto-discover `src/` while still excluding sp
 pytest --leela --target myapp/models.py --target myapp/views.py
 ```
 
-File targeting is useful for quick local feedback. It can narrow both the set
-of tests run without mutations to establish a clean baseline and the set of
-modules tracked by Leela’s mutation import hook. Combining separate file-only
-runs does not establish parity with a full run.
-
 **Only mutate lines changed vs a branch:**
 
 ```bash
@@ -142,6 +137,38 @@ existing run-local integer ID), `file_path` (absolute), `module_name`, `lineno`
 `wall_time_seconds` (the full runner call, including any control and confirmation).
 The file is not a success marker: check pytest's exit status. A sink error aborts
 mutation testing with a diagnostic and a nonzero exit; the file may be incomplete.
+
+**Run experimental shards on separate machines:**
+
+```bash
+pytest --leela-write-plan leela-plan.json --leela-shard-count 2
+pytest --leela-plan leela-plan.json --leela-shard 0/2 --leela-jsonl shard-0.jsonl
+pytest --leela-plan leela-plan.json --leela-shard 1/2 --leela-jsonl shard-1.jsonl
+python -m pytest_leela.shard leela-plan.json shard-0.jsonl shard-1.jsonl
+```
+
+Copy the plan from the first command to both workers. Use matching checkouts,
+Python, pytest, dependencies, configuration and test arguments. Every worker
+runs the ordinary tests, reconstructs the full mutation plan and checks the
+full clean baseline before executing its assigned occurrences serially. Workers
+reject differences in the checked inputs or selectors and reuse the planner's
+timing inputs. Don't divide `--target` between workers.
+
+Run each index once and collect each JSONL file with its `.receipt.json` sidecar.
+The verifier checks every assigned `mutant_id`, the plan identity and the exact
+event bytes. It returns 0 for complete passing results, 1 for complete results
+that fail mutation policy, and 2 for invalid or incomplete evidence. Do not use
+worker exit codes alone as proof of completion. Source locations can repeat;
+`file_path` is local to each worker.
+
+Use a regular checkout without symlinked project directories and with its Python
+environment outside the checkout. The fingerprint includes local `.py` files,
+effective Leela config, pytest config, platform and dependency versions. It does
+not check all external state (e.g. data files, environment variables, native
+libraries or installed package contents); those must be equivalent separately.
+Checksums detect accidental changes, not untrusted inputs. This is not a
+distributed runner or a speed guarantee. Diff, fast-first, HTML, benchmark and
+xdist modes cannot be combined with sharding.
 
 **Benchmark optimization layers:**
 
