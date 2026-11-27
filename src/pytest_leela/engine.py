@@ -35,6 +35,7 @@ from pytest_leela.runner import (
     run_baseline,
     run_tests_for_mutant,
 )
+from pytest_leela.shard import PlanWritten, Shard, ShardError
 from pytest_leela.type_extractor import enrich_mutation_points
 
 
@@ -129,6 +130,7 @@ class Engine:
         on_mutant_timing: Callable[[MutantTiming], None] | None = None,
         *,
         fast_first: bool = False,
+        shard: Shard | None = None,
     ) -> RunResult:
         """Run mutants serially, optionally reporting complete runner-call timings."""
         start = time.monotonic()
@@ -224,6 +226,18 @@ class Engine:
                 on_progress(MutationProgress("baseline", 0, runnable, total_pruned))
             self._check_baseline(mutant_test_ids, test_dir, known_user_modules, scope)
 
+        # Partition only after the complete selector baseline has passed.
+        if shard is not None:
+            test_times = shard.resolve(
+                target_files, module_to_file, all_mutants, test_node_ids, mutant_test_ids, test_times
+            )
+            if shard.write:
+                raise PlanWritten
+            all_mutants = all_mutants[shard.index::shard.count]
+            mutant_test_ids = mutant_test_ids[shard.index::shard.count]
+            runnable = total_mutants = len(all_mutants)
+            total_pruned = 0
+
         # 10. Run each mutant
         results: list[MutantResult] = []
         for mutant, test_ids in zip(all_mutants, mutant_test_ids):
@@ -264,6 +278,9 @@ class Engine:
         else:
             if on_progress is not None:
                 on_progress(MutationProgress("done", len(results), runnable, total_pruned))
+
+        if shard is not None and len(results) != runnable:
+            raise ShardError("shard did not complete all assigned occurrences")
 
         wall_time = time.monotonic() - start
 

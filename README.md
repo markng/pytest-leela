@@ -143,6 +143,29 @@ existing run-local integer ID), `file_path` (absolute), `module_name`, `lineno`
 The file is not a success marker: check pytest's exit status. A sink error aborts
 mutation testing with a diagnostic and a nonzero exit; the file may be incomplete.
 
+**Run experimental shards on separate machines:**
+
+```bash
+pytest --leela-write-plan leela-plan.json --leela-shard-count 2
+pytest --leela-plan leela-plan.json --leela-shard 0/2 --leela-jsonl shard-0.jsonl
+pytest --leela-plan leela-plan.json --leela-shard 1/2 --leela-jsonl shard-1.jsonl
+```
+
+Copy the plan from the first command to both workers. Use matching checkouts,
+Python, pytest, dependencies, configuration and test arguments. Every worker
+runs the ordinary tests, reconstructs the full mutation plan and checks the
+full clean baseline before executing its assigned occurrences serially. Workers
+reject differences in the checked inputs or selectors and reuse the planner's
+timing inputs. Don't divide `--target` between workers.
+
+Run each index once. Compare complete JSONL records by global `mutant_id`, not
+by source location (locations can repeat); `file_path` is local to each worker.
+Check each exit status and verify completeness before combining results. The
+plan checksum detects accidental changes, not untrusted plans; use only plans
+from your own matching run. This is not a distributed runner, merger, or
+speed guarantee. Diff, fast-first, HTML, benchmark and xdist modes cannot be
+combined with sharding.
+
 **Benchmark optimization layers:**
 
 ```bash

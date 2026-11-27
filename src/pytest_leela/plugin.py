@@ -27,6 +27,7 @@ from pytest_leela.mutant_events import (
 from pytest_leela.operators import ALL_OPERATORS
 from pytest_leela.output import format_terminal_report
 from pytest_leela.resources import ResourceLimits
+from pytest_leela.shard import PlanWritten, Shard, ShardError
 from pytest_leela.skill import SKILL_MARKDOWN
 
 
@@ -90,6 +91,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         metavar="PATH",
         help="Run mutation testing and stream completed mutants to a new JSONL file",
     )
+    group.addoption("--leela-write-plan", metavar="PATH", help="Write a shared mutation plan without running mutants")
+    group.addoption("--leela-shard-count", type=int, metavar="N", help="Bind a new plan to N shards")
+    group.addoption("--leela-plan", metavar="PATH", help="Read a shared mutation plan for a shard")
+    group.addoption("--leela-shard", metavar="INDEX/COUNT", help="Run one zero-based shard using --leela-plan")
     group.addoption(
         "--leela-benchmark",
         action="store_true",
@@ -106,13 +111,42 @@ def pytest_cmdline_main(config: pytest.Config) -> pytest.ExitCode | None:
     return None
 
 
+def _shard_options(config: pytest.Config) -> Shard | None:
+    write, read, part = (config.getoption(k, default=None) for k in (
+        "leela_write_plan", "leela_plan", "leela_shard"
+    ))
+    count_for_plan = config.getoption("leela_shard_count", default=None)
+    if write is None and read is None and part is None and count_for_plan is None:
+        return None
+    if any(config.getoption(k, default=None) for k in (
+        "skill", "diff", "leela_fast_first", "leela_benchmark", "leela_html",
+        "collectonly", "setuponly", "setupplan", "numprocesses",
+    )) or config.getoption("dist", default="no") != "no":
+        raise pytest.UsageError("Leela sharding needs a serial ordinary run without diff, fast-first, benchmark or HTML")
+    if write is not None and read is None and part is None and count_for_plan is not None and count_for_plan > 0:
+        if config.getoption("leela_jsonl", default=None) is not None:
+            raise pytest.UsageError("--leela-write-plan does not emit mutant events")
+        return Shard(Path(write), config.rootpath.resolve(), count=count_for_plan, write=True, config_path=config.inipath)
+    if write is None and read is not None and part is not None and count_for_plan is None:
+        try:
+            index, count = map(int, part.split("/"))
+        except ValueError:
+            pass
+        else:
+            if 0 <= index < count:
+                return Shard(Path(read), config.rootpath.resolve(), index, count, config_path=config.inipath)
+    raise pytest.UsageError("use --leela-write-plan PATH --leela-shard-count N or --leela-plan PATH --leela-shard INDEX/COUNT (zero-based)")
+
+
 def pytest_configure(config: pytest.Config) -> None:
+    shard = _shard_options(config)
     if (
-        config.getoption("leela", default=False)
+        shard is not None
+        or config.getoption("leela", default=False)
         or config.getoption("leela_html", default=None)
         or config.getoption("leela_jsonl", default=None) is not None
     ):
-        config.pluginmanager.register(LeelaPlugin(config), "leela-plugin")
+        config.pluginmanager.register(LeelaPlugin(config, shard), "leela-plugin")
     elif config.getoption("leela_benchmark", default=False):
         from pytest_leela.benchmark import BenchmarkPlugin
 
@@ -182,8 +216,9 @@ def _apply_excludes(
 
 
 class LeelaPlugin:
-    def __init__(self, config: pytest.Config) -> None:
+    def __init__(self, config: pytest.Config, shard: Shard | None = None) -> None:
         self.config = config
+        self._shard = shard
         self._coverage_plugin: CoveragePlugin | None = None
 
     def pytest_sessionstart(self, session: pytest.Session) -> None:
@@ -314,7 +349,7 @@ class LeelaPlugin:
         )
         zero_concurrency = f"\n{self._concurrency_summary(False, limits.max_cores)}\n{ordering}\n"
 
-        if not target_files and events_path is None:
+        if not target_files and events_path is None and self._shard is None:
             write_terminal_report(zero_concurrency)
             return
 
@@ -371,6 +406,8 @@ class LeelaPlugin:
         try:
             with open_mutant_events(events_path) as events:
                 if not target_files:
+                    if self._shard is not None:
+                        raise ShardError("no mutation targets")
                     write_terminal_report(zero_concurrency)
                     return
                 html_path = self.config.getoption("leela_html", default=None)
@@ -386,12 +423,16 @@ class LeelaPlugin:
                         on_progress=report_progress,
                         on_mutant_timing=report_timing,
                         fast_first=fast_first,
+                        shard=self._shard,
                     )
                 if events is not None and html_path is not None:
                     from pytest_leela.html_report import generate_html_report
 
                     generate_html_report(result, html_path, jsonl_fd=events.fileno(), ordering=ordering)
-        except (BaselineFailure, MutantEventsError) as exc:
+        except PlanWritten:
+            write_terminal_report("\nLeela: shared mutation plan written\n")
+            return
+        except (BaselineFailure, MutantEventsError, ShardError) as exc:
             message = f"\nleela: aborted: {exc}\n"
             if tw:
                 tw.write(message)
