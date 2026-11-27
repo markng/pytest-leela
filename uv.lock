@@ -275,7 +275,7 @@ wheels = [
 
 [[package]]
 name = "pytest-leela"
-version = "0.22.1"
+version = "0.23.0"
 source = { editable = "." }
 dependencies = [
     { name = "pytest" },

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.0 — 2026-11-27
+
+- Add experimental opt-in mutation shards with a shared plan, complete shard
+  receipts, and result verification. Serial execution remains the default.
+
 ## 0.22.1 — 2026-11-27
 
 - Show the effective fast-first ordering label in saved HTML reports, matching
