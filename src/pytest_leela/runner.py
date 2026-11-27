@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import io
 import importlib.util
+import math
 import ntpath  # noqa: F401 — keep in sys.modules (see engine.py comment)
 import os
 import posixpath  # noqa: F401 — same as ntpath
@@ -15,6 +16,7 @@ import time
 import types
 from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
+from itertools import groupby
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -458,6 +460,37 @@ class _PreferMutationFinder:
         sys.meta_path.insert(0, self.finder)
 
 
+class _FastFirst:
+    def __init__(self, test_times: dict[str, float]) -> None:
+        self.test_times = test_times
+        # If collection did not complete, do not claim that ordering was a no-op.
+        self.changed = True
+
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+    def pytest_collection_modifyitems(
+        self, items: list[pytest.Item]
+    ) -> Generator[None, None, None]:
+        # Sort only what pytest actually selected, after other collection hooks.
+        yield
+
+        def duration(item: pytest.Item) -> float:
+            elapsed = self.test_times.get(item.nodeid, math.inf)
+            return elapsed if math.isfinite(elapsed) and elapsed >= 0 else math.inf
+
+        # Keep pytest's parent transitions and parametrized fixture order.
+        # A callspec may include a high-scope fixture parameter, not just test args.
+        def group(item: pytest.Item) -> int:
+            return id(item) if getattr(item, "callspec", None) is not None else id(item.parent)
+
+        ordered = [
+            item
+            for _, batch in groupby(items, key=group)
+            for item in sorted(batch, key=duration)
+        ]
+        self.changed = any(original is not new for original, new in zip(items, ordered))
+        items[:] = ordered
+
+
 class InnerSession:
     """One in-process pytest run against the current import state.
 
@@ -476,13 +509,17 @@ class InnerSession:
         known_user_modules: frozenset[str] | None = None,
         test_times: dict[str, float] | None = None,
         exitfirst: bool = True,
+        fast_first: bool = False,
     ) -> None:
+        self.fast_first = fast_first
+        self.fast_first_plugin: _FastFirst | None = None
         self.finder = finder
         self.test_ids = test_ids
         self.test_dir = test_dir
         self.scope = scope
         self.known_user_modules = known_user_modules
         self.test_times = test_times
+        self.ordering_times = test_times
         self.exitfirst = exitfirst
         self.collector = _ResultCollector()
         self.timed_out = threading.Event()
@@ -586,6 +623,9 @@ class InnerSession:
             plugins.append(_TimeoutPlugin(self.timed_out))
         if self.finder is not None:
             plugins.append(_PreferMutationFinder(self.finder))
+        if self.fast_first and self.test_ids and self.ordering_times:
+            self.fast_first_plugin = _FastFirst(self.ordering_times)
+            plugins.append(self.fast_first_plugin)
 
         # Run pytest in-process (suppress noisy output)
         try:
@@ -802,8 +842,11 @@ def run_control(
     test_dir: str | None,
     known_user_modules: frozenset[str],
     scope: ProjectModuleScope,
+    *,
+    fast_first: bool = False,
+    ordering_times: dict[str, float] | None = None,
 ) -> InnerSession:
-    """Run the same test selection with no mutation applied.
+    """Run the same test selection and ordering with no mutation applied.
 
     This is the in-process equivalent of the mutant's path used to prove
     that a setup/teardown/collection/import failure is caused by the mutant
@@ -816,7 +859,10 @@ def run_control(
         scope,
         known_user_modules=known_user_modules,
         exitfirst=False,
+        fast_first=fast_first,
     )
+    # Match mutant ordering without enabling the mutant timer on the control.
+    session.ordering_times = ordering_times
     return session.run()
 
 
@@ -829,6 +875,8 @@ def run_tests_for_mutant(
     known_user_modules: frozenset[str] | None = None,
     test_times: dict[str, float] | None = None,
     scope: ProjectModuleScope | None = None,
+    *,
+    fast_first: bool = False,
 ) -> MutantResult:
     """Run tests against a single mutant, return the result.
 
@@ -848,17 +896,26 @@ def run_tests_for_mutant(
         scope,
         known_user_modules=known_user_modules,
         test_times=test_times,
+        fast_first=fast_first,
     )
     result = session.run().result_for(mutant)
 
-    if result.status != "error" or not (result.error or "").startswith(
+    if result.status == "killed":
+        # Only skip the additional control when this feature introduced no
+        # permutation. An observed change still needs the exact-subset check.
+        ordering = session.fast_first_plugin
+        if ordering is None or not ordering.changed:
+            return result
+    elif result.status != "error" or not (result.error or "").startswith(
         "inconclusive:"
     ):
         return result
 
-    inconclusive = session.inconclusive_failures()
     control_known = known_user_modules or precompute_user_modules(scope)
-    control = run_control(test_ids, test_dir, control_known, scope)
+    control = run_control(
+        test_ids, test_dir, control_known, scope,
+        fast_first=fast_first, ordering_times=test_times,
+    )
     if control.error() is not None or control.failures():
         reason = control.error()
         if reason is None:
@@ -880,6 +937,10 @@ def run_tests_for_mutant(
             ),
         )
 
+    if result.status == "killed":
+        return result
+
+    inconclusive = session.inconclusive_failures()
     finder2 = install_hook(target_sources, mutant, module_to_file)
     session2 = InnerSession(
         finder2,
@@ -888,6 +949,7 @@ def run_tests_for_mutant(
         scope,
         known_user_modules=control_known,
         test_times=test_times,
+        fast_first=fast_first,
     )
     confirmation = session2.run().result_for(mutant)
     if (
