@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.1 — 2026-11-27
+
+- Label the serial in-process pytest dispatch model without implying that
+  pytest worker concurrency was measured.
+
 ## 0.23.0 — 2026-11-27
 
 - Add experimental opt-in mutation shards with a shared plan, complete shard
